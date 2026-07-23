@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 type IconProps = { className?: string };
 
 export function HomeIcon({ className = "h-5 w-5" }: IconProps) {
@@ -134,4 +132,3 @@ export function CloseIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
-export type NavIcon = (props: IconProps) => ReactNode;

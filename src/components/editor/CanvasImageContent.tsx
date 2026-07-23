@@ -5,7 +5,7 @@ import { isPatternGraphicSrc } from "@/lib/data/element-library";
 import type { ImageFrame } from "@/lib/data/canvas-elements";
 import type { InvitationShape } from "./editor-types";
 
-export function frameClip(frame?: ImageFrame): string | undefined {
+function frameClip(frame?: ImageFrame): string | undefined {
   switch (frame) {
     case "circle":
       return "circle(50% at 50% 50%)";

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import type {
   Invitation,
@@ -132,12 +133,12 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
           <p className="mt-2 text-sm text-grey">
             Create your first invitation to see it here.
           </p>
-          <a
+          <Link
             href="/invitations/new"
             className="mt-6 inline-flex rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-black/90"
           >
             + Create Invitation
-          </a>
+          </Link>
         </div>
       ) : (
         <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">

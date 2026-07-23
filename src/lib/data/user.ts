@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import type { User } from "./types";
-import { getDisplayName, getGreeting } from "./user-utils";
+import { getGreeting } from "./user-utils";
 
-export { getDisplayName, getGreeting };
+export { getGreeting };
 
 function splitName(fullName?: string | null): {
   firstName: string;

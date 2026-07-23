@@ -66,7 +66,7 @@ export interface CanvasElement {
   style: ElementStyle;
 }
 
-export function createDefaultTextStyle(
+function createDefaultTextStyle(
   overrides?: Partial<ElementStyle>,
 ): ElementStyle {
   return {
@@ -340,4 +340,4 @@ export function createBlankPageElements(): CanvasElement[] {
   ];
 }
 
-export { uid as createElementId };
+

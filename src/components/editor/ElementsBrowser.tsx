@@ -15,7 +15,7 @@ import {
 import { ChevronLeftIcon } from "./editor-icons";
 import { ShapeGraphic } from "./ShapeGraphic";
 
-export const ELEMENT_RECENTS_KEY = "gather.editor.elementRecents";
+const ELEMENT_RECENTS_KEY = "gather.editor.elementRecents";
 const MAX_RECENTS = 12;
 
 export function loadElementRecents(): string[] {

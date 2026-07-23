@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type ButtonVariant = "primary" | "secondary" | "outline" | "ghost";
+type ButtonVariant = "primary" | "secondary";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonProps {
@@ -11,7 +11,6 @@ interface ButtonProps {
   className?: string;
   onClick?: () => void;
   type?: "button" | "submit";
-  ariaLabel?: string;
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
@@ -19,10 +18,6 @@ const variantStyles: Record<ButtonVariant, string> = {
     "bg-black text-white hover:bg-black/90 focus-visible:ring-black",
   secondary:
     "bg-white text-black border border-black/10 hover:border-black/30 focus-visible:ring-black",
-  outline:
-    "bg-transparent text-black border border-black/20 hover:border-black/40 focus-visible:ring-black",
-  ghost:
-    "bg-transparent text-black hover:bg-soft-grey focus-visible:ring-black",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -40,7 +35,6 @@ export function Button({
   className = "",
   onClick,
   type = "button",
-  ariaLabel,
 }: ButtonProps) {
   const baseStyles =
     "inline-flex items-center justify-center gap-2 rounded-full font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
@@ -49,19 +43,14 @@ export function Button({
 
   if (href) {
     return (
-      <Link href={href} className={combined} aria-label={ariaLabel}>
+      <Link href={href} className={combined}>
         {children}
       </Link>
     );
   }
 
   return (
-    <button
-      type={type}
-      className={combined}
-      onClick={onClick}
-      aria-label={ariaLabel}
-    >
+    <button type={type} className={combined} onClick={onClick}>
       {children}
     </button>
   );

@@ -178,5 +178,3 @@ export function CustomSizeModal({
     </div>
   );
 }
-
-export { DEFAULT_CUSTOM_SIZE } from "./editor-types";

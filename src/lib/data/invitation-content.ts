@@ -5,8 +5,6 @@ import {
   normalizeElements,
 } from "./canvas-elements";
 
-export type EditorCardId = "invite" | "details" | "rsvp" | "thanks";
-
 export interface InvitationPage {
   id: string;
   name: string;
@@ -52,38 +50,11 @@ export interface InvitationContent {
   activePageId: string;
 }
 
-export const EDITOR_CARDS: {
-  id: EditorCardId;
-  label: string;
-  description: string;
-}[] = [
-  {
-    id: "invite",
-    label: "Invitation",
-    description: "Headline and welcome message",
-  },
-  {
-    id: "details",
-    label: "Event details",
-    description: "Venue, time, and dress code",
-  },
-  {
-    id: "rsvp",
-    label: "RSVP",
-    description: "Response prompt for guests",
-  },
-  {
-    id: "thanks",
-    label: "Thank you",
-    description: "Closing message",
-  },
-];
-
 function pageId() {
   return `page_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export function createPage(
+function createPage(
   name: string,
   elements: CanvasElement[],
   backgroundColor = "#fff8f4",

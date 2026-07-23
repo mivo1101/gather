@@ -2,18 +2,11 @@ import Link from "next/link";
 
 interface LogoProps {
   className?: string;
-  variant?: "default" | "light";
   href?: string;
 }
 
 /** Gather wordmark with the signature "+" icon mark */
-export function Logo({
-  className = "",
-  variant = "default",
-  href = "/",
-}: LogoProps) {
-  const textColor = variant === "light" ? "text-white" : "text-black";
-
+export function Logo({ className = "", href = "/" }: LogoProps) {
   return (
     <Link
       href={href}
@@ -26,7 +19,7 @@ export function Logo({
       >
         +
       </span>
-      <span className={`text-xl font-semibold tracking-tight ${textColor}`}>
+      <span className="text-xl font-semibold tracking-tight text-black">
         Gather
       </span>
     </Link>
