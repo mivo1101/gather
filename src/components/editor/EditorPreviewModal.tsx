@@ -3,6 +3,8 @@
 import { useEffect, useId } from "react";
 import type { CanvasElement } from "@/lib/data/canvas-elements";
 import type { InvitationPage } from "@/lib/data/invitation-content";
+import { InteractiveRsvpPanel } from "@/components/invitation/InteractiveRsvpPanel";
+import { LocationMapPanel } from "@/components/invitation/LocationMapPanel";
 import { CanvasImageContent, cardAspectRatio } from "./CanvasImageContent";
 import { CloseIcon, DesktopIcon, MobileIcon } from "./editor-icons";
 import { ShapeGraphic } from "./ShapeGraphic";
@@ -184,6 +186,7 @@ interface EditorPreviewModalProps {
   title: string;
   shape: InvitationShape;
   customSize: CustomCanvasSize;
+  rsvp?: { prompt: string; note: string };
   onClose: () => void;
 }
 
@@ -196,6 +199,7 @@ export function EditorPreviewModal({
   title,
   shape,
   customSize,
+  rsvp,
   onClose,
 }: EditorPreviewModalProps) {
   const titleId = useId();
@@ -213,14 +217,32 @@ export function EditorPreviewModal({
 
   if (!open || !activePage) return null;
 
-  const card = (
-    <PreviewInvitation
-      elements={activePage.elements}
-      backgroundColor={activePage.backgroundColor || "#fff8f4"}
-      shape={shape}
-      customSize={customSize}
-    />
-  );
+  const card =
+    activePage.kind === "rsvp" ? (
+      <div className="aspect-[9/16] w-full overflow-hidden bg-white">
+        <InteractiveRsvpPanel
+          config={activePage.rsvpConfig}
+          prompt={rsvp?.prompt}
+          note={rsvp?.note}
+          interactive
+          className="h-full w-full"
+        />
+      </div>
+    ) : activePage.kind === "location" && activePage.location ? (
+      <div className="aspect-[9/16] w-full overflow-hidden bg-white">
+        <LocationMapPanel
+          location={activePage.location}
+          className="h-full w-full"
+        />
+      </div>
+    ) : (
+      <PreviewInvitation
+        elements={activePage.elements}
+        backgroundColor={activePage.backgroundColor || "#fff8f4"}
+        shape={shape}
+        customSize={customSize}
+      />
+    );
 
   return (
     <div

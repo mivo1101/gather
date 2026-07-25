@@ -13,6 +13,8 @@ function frameClip(frame?: ImageFrame): string | undefined {
       return "polygon(50% 92%, 8% 52%, 8% 30%, 22% 16%, 38% 16%, 50% 30%, 62% 16%, 78% 16%, 92% 30%, 92% 52%)";
     case "rounded":
       return "inset(0 round 16%)";
+    case "arch":
+      return "inset(0 round 50% 50% 0 0)";
     case "square":
       return "inset(0)";
     default:
@@ -103,7 +105,7 @@ export function CanvasImageContent({
         src={src}
         alt=""
         draggable={false}
-        className="pointer-events-none h-full w-full object-contain select-none"
+        className="pointer-events-none h-full w-full object-cover select-none"
         onLoad={(event) => {
           const { naturalWidth, naturalHeight } = event.currentTarget;
           if (naturalWidth > 0 && naturalHeight > 0) {

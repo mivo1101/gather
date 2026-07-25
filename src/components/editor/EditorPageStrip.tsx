@@ -29,12 +29,39 @@ function fontFamilyClass(family: CanvasElement["style"]["fontFamily"]) {
  * That keeps layout identical to the canvas (not a denser reflow).
  */
 function PageThumbnail({
-  elements,
-  backgroundColor,
+  page,
 }: {
-  elements: CanvasElement[];
-  backgroundColor: string;
+  page: InvitationPage;
 }) {
+  const backgroundColor = page.backgroundColor || "#fff8f4";
+
+  if (page.kind === "rsvp") {
+    return (
+      <div
+        className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-white to-[#fff5f9] px-1"
+        aria-hidden="true"
+      >
+        <span className="text-[7px] font-bold uppercase tracking-wide text-signature">
+          RSVP
+        </span>
+      </div>
+    );
+  }
+
+  if (page.kind === "location") {
+    return (
+      <div
+        className="absolute inset-0 flex flex-col items-center justify-center bg-soft-grey px-1"
+        aria-hidden="true"
+      >
+        <span className="text-[7px] font-bold uppercase tracking-wide text-black">
+          Map
+        </span>
+      </div>
+    );
+  }
+
+  const elements = page.elements;
   const cardHeight = CARD_HEIGHT;
 
   return (
@@ -178,10 +205,7 @@ export function EditorPageStrip({
                   aria-current={active ? "page" : undefined}
                   aria-label={page.name}
                 >
-                  <PageThumbnail
-                    elements={page.elements}
-                    backgroundColor={page.backgroundColor || "#fff8f4"}
-                  />
+                  <PageThumbnail page={page} />
                   <span className="absolute inset-x-0 bottom-0 z-10 bg-black/45 py-0.5 text-center text-[9px] font-semibold text-white">
                     {index + 1}
                   </span>
