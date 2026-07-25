@@ -135,10 +135,12 @@ export async function getInvitationForUser(
 export async function createInvitation(input: {
   userId: string;
   title?: string;
+  content?: InvitationContent;
 }): Promise<Invitation> {
   const supabase = getSupabaseAdmin();
   const title = input.title?.trim() || "Untitled invitation";
-  const content = createDefaultContent({ title });
+  const content =
+    input.content ?? createDefaultContent({ title });
 
   const { data, error } = await supabase
     .from("invitations")
@@ -146,7 +148,7 @@ export async function createInvitation(input: {
       user_id: input.userId,
       title,
       status: "draft",
-      cover_image: "/images/flowers/flower-8.png",
+      cover_image: null,
       content,
     })
     .select(INVITATION_COLUMNS)
@@ -199,6 +201,51 @@ export async function updateInvitationForUser(
   }
 
   return mapInvitation(data as InvitationRow);
+}
+
+/** Permanently delete archived invitations owned by the user. */
+export async function permanentlyDeleteInvitationsForUser(
+  userId: string,
+  invitationIds: string[],
+): Promise<number> {
+  const ids = [...new Set(invitationIds.filter(Boolean))];
+  if (ids.length === 0) return 0;
+
+  const supabase = getSupabaseAdmin();
+
+  const { data, error } = await supabase
+    .from("invitations")
+    .delete()
+    .eq("user_id", userId)
+    .eq("status", "archived")
+    .in("id", ids)
+    .select("id");
+
+  if (error) {
+    throw new Error(formatInvitationDbError(error.message));
+  }
+
+  return data?.length ?? 0;
+}
+
+/** Permanently delete every archived invitation for the user. */
+export async function clearTrashedInvitationsForUser(
+  userId: string,
+): Promise<number> {
+  const supabase = getSupabaseAdmin();
+
+  const { data, error } = await supabase
+    .from("invitations")
+    .delete()
+    .eq("user_id", userId)
+    .eq("status", "archived")
+    .select("id");
+
+  if (error) {
+    throw new Error(formatInvitationDbError(error.message));
+  }
+
+  return data?.length ?? 0;
 }
 
 function formatInvitationDbError(message: string): string {

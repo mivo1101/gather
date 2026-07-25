@@ -1,6 +1,6 @@
 export type TextAlign = "left" | "center" | "right" | "justify";
 export type VerticalAlign = "top" | "middle" | "bottom";
-export type ImageFrame = "none" | "square" | "circle" | "heart" | "rounded";
+export type ImageFrame = "none" | "square" | "circle" | "heart" | "rounded" | "arch";
 
 export interface ElementEffects {
   shadow?: boolean;
@@ -234,8 +234,8 @@ export function createDefaultElements(): CanvasElement[] {
 }
 
 export function normalizeElements(raw: unknown): CanvasElement[] {
-  if (!Array.isArray(raw) || raw.length === 0) {
-    return createDefaultElements();
+  if (!Array.isArray(raw)) {
+    return [];
   }
 
   return raw.map((item) => {
@@ -324,20 +324,9 @@ export function createDividerElement(
   };
 }
 
-/** Sparse starter page — mostly blank for additional cards */
+/** Empty starter page for new cards */
 export function createBlankPageElements(): CanvasElement[] {
-  return [
-    createTextElement({
-      x: 15,
-      y: 40,
-      width: 70,
-      content: "New card",
-      style: createDefaultTextStyle({
-        fontFamily: "playfair",
-        fontSize: 28,
-      }),
-    }),
-  ];
+  return [];
 }
 
 

@@ -1,12 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
+import {
+  clearTrashAction,
+  permanentlyDeleteInvitationsAction,
+} from "@/lib/actions/invitations";
 import type {
   Invitation,
   InvitationSort,
   InvitationStatusFilter,
 } from "@/lib/data/types";
+import { BrandCheckbox } from "./BrandCheckbox";
 import { ChevronDownIcon } from "./icons";
 import { InvitationCard } from "./InvitationCard";
 
@@ -18,7 +30,7 @@ const statusOptions: { value: InvitationStatusFilter; label: string }[] = [
   { value: "all", label: "All statuses" },
   { value: "draft", label: "Draft" },
   { value: "published", label: "Published" },
-  { value: "archived", label: "Archived" },
+  { value: "archived", label: "Trash" },
 ];
 
 const sortOptions: { value: InvitationSort; label: string }[] = [
@@ -58,16 +70,139 @@ function sortList(list: Invitation[], sort: InvitationSort): Invitation[] {
 
 /** Recent invitations grid with client-side status filter and sort */
 export function RecentInvitations({ invitations }: RecentInvitationsProps) {
+  const router = useRouter();
   const [status, setStatus] = useState<InvitationStatusFilter>("all");
   const [sort, setSort] = useState<InvitationSort>("updated_desc");
+  const [trashedIds, setTrashedIds] = useState<Set<string>>(() => new Set());
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(() => new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const inTrashView = status === "archived";
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setActionError(null);
+  }, [status]);
+
+  const handleTrashed = useCallback((id: string) => {
+    setTrashedIds((prev) => new Set(prev).add(id));
+  }, []);
+
+  const handleTrashFailed = useCallback((id: string) => {
+    setTrashedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const handlePermanentlyDeleted = useCallback((id: string) => {
+    setDeletedIds((prev) => new Set(prev).add(id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const handlePermanentDeleteFailed = useCallback((id: string) => {
+    setDeletedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
 
   const visible = useMemo(() => {
+    const withOptimisticTrash = invitations
+      .filter((invitation) => !deletedIds.has(invitation.id))
+      .map((invitation) =>
+        trashedIds.has(invitation.id)
+          ? { ...invitation, status: "archived" as const }
+          : invitation,
+      );
     const filtered =
       status === "all"
-        ? invitations
-        : invitations.filter((invitation) => invitation.status === status);
+        ? withOptimisticTrash.filter(
+            (invitation) => invitation.status !== "archived",
+          )
+        : withOptimisticTrash.filter(
+            (invitation) => invitation.status === status,
+          );
     return sortList(filtered, sort);
-  }, [invitations, status, sort]);
+  }, [invitations, status, sort, trashedIds, deletedIds]);
+
+  const allVisibleSelected =
+    visible.length > 0 && visible.every((item) => selectedIds.has(item.id));
+  const selectedCount = visible.filter((item) =>
+    selectedIds.has(item.id),
+  ).length;
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = () => {
+    if (allVisibleSelected) {
+      setSelectedIds(new Set());
+      return;
+    }
+    setSelectedIds(new Set(visible.map((item) => item.id)));
+  };
+
+  const deleteSelected = () => {
+    const ids = visible
+      .filter((item) => selectedIds.has(item.id))
+      .map((item) => item.id);
+    if (ids.length === 0) return;
+
+    const confirmed = window.confirm(
+      `Permanently delete ${ids.length} invitation${ids.length === 1 ? "" : "s"}? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setActionError(null);
+    ids.forEach((id) => handlePermanentlyDeleted(id));
+    startTransition(async () => {
+      const result = await permanentlyDeleteInvitationsAction(ids);
+      if ("error" in result) {
+        ids.forEach((id) => handlePermanentDeleteFailed(id));
+        setActionError(result.error);
+        return;
+      }
+      setSelectedIds(new Set());
+      router.refresh();
+    });
+  };
+
+  const emptyTrash = () => {
+    const ids = visible.map((item) => item.id);
+    if (ids.length === 0) return;
+
+    const confirmed = window.confirm(
+      `Empty trash and permanently delete ${ids.length} invitation${ids.length === 1 ? "" : "s"}? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setActionError(null);
+    ids.forEach((id) => handlePermanentlyDeleted(id));
+    startTransition(async () => {
+      const result = await clearTrashAction();
+      if ("error" in result) {
+        ids.forEach((id) => handlePermanentDeleteFailed(id));
+        setActionError(result.error);
+        return;
+      }
+      setSelectedIds(new Set());
+      router.refresh();
+    });
+  };
 
   return (
     <section aria-labelledby="recent-invitations-heading">
@@ -77,10 +212,12 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
             id="recent-invitations-heading"
             className="text-xl font-semibold tracking-tight text-black"
           >
-            Recent invitations
+            {inTrashView ? "Trash" : "Recent invitations"}
           </h2>
           <p className="mt-1 text-sm text-grey">
-            Pick up where you left off, or jump back into a draft.
+            {inTrashView
+              ? "Select invitations to permanently delete, or empty trash."
+              : "Pick up where you left off, or jump back into a draft."}
           </p>
         </div>
 
@@ -127,23 +264,85 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
         </div>
       </div>
 
+      {inTrashView && visible.length > 0 && (
+        <div className="mt-5 flex flex-wrap items-center gap-2 rounded-2xl border border-black/8 bg-white px-3.5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+          <div className="inline-flex items-center gap-2 text-sm text-black">
+            <BrandCheckbox
+              checked={allVisibleSelected}
+              onChange={toggleSelectAll}
+              label={allVisibleSelected ? "Deselect all" : "Select all"}
+            />
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              className="font-medium hover:text-black/70"
+            >
+              {allVisibleSelected ? "Deselect all" : "Select all"}
+            </button>
+          </div>
+
+          <span className="text-sm text-grey">
+            {selectedCount} selected
+          </span>
+
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={isPending || selectedCount === 0}
+              onClick={deleteSelected}
+              className="rounded-full border border-black/10 bg-white px-3.5 py-1.5 text-sm font-medium text-black transition-colors hover:border-black/20 hover:bg-soft-grey disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {isPending ? "Deleting…" : "Delete selected"}
+            </button>
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={emptyTrash}
+              className="rounded-full bg-black px-3.5 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Empty trash
+            </button>
+          </div>
+        </div>
+      )}
+
+      {actionError && (
+        <p className="mt-3 text-sm font-medium text-signature">{actionError}</p>
+      )}
+
       {visible.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-dashed border-black/10 bg-white px-6 py-16 text-center">
-          <p className="text-base font-semibold text-black">No invitations yet</p>
-          <p className="mt-2 text-sm text-grey">
-            Create your first invitation to see it here.
+          <p className="text-base font-semibold text-black">
+            {inTrashView ? "Trash is empty" : "No invitations yet"}
           </p>
-          <Link
-            href="/invitations/new"
-            className="mt-6 inline-flex rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-black/90"
-          >
-            + Create Invitation
-          </Link>
+          <p className="mt-2 text-sm text-grey">
+            {inTrashView
+              ? "Invitations you move to trash will appear here."
+              : "Create your first invitation to see it here."}
+          </p>
+          {!inTrashView && (
+            <Link
+              href="/invitations/new"
+              className="mt-6 inline-flex rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-black/90"
+            >
+              + Create Invitation
+            </Link>
+          )}
         </div>
       ) : (
         <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((invitation) => (
-            <InvitationCard key={invitation.id} invitation={invitation} />
+            <InvitationCard
+              key={invitation.id}
+              invitation={invitation}
+              selectable={inTrashView}
+              selected={selectedIds.has(invitation.id)}
+              onSelectedChange={toggleSelected}
+              onTrashed={handleTrashed}
+              onTrashFailed={handleTrashFailed}
+              onPermanentlyDeleted={handlePermanentlyDeleted}
+              onPermanentDeleteFailed={handlePermanentDeleteFailed}
+            />
           ))}
         </div>
       )}

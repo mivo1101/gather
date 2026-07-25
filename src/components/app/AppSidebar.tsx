@@ -30,6 +30,9 @@ const navItems = [
   { label: "Settings", href: "/settings", icon: SettingsIcon },
 ] as const;
 
+const panelShadow =
+  "shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)]";
+
 interface AppSidebarProps {
   user: User;
 }
@@ -42,7 +45,7 @@ function NavLinks({
   onNavigate?: () => void;
 }) {
   return (
-    <ul className="flex flex-col gap-1">
+    <ul className="flex flex-col gap-0.5">
       {navItems.map((item) => {
         const active =
           pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -114,49 +117,63 @@ function UserChip({ user }: { user: User }) {
   );
 }
 
-function SidebarPanel({
-  user,
+function NavPanel({
   pathname,
   onNavigate,
 }: {
-  user: User;
   pathname: string;
   onNavigate?: () => void;
 }) {
   return (
-    <div className="flex h-full flex-col">
-      <div className="px-4 py-5">
+    <div
+      className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-black/[0.04] bg-white ${panelShadow}`}
+    >
+      <div className="shrink-0 px-4 py-5">
         <Logo href="/home" />
       </div>
-
-      <nav className="flex-1 px-3" aria-label="App navigation">
+      <nav
+        className="min-h-0 flex-1 overflow-y-auto px-3 pb-4"
+        aria-label="App navigation"
+      >
         <NavLinks pathname={pathname} onNavigate={onNavigate} />
       </nav>
+    </div>
+  );
+}
 
-      <div className="mt-auto border-t border-black/5 px-3 py-4">
-        <div className="mb-3 rounded-2xl bg-sugar-milk px-4 py-4">
-          <p className="text-sm font-semibold text-black">Upgrade to Pro</p>
-          <p className="mt-1 text-xs leading-relaxed text-grey">
-            Unlock more templates, guests, and insights.
-          </p>
-          <Link
-            href="/settings"
-            onClick={onNavigate}
-            className="mt-3 inline-flex text-sm font-semibold text-signature transition-opacity hover:opacity-80"
-          >
-            Upgrade Now →
-          </Link>
-        </div>
-        <UserChip user={user} />
-        <form action={signOutAction} className="mt-1 px-1">
-          <button
-            type="submit"
-            className="w-full rounded-xl px-2 py-2 text-left text-xs font-medium text-grey transition-colors hover:bg-soft-grey hover:text-black"
-          >
-            Sign out
-          </button>
-        </form>
+function AccountPanel({
+  user,
+  onNavigate,
+}: {
+  user: User;
+  onNavigate?: () => void;
+}) {
+  return (
+    <div
+      className={`shrink-0 rounded-2xl border border-black/[0.04] bg-white px-3 py-3 ${panelShadow}`}
+    >
+      <div className="mb-2 rounded-xl bg-sugar-milk px-3.5 py-3.5">
+        <p className="text-sm font-semibold text-black">Upgrade to Pro</p>
+        <p className="mt-1 text-xs leading-relaxed text-grey">
+          Unlock more templates, guests, and insights.
+        </p>
+        <Link
+          href="/settings"
+          onClick={onNavigate}
+          className="mt-2.5 inline-flex text-sm font-semibold text-signature transition-opacity hover:opacity-80"
+        >
+          Upgrade Now →
+        </Link>
       </div>
+      <UserChip user={user} />
+      <form action={signOutAction} className="mt-0.5 px-1">
+        <button
+          type="submit"
+          className="w-full rounded-xl px-2 py-2 text-left text-xs font-medium text-grey transition-colors hover:bg-soft-grey hover:text-black"
+        >
+          Sign out
+        </button>
+      </form>
     </div>
   );
 }
@@ -168,11 +185,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-black/5 bg-white lg:block">
-        <SidebarPanel user={user} pathname={pathname} />
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[17.5rem] flex-col gap-3 p-3 lg:flex">
+        <NavPanel pathname={pathname} />
+        <AccountPanel user={user} />
       </aside>
 
-      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-black/5 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
+      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-black/5 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
         <Logo href="/home" />
         <button
           type="button"
@@ -192,20 +210,23 @@ export function AppSidebar({ user }: AppSidebarProps) {
             aria-label="Close navigation"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="absolute inset-y-0 left-0 flex w-[min(20rem,88vw)] flex-col bg-white shadow-xl">
-            <div className="flex justify-end px-3 pt-3">
+          <aside className="absolute inset-y-0 left-0 flex w-[min(20rem,88vw)] flex-col gap-3 bg-soft-grey p-3 shadow-xl">
+            <div className="flex justify-end">
               <button
                 type="button"
-                className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-soft-grey"
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-white hover:bg-soft-grey"
                 onClick={() => setMobileOpen(false)}
                 aria-label="Close navigation"
               >
                 <CloseIcon />
               </button>
             </div>
-            <SidebarPanel
-              user={user}
+            <NavPanel
               pathname={pathname}
+              onNavigate={() => setMobileOpen(false)}
+            />
+            <AccountPanel
+              user={user}
               onNavigate={() => setMobileOpen(false)}
             />
           </aside>

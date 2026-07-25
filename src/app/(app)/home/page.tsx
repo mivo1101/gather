@@ -1,4 +1,4 @@
-import { AppTopBar } from "@/components/app/AppTopBar";
+import { HomeHub } from "@/components/app/HomeHub";
 import { QuickActions } from "@/components/app/QuickActions";
 import { RecentInvitations } from "@/components/app/RecentInvitations";
 import { getInvitationsForUser } from "@/lib/data/invitations";
@@ -16,26 +16,11 @@ export default async function HomePage() {
   });
 
   return (
-    <div className="flex flex-col gap-8">
-      <AppTopBar user={user} />
-
-      <header className="animate-fade-up">
-        <h1 className="text-3xl font-bold tracking-tight text-black md:text-4xl">
-          {getGreeting()}, {user.firstName}{" "}
-          <span aria-hidden="true">👋</span>
-        </h1>
-        <p className="mt-2 text-base text-grey">
-          Create, manage and share beautiful invitations.
-        </p>
-      </header>
-
-      <div className="animate-fade-up" style={{ animationDelay: "80ms" }}>
+    <HomeHub user={user} greeting={getGreeting()} active="home">
+      <div className="flex flex-col gap-8">
         <QuickActions />
-      </div>
-
-      <div className="animate-fade-up" style={{ animationDelay: "140ms" }}>
         <RecentInvitations invitations={invitations} />
       </div>
-    </div>
+    </HomeHub>
   );
 }

@@ -1,12 +1,18 @@
-import { ComingSoon } from "@/components/app/AppTopBar";
+import { HomeHub } from "@/components/app/HomeHub";
+import { TemplateCategories } from "@/components/app/TemplateCategories";
+import { getCurrentUser, getGreeting } from "@/lib/data/user";
 
-export const metadata = { title: "Templates · Gather" };
+export const metadata = {
+  title: "Templates · Gather",
+  description: "Browse invitation templates by event category.",
+};
 
-export default function TemplatesPage() {
+export default async function TemplatesPage() {
+  const user = await getCurrentUser();
+
   return (
-    <ComingSoon
-      title="Templates"
-      description="Browse ready-made designs for weddings, birthdays, and more."
-    />
+    <HomeHub user={user} greeting={getGreeting()} active="templates">
+      <TemplateCategories />
+    </HomeHub>
   );
 }

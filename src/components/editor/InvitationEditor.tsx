@@ -28,6 +28,8 @@ import {
   type InvitationPage,
 } from "@/lib/data/invitation-content";
 import type { Invitation } from "@/lib/data/types";
+import { InteractiveRsvpPanel } from "@/components/invitation/InteractiveRsvpPanel";
+import { LocationMapPanel } from "@/components/invitation/LocationMapPanel";
 import {
   cardAspectRatio,
   photoElementSize,
@@ -65,8 +67,20 @@ type EditorSnapshot = {
 function clonePages(pages: InvitationPage[]): InvitationPage[] {
   return pages.map((page) => ({
     ...page,
+    kind: page.kind || "design",
     backgroundPattern: page.backgroundPattern || "none",
     border: page.border ? { ...page.border } : null,
+    location: page.location ? { ...page.location } : null,
+    rsvpConfig: page.rsvpConfig
+      ? {
+          ...page.rsvpConfig,
+          theme: { ...page.rsvpConfig.theme },
+          questions: page.rsvpConfig.questions.map((q) => ({
+            ...q,
+            options: q.options?.map((o) => ({ ...o })),
+          })),
+        }
+      : null,
     elements: page.elements.map((el) => ({
       ...el,
       style: { ...el.style, effects: { ...el.style.effects } },
@@ -134,13 +148,7 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
   const history = useHistory<EditorSnapshot>(initialSnapshot);
   const { title, pages, activePageId, shape, customSize } = history.present;
 
-  const [selectedId, setSelectedId] = useState<string | null>(
-    activeElements(initialSnapshot.pages, initialSnapshot.activePageId)[1]
-      ?.id ??
-      activeElements(initialSnapshot.pages, initialSnapshot.activePageId)[0]
-        ?.id ??
-      null,
-  );
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [contentMeta, setContentMeta] = useState(invitation.content);
   const [status, setStatus] = useState(invitation.status);
@@ -174,10 +182,12 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
   const activePage = pages.find((page) => page.id === activePageId) ?? {
     id: activePageId,
     name: "Page",
+    kind: "design" as const,
     elements,
     backgroundColor: "#fff8f4",
     backgroundPattern: "none" as const,
     border: null,
+    location: null,
   };
   const backgroundColor = activePage.backgroundColor ?? "#fff8f4";
   const canvasSelected = selectedId === CANVAS_SELECTION_ID;
@@ -811,6 +821,28 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
         )}
 
         <div className="relative flex min-w-0 flex-1 flex-col">
+          {activePage.kind === "rsvp" ? (
+            <div className="flex flex-1 items-center justify-center bg-[#ebe8e4] p-6">
+              <div className="aspect-[9/16] h-[min(72vh,640px)] overflow-hidden rounded-sm bg-white shadow-[0_16px_48px_rgba(0,0,0,0.12)]">
+                <InteractiveRsvpPanel
+                  config={activePage.rsvpConfig}
+                  prompt={contentMeta.rsvp.prompt}
+                  note={contentMeta.rsvp.note}
+                  interactive={false}
+                  className="h-full w-full"
+                />
+              </div>
+            </div>
+          ) : activePage.kind === "location" && activePage.location ? (
+            <div className="flex flex-1 items-center justify-center bg-[#ebe8e4] p-6">
+              <div className="aspect-[9/16] h-[min(72vh,640px)] overflow-hidden rounded-sm bg-white shadow-[0_16px_48px_rgba(0,0,0,0.12)]">
+                <LocationMapPanel
+                  location={activePage.location}
+                  className="h-full w-full"
+                />
+              </div>
+            </div>
+          ) : (
           <EditorCanvas
             shape={shape}
             customSize={customSize}
@@ -849,6 +881,7 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
             }}
             onBeforeChange={snapshotBeforeChange}
           />
+          )}
           <EditorPageStrip
             collapsed={pagesCollapsed}
             onToggleCollapse={() => setPagesCollapsed((v) => !v)}
@@ -947,6 +980,7 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
         title={title}
         shape={shape}
         customSize={customSize}
+        rsvp={contentMeta.rsvp}
         onClose={() => setPreviewOpen(false)}
       />
 
