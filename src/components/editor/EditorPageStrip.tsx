@@ -1,7 +1,11 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { CanvasElement } from "@/lib/data/canvas-elements";
-import type { InvitationPage } from "@/lib/data/invitation-content";
+import type {
+  InvitationPage,
+  InvitationPageKind,
+} from "@/lib/data/invitation-content";
 import { CanvasImageContent } from "./CanvasImageContent";
 import { ChevronLeftIcon, FitIcon, PlusIcon, TrashIcon } from "./editor-icons";
 import { ShapeGraphic } from "./ShapeGraphic";
@@ -146,9 +150,19 @@ interface EditorPageStripProps {
   pages: InvitationPage[];
   activePageId: string;
   onSelectPage: (pageId: string) => void;
-  onAddPage: () => void;
+  onAddPage: (kind?: InvitationPageKind) => void;
   onDeletePage: (pageId: string) => void;
 }
+
+const ADD_PAGE_OPTIONS: {
+  kind: InvitationPageKind;
+  label: string;
+  hint: string;
+}[] = [
+  { kind: "design", label: "Design", hint: "Blank canvas page" },
+  { kind: "rsvp", label: "RSVP", hint: "Questions guests answer" },
+  { kind: "location", label: "Location", hint: "Venue + map" },
+];
 
 export function EditorPageStrip({
   collapsed,
@@ -162,6 +176,27 @@ export function EditorPageStrip({
   onAddPage,
   onDeletePage,
 }: EditorPageStripProps) {
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const addMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!addMenuOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!addMenuRef.current?.contains(event.target as Node)) {
+        setAddMenuOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setAddMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [addMenuOpen]);
+
   if (collapsed) {
     return (
       <div className="absolute inset-x-0 bottom-0 z-20 flex justify-center border-t border-black/5 bg-white/95 px-4 py-2 backdrop-blur">
@@ -224,15 +259,43 @@ export function EditorPageStrip({
             );
           })}
 
-          <button
-            type="button"
-            onClick={onAddPage}
-            className="flex shrink-0 items-center justify-center rounded-lg border border-dashed border-black/20 text-grey transition-colors hover:border-signature/40 hover:text-signature"
-            style={{ width: THUMB_WIDTH, height: THUMB_HEIGHT }}
-            aria-label="Add page"
-          >
-            <PlusIcon />
-          </button>
+          <div ref={addMenuRef} className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setAddMenuOpen((open) => !open)}
+              className="flex items-center justify-center rounded-lg border border-dashed border-black/20 text-grey transition-colors hover:border-signature/40 hover:text-signature"
+              style={{ width: THUMB_WIDTH, height: THUMB_HEIGHT }}
+              aria-label="Add page"
+              aria-expanded={addMenuOpen}
+              aria-haspopup="menu"
+            >
+              <PlusIcon />
+            </button>
+            {addMenuOpen && (
+              <div
+                role="menu"
+                className="absolute bottom-full left-0 z-30 mb-2 w-48 overflow-hidden rounded-xl border border-black/10 bg-white py-1 shadow-[0_12px_32px_rgba(0,0,0,0.14)]"
+              >
+                {ADD_PAGE_OPTIONS.map((option) => (
+                  <button
+                    key={option.kind}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      onAddPage(option.kind);
+                      setAddMenuOpen(false);
+                    }}
+                    className="flex w-full flex-col items-start px-3 py-2 text-left hover:bg-soft-grey"
+                  >
+                    <span className="text-sm font-semibold text-black">
+                      {option.label}
+                    </span>
+                    <span className="text-[11px] text-grey">{option.hint}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-1">

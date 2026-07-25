@@ -6,7 +6,11 @@ import type {
   ElementStyle,
   ImageFrame,
 } from "@/lib/data/canvas-elements";
-import type { InvitationPage } from "@/lib/data/invitation-content";
+import type {
+  InvitationLocation,
+  InvitationPage,
+  RsvpConfig,
+} from "@/lib/data/invitation-content";
 import type { LibraryElement } from "@/lib/data/element-library";
 import type { EditorToolId, PropertiesTab } from "./editor-types";
 import {
@@ -18,6 +22,8 @@ import {
   ToolTextIdle,
 } from "./panels/SelectedStyles";
 import { PositionPanel } from "./panels/PositionPanel";
+import { LocationEditorPanel } from "./panels/LocationEditorPanel";
+import { RsvpBuilderPanel } from "./panels/RsvpBuilderPanel";
 import { EmptyHint } from "./panels/shared";
 import {
   ToolBackgroundPanel,
@@ -60,6 +66,8 @@ interface EditorPropertiesPanelProps {
     height?: number;
     rotation?: number;
   }) => void;
+  onChangeRsvpConfig?: (config: RsvpConfig) => void;
+  onChangeLocation?: (location: InvitationLocation) => void;
 }
 
 function ToolView(props: EditorPropertiesPanelProps) {
@@ -184,15 +192,52 @@ function SelectedStyleBody(props: EditorPropertiesPanelProps) {
 /**
  * Right panel: Style / Position / Content tabs always visible.
  * Selection drives Style/Position/Content bodies; otherwise Style shows the active tool.
+ * RSVP / Location pages replace the canvas tools with dedicated builders.
  */
 export function EditorPropertiesPanel(props: EditorPropertiesPanelProps) {
-  const { selected, canvasSelected, elements } = props;
+  const { selected, canvasSelected, elements, activePage } = props;
   const [tab, setTab] = useState<PropertiesTab>("style");
 
   useEffect(() => {
     // Keep Style as the default when switching tools or selection
     setTab("style");
   }, [selected?.id, canvasSelected, props.activeTool]);
+
+  if (activePage.kind === "rsvp" && activePage.rsvpConfig && props.onChangeRsvpConfig) {
+    return (
+      <aside className="flex w-80 shrink-0 flex-col border-l border-black/5 bg-white">
+        <div className="border-b border-black/5 px-4 py-3">
+          <p className="text-sm font-semibold text-black">Build</p>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+          <RsvpBuilderPanel
+            config={activePage.rsvpConfig}
+            onChange={props.onChangeRsvpConfig}
+          />
+        </div>
+      </aside>
+    );
+  }
+
+  if (
+    activePage.kind === "location" &&
+    activePage.location &&
+    props.onChangeLocation
+  ) {
+    return (
+      <aside className="flex w-80 shrink-0 flex-col border-l border-black/5 bg-white">
+        <div className="border-b border-black/5 px-4 py-3">
+          <p className="text-sm font-semibold text-black">Build</p>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+          <LocationEditorPanel
+            location={activePage.location}
+            onChange={props.onChangeLocation}
+          />
+        </div>
+      </aside>
+    );
+  }
 
   const selectedIndex = selected
     ? elements.findIndex((el) => el.id === selected.id)

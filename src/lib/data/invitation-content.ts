@@ -266,6 +266,139 @@ export function createBlankPage(pageNumber: number): InvitationPage {
   return createPage(`Page ${pageNumber}`, createBlankPageElements());
 }
 
+function questionId() {
+  return `q_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function optionId() {
+  return `opt_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+/** Default RSVP theme used for new RSVP pages. */
+export function createDefaultRsvpTheme(): RsvpTheme {
+  return {
+    background: "#ffffff",
+    surface: "#f6f6f6",
+    accent: "#1F2D22",
+    text: "#1F2D22",
+    muted: "#8E8E93",
+    buttonStyle: "pill",
+    headingFont: "playfair",
+    bodyFont: "urbanist",
+  };
+}
+
+/** Default multi-question RSVP config for a blank RSVP page. */
+export function createDefaultRsvpConfig(): RsvpConfig {
+  return {
+    eyebrow: "RSVP",
+    title: "Will you be joining us?",
+    note: "Please respond soon",
+    theme: createDefaultRsvpTheme(),
+    questions: [
+      {
+        id: questionId(),
+        type: "attend",
+        label: "Your reply",
+        yesLabel: "Yes, I'll be there",
+        noLabel: "Sorry, I can't make it",
+        required: true,
+      },
+    ],
+  };
+}
+
+/** Create a blank question of the given type for the builder. */
+export function createRsvpQuestion(type: RsvpQuestionType): RsvpQuestion {
+  const id = questionId();
+  switch (type) {
+    case "attend":
+      return {
+        id,
+        type: "attend",
+        label: "Your reply",
+        yesLabel: "Yes, I'll be there",
+        noLabel: "Sorry, I can't make it",
+        required: true,
+      };
+    case "short_text":
+      return {
+        id,
+        type: "short_text",
+        label: "Short answer",
+        placeholder: "Type here…",
+        required: false,
+      };
+    case "single_choice":
+      return {
+        id,
+        type: "single_choice",
+        label: "Choose one",
+        required: false,
+        options: [
+          { id: optionId(), label: "Option A" },
+          { id: optionId(), label: "Option B" },
+        ],
+      };
+    case "multi_choice":
+      return {
+        id,
+        type: "multi_choice",
+        label: "Select all that apply",
+        required: false,
+        options: [
+          { id: optionId(), label: "Option A" },
+          { id: optionId(), label: "Option B" },
+          { id: optionId(), label: "Option C" },
+        ],
+      };
+  }
+}
+
+export function createRsvpChoiceOption(label = "New option"): RsvpChoiceOption {
+  return { id: optionId(), label };
+}
+
+/** Add an interactive RSVP page with a starter attend question. */
+export function createRsvpPage(_pageNumber?: number): InvitationPage {
+  const config = createDefaultRsvpConfig();
+  return {
+    id: pageId(),
+    name: "RSVP",
+    kind: "rsvp",
+    elements: [],
+    backgroundColor: config.theme.background,
+    backgroundPattern: "none",
+    border: null,
+    location: null,
+    rsvpConfig: config,
+  };
+}
+
+/** Add an interactive Location page with venue + map fields. */
+export function createLocationPage(
+  _pageNumber?: number,
+  fallback?: { venue?: string; address?: string },
+): InvitationPage {
+  const venue = fallback?.venue?.trim() || "The Grand Pavilion";
+  const address = fallback?.address?.trim() || "Melbourne, Australia";
+  return {
+    id: pageId(),
+    name: "Location",
+    kind: "location",
+    elements: [],
+    backgroundColor: "#ffffff",
+    backgroundPattern: "none",
+    border: null,
+    location: {
+      venue,
+      address,
+      mapsQuery: [venue, address].filter(Boolean).join(", "),
+    },
+    rsvpConfig: null,
+  };
+}
+
 export function googleMapsEmbedUrl(query: string): string {
   return `https://www.google.com/maps?q=${encodeURIComponent(query)}&z=15&output=embed`;
 }

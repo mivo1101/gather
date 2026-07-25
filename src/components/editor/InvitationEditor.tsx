@@ -24,8 +24,13 @@ import {
 } from "@/lib/data/element-library";
 import {
   createBlankPage,
+  createLocationPage,
+  createRsvpPage,
   type InvitationContent,
+  type InvitationLocation,
   type InvitationPage,
+  type InvitationPageKind,
+  type RsvpConfig,
 } from "@/lib/data/invitation-content";
 import type { Invitation } from "@/lib/data/types";
 import { InteractiveRsvpPanel } from "@/components/invitation/InteractiveRsvpPanel";
@@ -721,6 +726,72 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
     updateElement(selected.id, patch, false);
   };
 
+  const onAddPage = (kind: InvitationPageKind = "design") => {
+    commit((current) => {
+      const n = current.pages.length + 1;
+      let page: InvitationPage;
+      if (kind === "rsvp") {
+        page = createRsvpPage(n);
+      } else if (kind === "location") {
+        page = createLocationPage(n, {
+          venue: contentMeta.details.venue,
+          address: contentMeta.details.address,
+        });
+      } else {
+        page = createBlankPage(n);
+      }
+      return {
+        ...current,
+        pages: [...current.pages, page],
+        activePageId: page.id,
+      };
+    });
+    setSelectedId(null);
+    setEditingId(null);
+    showToast(
+      kind === "rsvp"
+        ? "RSVP page added"
+        : kind === "location"
+          ? "Location page added"
+          : "Page added",
+    );
+  };
+
+  const onChangeRsvpConfig = (config: RsvpConfig) => {
+    snapshotBeforeChange();
+    history.setPresentSilent({
+      ...history.present,
+      pages: history.present.pages.map((page) =>
+        page.id === history.present.activePageId
+          ? {
+              ...page,
+              rsvpConfig: config,
+              backgroundColor: config.theme.background,
+            }
+          : page,
+      ),
+    });
+    setContentMeta((prev) => ({
+      ...prev,
+      rsvp: {
+        prompt: config.title,
+        note: config.note ?? prev.rsvp.note,
+      },
+    }));
+  };
+
+  const onChangeLocation = (location: InvitationLocation) => {
+    snapshotBeforeChange();
+    history.setPresentSilent({
+      ...history.present,
+      pages: history.present.pages.map((page) =>
+        page.id === history.present.activePageId
+          ? { ...page, location }
+          : page,
+      ),
+    });
+  };
+
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-white">
       <EditorToolbar
@@ -898,18 +969,7 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
               setSelectedId(null);
               setEditingId(null);
             }}
-            onAddPage={() => {
-              commit((current) => {
-                const page = createBlankPage(current.pages.length + 1);
-                return {
-                  ...current,
-                  pages: [...current.pages, page],
-                  activePageId: page.id,
-                };
-              });
-              setSelectedId(null);
-              showToast("Page added");
-            }}
+            onAddPage={onAddPage}
             onDeletePage={(pageId) => {
               if (pages.length <= 1) {
                 showToast("Keep at least one page");
@@ -968,6 +1028,8 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
             if (!selectedId || canvasSelected) return;
             updateElement(selectedId, { content: value }, false);
           }}
+          onChangeRsvpConfig={onChangeRsvpConfig}
+          onChangeLocation={onChangeLocation}
         />
       </div>
 
