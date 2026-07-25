@@ -1,6 +1,9 @@
-import type { CanvasElement } from "./canvas-elements";
+import type { CanvasElement, WidgetConfig } from "./canvas-elements";
 import {
   createBlankPageElements,
+  createDefaultWidgetConfig,
+  createTextElement,
+  createWidgetElement,
   normalizeElements,
 } from "./canvas-elements";
 
@@ -11,6 +14,13 @@ export interface InvitationLocation {
   address: string;
   /** Query used for Google Maps embed + open link */
   mapsQuery: string;
+  /** Button label shown to guests (editable in the editor) */
+  ctaLabel?: string;
+  /**
+   * Optional override for the button URL.
+   * When empty, the open link is built from mapsQuery / venue+address.
+   */
+  ctaUrl?: string;
 }
 
 export type RsvpQuestionType =
@@ -115,7 +125,7 @@ function pageId() {
 function createPage(
   name: string,
   elements: CanvasElement[],
-  backgroundColor = "#fff8f4",
+  backgroundColor = "#ffffff",
 ): InvitationPage {
   return {
     id: pageId(),
@@ -184,7 +194,16 @@ function normalizeLocation(raw: unknown): InvitationLocation | null {
       ? value.mapsQuery
       : [venue, address].filter(Boolean).join(", ");
   if (!venue && !address && !mapsQuery) return null;
-  return { venue, address, mapsQuery };
+  return {
+    venue,
+    address,
+    mapsQuery,
+    ctaLabel:
+      typeof value.ctaLabel === "string" && value.ctaLabel.trim()
+        ? value.ctaLabel
+        : "Open in Google Maps",
+    ctaUrl: typeof value.ctaUrl === "string" ? value.ctaUrl : "",
+  };
 }
 
 function normalizeRsvpConfig(raw: unknown): RsvpConfig | null {
@@ -196,6 +215,260 @@ function normalizeRsvpConfig(raw: unknown): RsvpConfig | null {
   return value as RsvpConfig;
 }
 
+export function elementsFromLocationPage(
+  location: InvitationLocation | null | undefined,
+  backgroundHint?: string,
+): CanvasElement[] {
+  const loc = location ?? {
+    venue: "Venue",
+    address: "",
+    mapsQuery: "",
+    ctaLabel: "Open in Google Maps",
+    ctaUrl: "",
+  };
+  const mapsQuery =
+    loc.mapsQuery || [loc.venue, loc.address].filter(Boolean).join(", ");
+  const textColor = backgroundHint === "#000000" ? "#ffffff" : "#000000";
+  const muted = backgroundHint === "#000000" ? "#c7c7cc" : "#8E8E93";
+
+  return [
+    createTextElement({
+      content: "LOCATION",
+      x: 10,
+      y: 6,
+      width: 80,
+      style: {
+        fontFamily: "urbanist",
+        fontSize: 11,
+        letterSpacing: 3,
+        fontWeight: "bold",
+        color: "#FF60AA",
+        textAlign: "center",
+        lineHeight: 1.2,
+        bold: true,
+        italic: false,
+        underline: false,
+        strike: false,
+      },
+    }),
+    createTextElement({
+      content: loc.venue || "Venue",
+      x: 10,
+      y: 12,
+      width: 80,
+      style: {
+        fontFamily: "playfair",
+        fontSize: 28,
+        fontWeight: "bold",
+        color: textColor,
+        textAlign: "center",
+        lineHeight: 1.15,
+        bold: true,
+        italic: false,
+        underline: false,
+        strike: false,
+        letterSpacing: 0,
+      },
+    }),
+    createTextElement({
+      content: loc.address || "",
+      x: 12,
+      y: 20,
+      width: 76,
+      style: {
+        fontFamily: "urbanist",
+        fontSize: 13,
+        color: muted,
+        textAlign: "center",
+        lineHeight: 1.3,
+        fontWeight: "regular",
+        bold: false,
+        italic: false,
+        underline: false,
+        strike: false,
+        letterSpacing: 0,
+      },
+    }),
+    createWidgetElement("map", {
+      x: 8,
+      y: 28,
+      width: 84,
+      height: 56,
+      widget: {
+        kind: "map",
+        mapsQuery,
+        radius: 18,
+        showButton: true,
+        buttonLabel: loc.ctaLabel || "Open in Google Maps",
+        buttonStyle: {
+          background: textColor,
+          textColor: backgroundHint === "#000000" ? "#000000" : "#FFFFFF",
+          borderColor: textColor,
+          borderWidth: 0,
+          borderStyle: "none",
+          radius: 999,
+        },
+      },
+    }),
+  ];
+}
+
+export function elementsFromRsvpPage(config: RsvpConfig | null | undefined): CanvasElement[] {
+  const cfg = config ?? createDefaultRsvpConfig();
+  const accent = cfg.theme.accent || "#1F2D22";
+  const elements: CanvasElement[] = [
+    createTextElement({
+      content: cfg.eyebrow || "RSVP",
+      x: 10,
+      y: 6,
+      width: 80,
+      style: {
+        fontFamily: "urbanist",
+        fontSize: 11,
+        letterSpacing: 3,
+        fontWeight: "bold",
+        color: accent,
+        textAlign: "center",
+        lineHeight: 1.2,
+        bold: true,
+        italic: false,
+        underline: false,
+        strike: false,
+      },
+    }),
+    createTextElement({
+      content: cfg.title,
+      x: 8,
+      y: 12,
+      width: 84,
+      style: {
+        fontFamily: cfg.theme.headingFont || "playfair",
+        fontSize: 26,
+        fontWeight: "bold",
+        color: cfg.theme.text || "#1F2D22",
+        textAlign: "center",
+        lineHeight: 1.15,
+        bold: true,
+        italic: false,
+        underline: false,
+        strike: false,
+        letterSpacing: 0,
+      },
+    }),
+  ];
+
+  if (cfg.note) {
+    elements.push(
+      createTextElement({
+        content: cfg.note,
+        x: 12,
+        y: 24,
+        width: 76,
+        style: {
+          fontFamily: cfg.theme.bodyFont || "urbanist",
+          fontSize: 13,
+          color: cfg.theme.muted || "#8E8E93",
+          textAlign: "center",
+          lineHeight: 1.3,
+          fontWeight: "regular",
+          bold: false,
+          italic: false,
+          underline: false,
+          strike: false,
+          letterSpacing: 0,
+        },
+      }),
+    );
+  }
+
+  let y = cfg.note ? 32 : 28;
+  for (const question of cfg.questions) {
+    const kind =
+      question.type === "attend"
+        ? "attend"
+        : question.type === "short_text"
+          ? "short_text"
+          : question.type === "multi_choice"
+            ? "multi_choice"
+            : "single_choice";
+
+    const base = createDefaultWidgetConfig(kind);
+    let widget: WidgetConfig;
+    if (kind === "attend" && base.kind === "attend") {
+      widget = {
+        ...base,
+        label: question.label,
+        yesLabel: question.yesLabel || "Yes",
+        noLabel: question.noLabel || "No",
+        required: question.required,
+        labelStyle: { color: cfg.theme.text || accent },
+        buttonStyle: {
+          ...base.buttonStyle,
+          borderColor: accent,
+          textColor: accent,
+          background: "transparent",
+        },
+      };
+    } else if (kind === "short_text" && base.kind === "short_text") {
+      widget = {
+        ...base,
+        label: question.label,
+        placeholder: question.placeholder || "Type here…",
+        required: question.required,
+        labelStyle: { color: cfg.theme.text || accent },
+        fieldStyle: {
+          ...base.fieldStyle,
+          borderColor: accent,
+          textColor: cfg.theme.text || accent,
+        },
+      };
+    } else if (
+      (kind === "single_choice" || kind === "multi_choice") &&
+      (base.kind === "single_choice" || base.kind === "multi_choice")
+    ) {
+      widget = {
+        ...base,
+        kind,
+        label: question.label,
+        required: question.required,
+        options: (question.options || []).map((o) => ({ ...o })),
+        labelStyle: { color: cfg.theme.text || accent },
+        optionStyle: {
+          ...base.optionStyle,
+          borderColor: accent,
+          textColor: cfg.theme.text || accent,
+        },
+      };
+    } else {
+      widget = base;
+    }
+
+    const optionCount =
+      widget.kind === "single_choice" || widget.kind === "multi_choice"
+        ? widget.options.length
+        : 0;
+    const height =
+      kind === "attend"
+        ? 20
+        : kind === "short_text"
+          ? 12
+          : Math.min(28, 8 + optionCount * 5);
+
+    elements.push(
+      createWidgetElement(kind, {
+        x: 10,
+        y,
+        width: 80,
+        height,
+        widget,
+      }),
+    );
+    y += height + 4;
+  }
+
+  return elements;
+}
+
 function normalizePages(
   raw: unknown,
   fallbackElements: CanvasElement[],
@@ -204,16 +477,51 @@ function normalizePages(
     const pages = raw.map((item, index) => {
       const page = item as Partial<InvitationPage>;
       const kind = normalizePageKind(page.kind);
+
+      // Legacy fixed RSVP / Location pages → freeform design pages with widgets
+      if (kind === "location") {
+        const location = normalizeLocation(page.location);
+        return {
+          id: page.id ?? pageId(),
+          name: page.name ?? `Page ${index + 1}`,
+          kind: "design" as const,
+          elements: elementsFromLocationPage(location, page.backgroundColor),
+          backgroundColor: page.backgroundColor || "#ffffff",
+          backgroundPattern: page.backgroundPattern || "none",
+          border: page.border ?? null,
+          location: null,
+          rsvpConfig: null,
+        };
+      }
+
+      if (kind === "rsvp") {
+        const rsvpConfig = normalizeRsvpConfig(page.rsvpConfig);
+        return {
+          id: page.id ?? pageId(),
+          name: page.name ?? `Page ${index + 1}`,
+          kind: "design" as const,
+          elements: elementsFromRsvpPage(rsvpConfig),
+          backgroundColor:
+            page.backgroundColor ||
+            rsvpConfig?.theme.background ||
+            "#ffffff",
+          backgroundPattern: page.backgroundPattern || "none",
+          border: page.border ?? null,
+          location: null,
+          rsvpConfig: null,
+        };
+      }
+
       return {
         id: page.id ?? pageId(),
         name: page.name ?? `Page ${index + 1}`,
-        kind,
-        elements: kind === "design" ? normalizeElements(page.elements) : [],
-        backgroundColor: page.backgroundColor || "#fff8f4",
+        kind: "design" as const,
+        elements: normalizeElements(page.elements),
+        backgroundColor: page.backgroundColor || "#ffffff",
         backgroundPattern: page.backgroundPattern || "none",
         border: page.border ?? null,
-        location: kind === "location" ? normalizeLocation(page.location) : null,
-        rsvpConfig: kind === "rsvp" ? normalizeRsvpConfig(page.rsvpConfig) : null,
+        location: null,
+        rsvpConfig: null,
       };
     });
     return {
@@ -325,7 +633,7 @@ export function createRsvpQuestion(type: RsvpQuestionType): RsvpQuestion {
       return {
         id,
         type: "short_text",
-        label: "Short answer",
+        label: "Your answer",
         placeholder: "Type here…",
         required: false,
       };
@@ -394,6 +702,8 @@ export function createLocationPage(
       venue,
       address,
       mapsQuery: [venue, address].filter(Boolean).join(", "),
+      ctaLabel: "Open in Google Maps",
+      ctaUrl: "",
     },
     rsvpConfig: null,
   };

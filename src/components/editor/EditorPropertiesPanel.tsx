@@ -4,14 +4,9 @@ import { useEffect, useState } from "react";
 import type {
   CanvasElement,
   ElementStyle,
-  ImageFrame,
+  WidgetConfig,
 } from "@/lib/data/canvas-elements";
-import type {
-  InvitationLocation,
-  InvitationPage,
-  RsvpConfig,
-} from "@/lib/data/invitation-content";
-import type { LibraryElement } from "@/lib/data/element-library";
+import type { InvitationPage } from "@/lib/data/invitation-content";
 import type { EditorToolId, PropertiesTab } from "./editor-types";
 import {
   SelectedCardStyles,
@@ -22,26 +17,16 @@ import {
   ToolTextIdle,
 } from "./panels/SelectedStyles";
 import { PositionPanel } from "./panels/PositionPanel";
-import { LocationEditorPanel } from "./panels/LocationEditorPanel";
-import { RsvpBuilderPanel } from "./panels/RsvpBuilderPanel";
+import { SelectedWidgetStyles } from "./panels/SelectedWidgetStyles";
 import { EmptyHint } from "./panels/shared";
-import {
-  ToolBackgroundPanel,
-  ToolElementsPanel,
-  ToolImagesPanel,
-  ToolPlaceholder,
-  ToolUploadsPanel,
-} from "./panels/ToolPanels";
+import { ToolBackgroundPanel } from "./panels/ToolPanels";
 
 interface EditorPropertiesPanelProps {
   activeTool: EditorToolId;
   selected: CanvasElement | null;
   canvasSelected: boolean;
   elements: CanvasElement[];
-  pages: InvitationPage[];
   activePage: InvitationPage;
-  defaultElementColor: string;
-  onDefaultElementColorChange: (color: string) => void;
   onChangeStyle: (patch: Partial<ElementStyle>) => void;
   onChangeContent: (content: string) => void;
   onChangeBackground: (color: string) => void;
@@ -49,9 +34,8 @@ interface EditorPropertiesPanelProps {
     pattern: NonNullable<InvitationPage["backgroundPattern"]>,
   ) => void;
   onChangeBorder: (border: InvitationPage["border"]) => void;
-  onAddLibraryElement: (item: LibraryElement) => void;
-  onAddImageSrc: (src: string, frame?: ImageFrame) => void;
-  onPickImageFrame: (frame: ImageFrame) => void;
+  onChangeWidget: (widget: WidgetConfig) => void;
+  onChangeHref: (href: string | null) => void;
   onBringForward: () => void;
   onSendBackward: () => void;
   onBringToFront: () => void;
@@ -66,101 +50,90 @@ interface EditorPropertiesPanelProps {
     height?: number;
     rotation?: number;
   }) => void;
-  onChangeRsvpConfig?: (config: RsvpConfig) => void;
-  onChangeLocation?: (location: InvitationLocation) => void;
 }
 
-function ToolView(props: EditorPropertiesPanelProps) {
-  switch (props.activeTool) {
-    case "elements":
-      return (
-        <ToolElementsPanel
-          defaultColor={props.defaultElementColor}
-          onDefaultColorChange={props.onDefaultElementColorChange}
-          onAddLibraryElement={props.onAddLibraryElement}
-        />
-      );
+/** Idle state for the right panel when nothing is selected — never duplicate left add UIs. */
+function ToolIdle({ activeTool }: { activeTool: EditorToolId }) {
+  switch (activeTool) {
     case "text":
       return <ToolTextIdle />;
+    case "interactive":
+      return (
+        <EmptyHint>
+          Select an interactive block on the canvas, or add one from the left
+          panel.
+        </EmptyHint>
+      );
+    case "elements":
+      return (
+        <EmptyHint>
+          Select a shape, pattern, or divider on the canvas, or add one from the
+          left panel.
+        </EmptyHint>
+      );
     case "images":
       return (
-        <ToolImagesPanel
-          onAddImageSrc={props.onAddImageSrc}
-          onPickFrame={props.onPickImageFrame}
-        />
+        <EmptyHint>
+          Select a photo on the canvas, or add one from the left panel.
+        </EmptyHint>
       );
     case "uploads":
       return (
-        <ToolUploadsPanel onAddImageSrc={(src) => props.onAddImageSrc(src)} />
+        <EmptyHint>
+          Select an uploaded image on the canvas, or add one from the left
+          panel.
+        </EmptyHint>
+      );
+    case "templates":
+      return (
+        <EmptyHint>
+          Choose a template on the left to apply it. Select an element on the
+          canvas to style it.
+        </EmptyHint>
+      );
+    case "layout":
+      return (
+        <EmptyHint>
+          Change card size on the left. Select an element to style it here.
+        </EmptyHint>
       );
     case "background":
       return (
-        <ToolBackgroundPanel
-          page={props.activePage}
-          onChangeBackground={props.onChangeBackground}
-          onChangePattern={props.onChangePattern}
-          onChangeBorder={props.onChangeBorder}
-        />
+        <EmptyHint>
+          Click the card background on the canvas to edit colour, pattern, and
+          border.
+        </EmptyHint>
       );
-    case "layout":
-      return <ToolPlaceholder title="Layout" />;
-    case "templates":
-      return <ToolPlaceholder title="Templates" />;
     case "qr":
-      return <ToolPlaceholder title="QR Code" />;
+      return <EmptyHint>QR Code tools coming soon.</EmptyHint>;
     case "brand":
-      return <ToolPlaceholder title="Brand Kit" />;
+      return <EmptyHint>Brand Kit coming soon.</EmptyHint>;
     default:
-      return <ToolPlaceholder title="Editor" />;
+      return (
+        <EmptyHint>
+          Select an element on the canvas to edit its style.
+        </EmptyHint>
+      );
   }
-}
-
-function SelectedContent({
-  selected,
-  onChangeContent,
-}: {
-  selected: CanvasElement;
-  onChangeContent: (content: string) => void;
-}) {
-  if (selected.type === "text") {
-    return (
-      <label className="block">
-        <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-grey">
-          Text
-        </span>
-        <textarea
-          value={selected.content}
-          onChange={(e) => onChangeContent(e.target.value)}
-          className="min-h-[140px] w-full resize-y rounded-xl border border-black/10 px-3 py-2.5 text-sm outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/20"
-        />
-      </label>
-    );
-  }
-  if (selected.type === "divider") {
-    return (
-      <SelectedDividerStyles
-        selected={selected}
-        onChangeStyle={() => undefined}
-        onChangeContent={onChangeContent}
-      />
-    );
-  }
-  return (
-    <EmptyHint>
-      This {selected.type} doesn&apos;t have editable content. Use Style or
-      Position instead.
-    </EmptyHint>
-  );
 }
 
 function SelectedStyleBody(props: EditorPropertiesPanelProps) {
   const { selected } = props;
   if (!selected) return null;
+  if (selected.type === "widget" && selected.widget) {
+    return (
+      <SelectedWidgetStyles
+        widget={selected.widget}
+        onChange={props.onChangeWidget}
+      />
+    );
+  }
   if (selected.type === "text") {
     return (
       <SelectedTextStyles
         selected={selected}
         onChangeStyle={props.onChangeStyle}
+        onChangeHref={props.onChangeHref}
       />
     );
   }
@@ -180,64 +153,29 @@ function SelectedStyleBody(props: EditorPropertiesPanelProps) {
       />
     );
   }
-  return (
-    <SelectedDividerStyles
-      selected={selected}
-      onChangeStyle={props.onChangeStyle}
-      onChangeContent={props.onChangeContent}
-    />
-  );
+  if (selected.type === "divider") {
+    return (
+      <SelectedDividerStyles
+        selected={selected}
+        onChangeStyle={props.onChangeStyle}
+        onChangeContent={props.onChangeContent}
+      />
+    );
+  }
+  return null;
 }
 
 /**
- * Right panel: Style / Position / Content tabs always visible.
- * Selection drives Style/Position/Content bodies; otherwise Style shows the active tool.
- * RSVP / Location pages replace the canvas tools with dedicated builders.
+ * Right panel: Style / Position for the selected canvas element.
+ * Copy edits happen on-canvas; interactive details live under Style.
  */
 export function EditorPropertiesPanel(props: EditorPropertiesPanelProps) {
-  const { selected, canvasSelected, elements, activePage } = props;
+  const { selected, canvasSelected, elements } = props;
   const [tab, setTab] = useState<PropertiesTab>("style");
 
   useEffect(() => {
-    // Keep Style as the default when switching tools or selection
     setTab("style");
   }, [selected?.id, canvasSelected, props.activeTool]);
-
-  if (activePage.kind === "rsvp" && activePage.rsvpConfig && props.onChangeRsvpConfig) {
-    return (
-      <aside className="flex w-80 shrink-0 flex-col border-l border-black/5 bg-white">
-        <div className="border-b border-black/5 px-4 py-3">
-          <p className="text-sm font-semibold text-black">Build</p>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-          <RsvpBuilderPanel
-            config={activePage.rsvpConfig}
-            onChange={props.onChangeRsvpConfig}
-          />
-        </div>
-      </aside>
-    );
-  }
-
-  if (
-    activePage.kind === "location" &&
-    activePage.location &&
-    props.onChangeLocation
-  ) {
-    return (
-      <aside className="flex w-80 shrink-0 flex-col border-l border-black/5 bg-white">
-        <div className="border-b border-black/5 px-4 py-3">
-          <p className="text-sm font-semibold text-black">Build</p>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-          <LocationEditorPanel
-            location={activePage.location}
-            onChange={props.onChangeLocation}
-          />
-        </div>
-      </aside>
-    );
-  }
 
   const selectedIndex = selected
     ? elements.findIndex((el) => el.id === selected.id)
@@ -249,7 +187,6 @@ export function EditorPropertiesPanel(props: EditorPropertiesPanelProps) {
   const tabs: { id: PropertiesTab; label: string }[] = [
     { id: "style", label: "Style" },
     { id: "position", label: "Position" },
-    { id: "content", label: "Content" },
   ];
 
   let body: React.ReactNode;
@@ -270,15 +207,6 @@ export function EditorPropertiesPanel(props: EditorPropertiesPanelProps) {
     ) : (
       <EmptyHint>Select an element on the canvas to arrange it.</EmptyHint>
     );
-  } else if (tab === "content") {
-    body = selected ? (
-      <SelectedContent
-        selected={selected}
-        onChangeContent={props.onChangeContent}
-      />
-    ) : (
-      <EmptyHint>Select an element to edit its content.</EmptyHint>
-    );
   } else if (selected) {
     body = <SelectedStyleBody {...props} />;
   } else if (canvasSelected) {
@@ -297,11 +225,11 @@ export function EditorPropertiesPanel(props: EditorPropertiesPanelProps) {
         />
       );
   } else {
-    body = <ToolView {...props} />;
+    body = <ToolIdle activeTool={props.activeTool} />;
   }
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l border-black/5 bg-white">
+    <aside className="relative z-10 flex w-80 shrink-0 flex-col overflow-hidden rounded-2xl border border-black/[0.04] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)]">
       <div className="flex border-b border-black/5 px-2">
         {tabs.map((item) => (
           <button

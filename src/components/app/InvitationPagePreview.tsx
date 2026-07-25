@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import type { CanvasElement } from "@/lib/data/canvas-elements";
 import type { InvitationPage } from "@/lib/data/invitation-content";
 import { CanvasImageContent } from "@/components/editor/CanvasImageContent";
+import { CanvasWidgetView } from "@/components/editor/CanvasWidgetView";
 import { ShapeGraphic } from "@/components/editor/ShapeGraphic";
+import { fillBoxStyle, fillTextStyle } from "@/lib/color-utils";
 
 const DESIGN_WIDTH = 320;
 const DESIGN_HEIGHT = DESIGN_WIDTH * (16 / 9);
@@ -51,7 +53,7 @@ export function InvitationPagePreview({
     <div
       ref={frameRef}
       className={`relative overflow-hidden ${className}`}
-      style={{ backgroundColor }}
+      style={fillBoxStyle(backgroundColor)}
       aria-hidden="true"
     >
       {elements.length === 0 ? (
@@ -63,7 +65,7 @@ export function InvitationPagePreview({
             width: DESIGN_WIDTH,
             height: DESIGN_HEIGHT,
             transform: `translate(-50%, -50%) scale(${scale})`,
-            backgroundColor,
+            ...fillBoxStyle(backgroundColor),
           }}
         >
           {elements.map((el) => (
@@ -87,7 +89,7 @@ export function InvitationPagePreview({
                       el.style.bold || el.style.fontWeight === "bold"
                         ? 700
                         : 400,
-                    color: el.style.color,
+                    ...fillTextStyle(el.style.color),
                     textAlign: el.style.textAlign,
                     lineHeight: el.style.lineHeight,
                     letterSpacing: `${el.style.letterSpacing}px`,
@@ -102,6 +104,10 @@ export function InvitationPagePreview({
                   src={el.content}
                   color={el.style.color}
                   frame={el.style.frame}
+                  effects={el.style.effects}
+                  imageScale={el.style.imageScale}
+                  imageOffsetX={el.style.imageOffsetX}
+                  imageOffsetY={el.style.imageOffsetY}
                   className="relative h-full min-h-[24px] w-full"
                 />
               )}
@@ -111,7 +117,14 @@ export function InvitationPagePreview({
               {el.type === "divider" && (
                 <div
                   className="h-0.5 w-full rounded-full"
-                  style={{ backgroundColor: el.style.color }}
+                  style={fillBoxStyle(el.style.color)}
+                />
+              )}
+              {el.type === "widget" && el.widget && (
+                <CanvasWidgetView
+                  widget={el.widget}
+                  interactive={false}
+                  className="h-full w-full"
                 />
               )}
             </div>

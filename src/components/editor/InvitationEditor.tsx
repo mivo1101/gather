@@ -13,9 +13,12 @@ import { saveInvitationAction } from "@/lib/actions/invitations";
 import {
   createImageElement,
   createTextElement,
+  createWidgetElement,
   type CanvasElement,
   type ElementStyle,
   type ImageFrame,
+  type WidgetConfig,
+  type WidgetKind,
 } from "@/lib/data/canvas-elements";
 import {
   createElementFromLibrary,
@@ -24,21 +27,24 @@ import {
 } from "@/lib/data/element-library";
 import {
   createBlankPage,
-  createLocationPage,
-  createRsvpPage,
   type InvitationContent,
-  type InvitationLocation,
   type InvitationPage,
-  type InvitationPageKind,
-  type RsvpConfig,
 } from "@/lib/data/invitation-content";
+import {
+  contentFromTemplate,
+  type InvitationTemplate,
+} from "@/lib/data/invitation-templates";
 import type { Invitation } from "@/lib/data/types";
-import { InteractiveRsvpPanel } from "@/components/invitation/InteractiveRsvpPanel";
-import { LocationMapPanel } from "@/components/invitation/LocationMapPanel";
+import { collectDocumentColors } from "@/lib/color-utils";
+import { invitationEditPath } from "@/lib/invitation-paths";
+import { shortcutLabel } from "@/lib/shortcut-label";
 import {
   cardAspectRatio,
   photoElementSize,
+  isSquareFrame,
+  squareElementSize,
 } from "./CanvasImageContent";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { EditorCanvas } from "./EditorCanvas";
 import { EditorLeftPanel } from "./EditorLeftPanel";
 import { EditorPageStrip } from "./EditorPageStrip";
@@ -46,6 +52,7 @@ import { EditorPreviewModal } from "./EditorPreviewModal";
 import { EditorPropertiesPanel } from "./EditorPropertiesPanel";
 import { EditorToolbar } from "./EditorToolbar";
 import { EditorToolNav } from "./EditorToolNav";
+import { DocumentColorsProvider } from "./panels/shared";
 import { ChevronRightIcon } from "./editor-icons";
 import type {
   EditorToolId,
@@ -88,7 +95,18 @@ function clonePages(pages: InvitationPage[]): InvitationPage[] {
       : null,
     elements: page.elements.map((el) => ({
       ...el,
+      href: el.href ?? null,
       style: { ...el.style, effects: { ...el.style.effects } },
+      widget: el.widget
+        ? {
+            ...el.widget,
+            ...("options" in el.widget && el.widget.options
+              ? {
+                  options: el.widget.options.map((o) => ({ ...o })),
+                }
+              : {}),
+          }
+        : null,
     })),
   }));
 }
@@ -171,6 +189,8 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
   const [defaultElementColor, setDefaultElementColor] = useState("#1F2D22");
   const [pendingImageFrame, setPendingImageFrame] =
     useState<ImageFrame>("none");
+  const [pendingTemplate, setPendingTemplate] =
+    useState<InvitationTemplate | null>(null);
 
   const savingRef = useRef(false);
   const pendingAutosaveRef = useRef(false);
@@ -195,6 +215,10 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
     location: null,
   };
   const backgroundColor = activePage.backgroundColor ?? "#fff8f4";
+  const documentColors = useMemo(
+    () => collectDocumentColors(pages),
+    [pages],
+  );
   const canvasSelected = selectedId === CANVAS_SELECTION_ID;
   const selected = canvasSelected
     ? null
@@ -430,7 +454,7 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
           );
         }
 
-        router.refresh();
+        router.replace(invitationEditPath(result.invitation), { scroll: false });
         window.setTimeout(() => setSaveLabel("Save"), 1800);
 
         if (pendingAutosaveRef.current) {
@@ -477,16 +501,28 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
   const onChangeStyle = (patch: Partial<ElementStyle>) => {
     if (!selectedId || canvasSelected || !selected) return;
     snapshotBeforeChange();
+    const nextStyle = {
+      ...selected.style,
+      ...patch,
+      effects: patch.effects
+        ? { ...selected.style.effects, ...patch.effects }
+        : selected.style.effects,
+    };
+    const sizePatch =
+      selected.type === "image" &&
+      patch.frame !== undefined &&
+      isSquareFrame(patch.frame)
+        ? squareElementSize(
+            selected.width,
+            selected.height || selected.width,
+            cardAspectRatio(shape, customSize),
+          )
+        : null;
     updateElement(
       selectedId,
       {
-        style: {
-          ...selected.style,
-          ...patch,
-          effects: patch.effects
-            ? { ...selected.style.effects, ...patch.effects }
-            : selected.style.effects,
-        },
+        style: nextStyle,
+        ...(sizePatch ?? {}),
       },
       false,
     );
@@ -638,11 +674,15 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
 
     const probe = new window.Image();
     probe.onload = () => {
-      const size = photoElementSize(
+      const aspect = cardAspectRatio(shape, customSize);
+      let size = photoElementSize(
         probe.naturalWidth,
         probe.naturalHeight,
-        cardAspectRatio(shape, customSize),
+        aspect,
       );
+      if (isSquareFrame(nextFrame)) {
+        size = squareElementSize(size.width, size.height, aspect);
+      }
       addElement({ ...withFrame, ...size });
     };
     probe.onerror = () => {
@@ -726,20 +766,9 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
     updateElement(selected.id, patch, false);
   };
 
-  const onAddPage = (kind: InvitationPageKind = "design") => {
+  const onAddPage = () => {
     commit((current) => {
-      const n = current.pages.length + 1;
-      let page: InvitationPage;
-      if (kind === "rsvp") {
-        page = createRsvpPage(n);
-      } else if (kind === "location") {
-        page = createLocationPage(n, {
-          venue: contentMeta.details.venue,
-          address: contentMeta.details.address,
-        });
-      } else {
-        page = createBlankPage(n);
-      }
+      const page = createBlankPage(current.pages.length + 1);
       return {
         ...current,
         pages: [...current.pages, page],
@@ -748,51 +777,55 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
     });
     setSelectedId(null);
     setEditingId(null);
+    showToast("Page added");
+  };
+
+  const applyTemplate = (template: InvitationTemplate) => {
+    const content = contentFromTemplate(template);
+    commit((current) => ({
+      ...current,
+      pages: clonePages(content.pages),
+      activePageId: content.activePageId,
+    }));
+    setSelectedId(null);
+    setEditingId(null);
+    setPendingTemplate(null);
+    showToast(`Applied “${template.title}”`);
+  };
+
+  const onApplyTemplate = (template: InvitationTemplate) => {
+    const hasContent = pages.some((page) => page.elements.length > 0);
+    if (hasContent) {
+      setPendingTemplate(template);
+      return;
+    }
+    applyTemplate(template);
+  };
+
+  const onAddWidget = (kind: WidgetKind) => {
+    const el = createWidgetElement(kind, undefined, backgroundColor);
+    if (kind !== "map") {
+      el.style = { ...el.style, color: defaultElementColor };
+    }
+    addElement(el);
+    setActiveTool("interactive");
     showToast(
-      kind === "rsvp"
-        ? "RSVP page added"
-        : kind === "location"
-          ? "Location page added"
-          : "Page added",
+      kind === "map"
+        ? "Map added — drag to place"
+        : "Interactive block added — drag to place",
     );
   };
 
-  const onChangeRsvpConfig = (config: RsvpConfig) => {
+  const onChangeWidget = (widget: WidgetConfig) => {
+    if (!selectedId || canvasSelected || !selected || selected.type !== "widget") {
+      return;
+    }
     snapshotBeforeChange();
-    history.setPresentSilent({
-      ...history.present,
-      pages: history.present.pages.map((page) =>
-        page.id === history.present.activePageId
-          ? {
-              ...page,
-              rsvpConfig: config,
-              backgroundColor: config.theme.background,
-            }
-          : page,
-      ),
-    });
-    setContentMeta((prev) => ({
-      ...prev,
-      rsvp: {
-        prompt: config.title,
-        note: config.note ?? prev.rsvp.note,
-      },
-    }));
-  };
-
-  const onChangeLocation = (location: InvitationLocation) => {
-    snapshotBeforeChange();
-    history.setPresentSilent({
-      ...history.present,
-      pages: history.present.pages.map((page) =>
-        page.id === history.present.activePageId
-          ? { ...page, location }
-          : page,
-      ),
-    });
+    updateElement(selectedId, { widget, content: widget.kind }, false);
   };
 
   return (
+    <DocumentColorsProvider colors={documentColors} resetKey={invitation.id}>
     <div className="flex h-dvh flex-col overflow-hidden bg-white">
       <EditorToolbar
         title={title}
@@ -826,7 +859,7 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
         Save
       </button>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 gap-3 bg-soft-grey p-3">
         <EditorToolNav
           activeTool={activeTool}
           onHelp={() =>
@@ -836,11 +869,11 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
             setActiveTool(tool);
             setEditingId(null);
             setLeftPanelCollapsed(false);
-            // Tool nav owns the right panel — clear element selection so Style
-            // shows that tool instead of the previously selected element's props.
+            // Left = add features; right = style selection.
+            // Background selects the card; other tools keep the current selection.
             if (tool === "background") {
               setSelectedId(CANVAS_SELECTION_ID);
-            } else {
+            } else if (selectedId === CANVAS_SELECTION_ID) {
               setSelectedId(null);
             }
           }}
@@ -849,7 +882,7 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
           <button
             type="button"
             onClick={() => setLeftPanelCollapsed(false)}
-            className="flex w-8 shrink-0 flex-col items-center justify-center border-r border-black/5 bg-white text-grey hover:bg-soft-grey hover:text-black"
+            className="flex w-10 shrink-0 flex-col items-center justify-center rounded-2xl border border-black/[0.04] bg-white text-grey shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)] hover:text-black"
             aria-label="Show sidebar"
             title="Show sidebar"
           >
@@ -863,7 +896,8 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
             selectedShape={shape}
             customSize={customSize}
             pages={pages}
-            allElements={pages.flatMap((page) => page.elements)}
+            defaultElementColor={defaultElementColor}
+            onDefaultElementColorChange={setDefaultElementColor}
             onShapeChange={(next) =>
               commit((current) => ({ ...current, shape: next }))
             }
@@ -874,46 +908,20 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
             onAddLibraryElement={(item: LibraryElement) => {
               saveElementRecent(item.id);
               const el = createElementFromLibrary(item);
-              if (el.type === "image" || el.type === "shape" || el.type === "divider") {
-                addElement({
-                  ...el,
-                  style: { ...el.style, color: defaultElementColor },
-                });
-              } else {
-                addElement({
-                  ...el,
-                  style: { ...el.style, color: defaultElementColor },
-                });
-              }
+              addElement({
+                ...el,
+                style: { ...el.style, color: defaultElementColor },
+              });
             }}
-            onAddImageSrc={(src) => addImageWithOptions(src)}
+            onAddImageSrc={(src, frame) => addImageWithOptions(src, frame)}
+            onPickImageFrame={setPendingImageFrame}
+            onAddWidget={onAddWidget}
+            onApplyTemplate={onApplyTemplate}
             onCollapse={() => setLeftPanelCollapsed(true)}
           />
         )}
 
         <div className="relative flex min-w-0 flex-1 flex-col">
-          {activePage.kind === "rsvp" ? (
-            <div className="flex flex-1 items-center justify-center bg-[#ebe8e4] p-6">
-              <div className="aspect-[9/16] h-[min(72vh,640px)] overflow-hidden rounded-sm bg-white shadow-[0_16px_48px_rgba(0,0,0,0.12)]">
-                <InteractiveRsvpPanel
-                  config={activePage.rsvpConfig}
-                  prompt={contentMeta.rsvp.prompt}
-                  note={contentMeta.rsvp.note}
-                  interactive={false}
-                  className="h-full w-full"
-                />
-              </div>
-            </div>
-          ) : activePage.kind === "location" && activePage.location ? (
-            <div className="flex flex-1 items-center justify-center bg-[#ebe8e4] p-6">
-              <div className="aspect-[9/16] h-[min(72vh,640px)] overflow-hidden rounded-sm bg-white shadow-[0_16px_48px_rgba(0,0,0,0.12)]">
-                <LocationMapPanel
-                  location={activePage.location}
-                  className="h-full w-full"
-                />
-              </div>
-            </div>
-          ) : (
           <EditorCanvas
             shape={shape}
             customSize={customSize}
@@ -952,7 +960,6 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
             }}
             onBeforeChange={snapshotBeforeChange}
           />
-          )}
           <EditorPageStrip
             collapsed={pagesCollapsed}
             onToggleCollapse={() => setPagesCollapsed((v) => !v)}
@@ -1000,24 +1007,12 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
           selected={selected}
           canvasSelected={canvasSelected}
           elements={elements}
-          pages={pages}
           activePage={activePage}
-          defaultElementColor={defaultElementColor}
-          onDefaultElementColorChange={setDefaultElementColor}
           onChangeStyle={onChangeStyle}
           onChangeBackground={onChangeBackground}
           onChangePattern={onChangePattern}
           onChangeBorder={onChangeBorder}
-          onAddLibraryElement={(item: LibraryElement) => {
-            saveElementRecent(item.id);
-            const el = createElementFromLibrary(item);
-            addElement({
-              ...el,
-              style: { ...el.style, color: defaultElementColor },
-            });
-          }}
-          onAddImageSrc={(src, frame) => addImageWithOptions(src, frame)}
-          onPickImageFrame={setPendingImageFrame}
+          onChangeWidget={onChangeWidget}
           onBringForward={onBringForward}
           onSendBackward={onSendBackward}
           onBringToFront={onBringToFront}
@@ -1028,8 +1023,11 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
             if (!selectedId || canvasSelected) return;
             updateElement(selectedId, { content: value }, false);
           }}
-          onChangeRsvpConfig={onChangeRsvpConfig}
-          onChangeLocation={onChangeLocation}
+          onChangeHref={(href) => {
+            if (!selectedId || canvasSelected) return;
+            snapshotBeforeChange();
+            updateElement(selectedId, { href }, false);
+          }}
         />
       </div>
 
@@ -1046,11 +1044,27 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
         onClose={() => setPreviewOpen(false)}
       />
 
+      <ConfirmDialog
+        open={pendingTemplate !== null}
+        title="Replace design?"
+        description={
+          pendingTemplate
+            ? `Replace your current design with “${pendingTemplate.title}”? You can undo with ${shortcutLabel("Z")}.`
+            : ""
+        }
+        confirmLabel="Replace"
+        onConfirm={() => {
+          if (pendingTemplate) applyTemplate(pendingTemplate);
+        }}
+        onCancel={() => setPendingTemplate(null)}
+      />
+
       {toast && (
         <div className="pointer-events-none fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-full bg-black px-4 py-2 text-sm font-medium text-white shadow-lg">
           {toast}
         </div>
       )}
     </div>
+    </DocumentColorsProvider>
   );
 }

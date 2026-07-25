@@ -1,14 +1,21 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type {
   CanvasElement,
   DividerStyle,
   ElementEffects,
   ElementStyle,
+  EffectKind,
   ImageFrame,
   VerticalAlign,
 } from "@/lib/data/canvas-elements";
 import { isPatternGraphicSrc } from "@/lib/data/element-library";
+import {
+  effectParams,
+  resolveEffectKind,
+  withEffectKind,
+} from "@/lib/element-effects";
 import {
   AlignCenterIcon,
   AlignJustifyIcon,
@@ -43,9 +50,11 @@ interface StyleHandlers {
 export function SelectedTextStyles({
   selected,
   onChangeStyle,
+  onChangeHref,
 }: {
   selected: CanvasElement;
   onChangeStyle: (patch: Partial<ElementStyle>) => void;
+  onChangeHref?: (href: string | null) => void;
 }) {
   const style = selected.style;
   const effects = style.effects ?? {};
@@ -53,7 +62,7 @@ export function SelectedTextStyles({
   return (
     <div className="space-y-5">
       <label className="block">
-        <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+        <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
           Font
         </span>
         <select
@@ -73,7 +82,7 @@ export function SelectedTextStyles({
 
       <div className="grid grid-cols-2 gap-2">
         <label className="block">
-          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+          <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
             Weight
           </span>
           <select
@@ -91,7 +100,7 @@ export function SelectedTextStyles({
           </select>
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+          <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
             Size
           </span>
           <div className="flex items-center rounded-xl border border-black/10 px-3 py-2">
@@ -219,8 +228,22 @@ export function SelectedTextStyles({
       <EffectsPicker
         effects={effects}
         onChange={(next) => onChangeStyle({ effects: next })}
-        showInset={false}
       />
+
+      {onChangeHref ? (
+        <label className="block">
+          <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
+            Link
+          </span>
+          <input
+            type="url"
+            value={selected.href || ""}
+            onChange={(e) => onChangeHref(e.target.value.trim() || null)}
+            placeholder="https://…"
+            className="w-full rounded-xl border border-black/10 px-3 py-2.5 text-sm outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/20"
+          />
+        </label>
+      ) : null}
     </div>
   );
 }
@@ -228,42 +251,193 @@ export function SelectedTextStyles({
 function EffectsPicker({
   effects,
   onChange,
-  showInset,
 }: {
   effects: ElementEffects;
   onChange: (effects: ElementEffects) => void;
-  showInset: boolean;
 }) {
-  const items: { key: keyof ElementEffects; label: string }[] = [
-    { key: "shadow", label: showInset ? "Shadow out" : "Drop" },
-    { key: "glow", label: "Glow" },
-    { key: "outline", label: "Outline" },
+  const params = effectParams(effects);
+  const kind = resolveEffectKind(effects);
+  const presets: {
+    id: EffectKind;
+    label: string;
+    preview: ReactNode;
+  }[] = [
+    {
+      id: "drop",
+      label: "Drop",
+      preview: (
+        <span
+          className="block h-8 w-8 rounded-lg bg-signature"
+          style={{
+            boxShadow: "4px 5px 8px rgba(0,0,0,0.28)",
+          }}
+        />
+      ),
+    },
+    {
+      id: "glow",
+      label: "Glow",
+      preview: (
+        <span
+          className="block h-8 w-8 rounded-lg bg-signature"
+          style={{
+            boxShadow: "0 0 10px rgba(0,0,0,0.35), 0 0 4px rgba(0,0,0,0.2)",
+          }}
+        />
+      ),
+    },
+    {
+      id: "echo",
+      label: "Echo",
+      preview: (
+        <span className="relative block h-8 w-8">
+          <span className="absolute left-1.5 top-1.5 h-8 w-8 rounded-lg bg-signature/25" />
+          <span className="absolute left-0.5 top-0.5 h-8 w-8 rounded-lg bg-signature/45" />
+          <span className="absolute left-0 top-0 h-8 w-8 rounded-lg bg-signature" />
+        </span>
+      ),
+    },
   ];
-  if (showInset) {
-    items.splice(1, 0, { key: "shadowInset", label: "Shadow in" });
-  }
+
+  const patch = (partial: Partial<ElementEffects>) =>
+    onChange({ ...effects, kind, ...partial });
 
   return (
     <PanelSection title="Effects">
-      <div className="grid grid-cols-2 gap-1.5">
-        {items.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            onClick={() =>
-              onChange({ ...effects, [item.key]: !effects[item.key] })
-            }
-            className={`rounded-xl border px-2.5 py-2 text-left text-xs font-semibold ${
-              effects[item.key]
-                ? "border-signature bg-signature/10 text-signature"
-                : "border-black/10 text-black hover:bg-soft-grey"
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
+      <div className="grid grid-cols-3 gap-2">
+        {presets.map((preset) => {
+          const active = kind === preset.id;
+          return (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() =>
+                onChange(
+                  withEffectKind(effects, active ? "none" : preset.id),
+                )
+              }
+              className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-2.5 transition-colors ${
+                active
+                  ? "border-signature bg-signature/10"
+                  : "border-black/10 hover:border-black/20"
+              }`}
+            >
+              <span className="flex h-12 w-full items-center justify-center rounded-lg bg-soft-grey/80">
+                {preset.preview}
+              </span>
+              <span
+                className={`text-xs font-semibold ${
+                  active ? "text-signature" : "text-black"
+                }`}
+              >
+                {preset.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
+
+      {kind !== "none" ? (
+        <div className="mt-4 space-y-3">
+          {kind !== "glow" ? (
+            <EffectSlider
+              label="Direction"
+              value={params.direction}
+              min={-180}
+              max={180}
+              onChange={(direction) => patch({ direction })}
+            />
+          ) : null}
+          {kind !== "glow" ? (
+            <EffectSlider
+              label="Offset"
+              value={params.offset}
+              min={0}
+              max={60}
+              onChange={(offset) => patch({ offset })}
+            />
+          ) : null}
+          <EffectSlider
+            label="Blur"
+            value={params.blur}
+            min={0}
+            max={40}
+            onChange={(blur) => patch({ blur })}
+          />
+          <EffectSlider
+            label="Transparency"
+            value={params.transparency}
+            min={0}
+            max={100}
+            onChange={(transparency) => patch({ transparency })}
+          />
+        </div>
+      ) : null}
     </PanelSection>
+  );
+}
+
+function EffectSlider({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+}) {
+  const step = 1;
+  return (
+    <div>
+      <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
+        {label}
+      </span>
+      <div className="flex items-center gap-2">
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="h-1.5 min-w-0 flex-1 appearance-none rounded-full bg-black/10 accent-signature [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-black/10 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow"
+        />
+        <div className="flex h-8 shrink-0 items-center overflow-hidden rounded-lg border border-black/10 bg-white">
+          <button
+            type="button"
+            aria-label={`Decrease ${label}`}
+            onClick={() => onChange(Math.max(min, value - step))}
+            className="px-2 text-sm text-grey hover:bg-soft-grey hover:text-black"
+          >
+            −
+          </button>
+          <input
+            type="number"
+            min={min}
+            max={max}
+            value={value}
+            onChange={(e) => {
+              const next = Number(e.target.value);
+              if (!Number.isFinite(next)) return;
+              onChange(Math.min(max, Math.max(min, Math.round(next))));
+            }}
+            className="w-10 border-x border-black/10 bg-transparent py-1.5 text-center text-xs font-semibold outline-none"
+          />
+          <button
+            type="button"
+            aria-label={`Increase ${label}`}
+            onClick={() => onChange(Math.min(max, value + step))}
+            className="px-2 text-sm text-grey hover:bg-soft-grey hover:text-black"
+          >
+            +
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -315,7 +489,6 @@ export function SelectedImageStyles({
       <EffectsPicker
         effects={effects}
         onChange={(next) => onChangeStyle({ effects: next })}
-        showInset
       />
     </div>
   );
@@ -338,7 +511,6 @@ export function SelectedShapeStyles({
       <EffectsPicker
         effects={selected.style.effects ?? {}}
         onChange={(effects) => onChangeStyle({ effects })}
-        showInset={false}
       />
     </div>
   );

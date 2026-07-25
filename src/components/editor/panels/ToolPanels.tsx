@@ -124,7 +124,7 @@ export function ToolImagesPanel({
 
       <PanelSection title="Effects">
         <p className="text-xs text-grey">
-          Select a photo on the canvas to apply shadow, glow, or outline.
+          Select a photo on the canvas to apply Drop, Glow, or Echo.
         </p>
       </PanelSection>
     </div>
@@ -193,7 +193,8 @@ export function ToolUploadsPanel({
 }: {
   onAddImageSrc: (src: string) => void;
 }) {
-  const [uploads, setUploads] = useState<UploadRecord[]>(() => loadUploads());
+  // Empty on SSR; subscribeUploads hydrates from localStorage after mount
+  const [uploads, setUploads] = useState<UploadRecord[]>([]);
   const [filter, setFilter] = useState<"image" | "video" | "audio" | "all">(
     "all",
   );
@@ -420,14 +421,11 @@ export function ToolBackgroundPanel({
         </div>
         {border && border.style !== "none" && (
           <div className="space-y-3">
-            <ColourField
-              label="Border colour"
-              value={border.color}
-              onChange={(color) => onChangeBorder({ ...border, color })}
-            />
             <label className="block">
               <div className="mb-1.5 flex items-center justify-between">
-                <span className="text-xs font-medium text-grey">Width</span>
+                <span className="text-[11px] font-medium tracking-wide text-grey">
+                  Border width
+                </span>
                 <span className="text-xs text-grey">{border.width}px</span>
               </div>
               <input
@@ -444,6 +442,11 @@ export function ToolBackgroundPanel({
                 className="h-1 w-full appearance-none rounded-full bg-black/10 accent-signature"
               />
             </label>
+            <ColourField
+              label="Border colour"
+              value={border.color}
+              onChange={(color) => onChangeBorder({ ...border, color })}
+            />
           </div>
         )}
       </PanelSection>

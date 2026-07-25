@@ -43,7 +43,11 @@ export default function RootLayout({
       lang="en"
       className={`${urbanist.variable} ${caveat.variable} ${playfair.variable}`}
     >
-      <body className="font-sans antialiased">{children}</body>
+      {/* suppressHydrationWarning: browser extensions (e.g. Grammarly) inject
+          attributes on <body> before React hydrates, which is harmless */}
+      <body className="font-sans antialiased" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }

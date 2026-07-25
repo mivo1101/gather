@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useId, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { createInvitationFromTemplateAction } from "@/lib/actions/invitations";
 import type { InvitationTemplate } from "@/lib/data/invitation-templates";
-import { InteractiveRsvpPanel } from "@/components/invitation/InteractiveRsvpPanel";
-import { LocationMapPanel } from "@/components/invitation/LocationMapPanel";
+import {
+  elementsFromLocationPage,
+  elementsFromRsvpPage,
+} from "@/lib/data/invitation-content";
 import { CloseIcon } from "./icons";
 import { InvitationPagePreview } from "./InvitationPagePreview";
 
@@ -14,7 +16,7 @@ interface TemplatePreviewModalProps {
   onClose: () => void;
 }
 
-/** Full-size quick preview with page flip — design, Location map, interactive RSVP. */
+/** Full-size quick preview with page flip — design + placeable interactive widgets. */
 export function TemplatePreviewModal({
   template,
   onClose,
@@ -26,6 +28,29 @@ export function TemplatePreviewModal({
   const pages = template.pages;
   const current = pages[pageIndex] ?? pages[0];
   const pageCount = pages.length;
+
+  const previewPage = useMemo(() => {
+    if (!current) return null;
+    if (current.kind === "location") {
+      return {
+        elements: elementsFromLocationPage(
+          current.location,
+          current.backgroundColor,
+        ),
+        backgroundColor: current.backgroundColor,
+      };
+    }
+    if (current.kind === "rsvp") {
+      return {
+        elements: elementsFromRsvpPage(current.rsvpConfig),
+        backgroundColor: current.backgroundColor,
+      };
+    }
+    return {
+      elements: current.elements,
+      backgroundColor: current.backgroundColor,
+    };
+  }, [current]);
 
   useEffect(() => {
     setMounted(true);
@@ -56,7 +81,7 @@ export function TemplatePreviewModal({
     };
   }, [onClose, pageCount]);
 
-  if (!mounted || !current) return null;
+  if (!mounted || !current || !previewPage) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
@@ -99,29 +124,11 @@ export function TemplatePreviewModal({
         <div className="min-h-0 flex-1 overflow-auto bg-[#f3f1ef] px-4 py-6 sm:px-8 sm:py-8">
           <div className="mx-auto flex max-h-full flex-col items-center gap-4">
             <div className="relative aspect-[9/16] h-[min(58vh,480px)] overflow-hidden rounded-sm bg-white shadow-[0_16px_48px_rgba(0,0,0,0.16)]">
-              {current.kind === "rsvp" ? (
-                <InteractiveRsvpPanel
-                  key={`${template.id}-rsvp-${pageIndex}`}
-                  config={current.rsvpConfig}
-                  interactive
-                  className="h-full w-full"
-                />
-              ) : current.kind === "location" && current.location ? (
-                <LocationMapPanel
-                  key={`${template.id}-map-${pageIndex}`}
-                  location={current.location}
-                  className="h-full w-full"
-                />
-              ) : (
-                <InvitationPagePreview
-                  key={`${template.id}-design-${pageIndex}`}
-                  page={{
-                    elements: current.elements,
-                    backgroundColor: current.backgroundColor,
-                  }}
-                  className="h-full w-full"
-                />
-              )}
+              <InvitationPagePreview
+                key={`${template.id}-page-${pageIndex}`}
+                page={previewPage}
+                className="h-full w-full"
+              />
             </div>
 
             <div className="flex items-center gap-3">
@@ -161,13 +168,7 @@ export function TemplatePreviewModal({
               </button>
             </div>
             <p className="text-xs font-medium text-grey">
-              {current.name}
-              {current.kind === "rsvp"
-                ? " · interactive"
-                : current.kind === "location"
-                  ? " · Google Maps"
-                  : ""}{" "}
-              · {pageIndex + 1} of {pageCount}
+              {current.name} · {pageIndex + 1} of {pageCount}
             </p>
           </div>
         </div>

@@ -1,16 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   ELEMENT_CATEGORIES,
   LIBRARY_ELEMENTS,
   PATTERN_SUBCATEGORIES,
+  SHAPE_SUBCATEGORIES,
   patternMarkSpec,
   searchLibraryElements,
   type ElementCategoryId,
   type LibraryElement,
   type PatternSubcategoryId,
+  type ShapeSubcategoryId,
 } from "@/lib/data/element-library";
 import { ChevronLeftIcon } from "./editor-icons";
 import { ShapeGraphic } from "./ShapeGraphic";
@@ -116,7 +118,16 @@ function ElementTile({
             className={imageClass}
           />
         ) : item.kind === "shape" && item.shapeKind ? (
-          <div className={shapeBox}>
+          <div
+            className={
+              item.shapeKind.startsWith("line") ||
+              item.shapeKind.startsWith("arrow")
+                ? size === "sm"
+                  ? "h-4 w-10"
+                  : "h-5 w-12"
+                : shapeBox
+            }
+          >
             <ShapeGraphic kind={item.shapeKind} color="#1F2D22" />
           </div>
         ) : item.kind === "divider" ? (
@@ -207,11 +218,15 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
   const [activeCategory, setActiveCategory] =
     useState<ElementCategoryId | null>(null);
   const [patternSub, setPatternSub] = useState<PatternSubcategoryId>("all");
+  const [shapeSub, setShapeSub] = useState<ShapeSubcategoryId>("all");
   const [showAllRecents, setShowAllRecents] = useState(false);
-  const [recentIds, setRecentIds] = useState<string[]>(() =>
-    loadElementRecents(),
-  );
+  // Empty on SSR; load from localStorage after mount to avoid hydration mismatch
+  const [recentIds, setRecentIds] = useState<string[]>([]);
   const recentRailRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setRecentIds(loadElementRecents());
+  }, []);
 
   const recents = useMemo(() => {
     return recentIds
@@ -224,14 +239,29 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
     [query],
   );
 
+  const shapeItemsByGroup = useMemo(() => {
+    const shapes = LIBRARY_ELEMENTS.filter((item) => item.category === "shapes");
+    return SHAPE_SUBCATEGORIES.filter((g) => g.id !== "all").map((group) => ({
+      ...group,
+      items: shapes.filter((item) => item.shapeGroup === group.id),
+    }));
+  }, []);
+
   const categoryItems = useMemo(() => {
     if (!activeCategory) return [];
     const base = LIBRARY_ELEMENTS.filter(
       (item) => item.category === activeCategory,
     );
-    if (activeCategory !== "patterns" || patternSub === "all") return base;
-    return base.filter((item) => item.subcategory === patternSub);
-  }, [activeCategory, patternSub]);
+    if (activeCategory === "patterns") {
+      if (patternSub === "all") return base;
+      return base.filter((item) => item.subcategory === patternSub);
+    }
+    if (activeCategory === "shapes") {
+      if (shapeSub === "all") return base;
+      return base.filter((item) => item.shapeGroup === shapeSub);
+    }
+    return base;
+  }, [activeCategory, patternSub, shapeSub]);
 
   const handleSelect = (item: LibraryElement) => {
     saveElementRecent(item.id);
@@ -239,15 +269,22 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
     onSelect(item);
   };
 
-  const scrollRecents = (dir: -1 | 1) => {
-    const rail = recentRailRef.current;
+  const scrollRail = (ref: RefObject<HTMLDivElement | null>, dir: -1 | 1) => {
+    const rail = ref.current;
     if (!rail) return;
     rail.scrollBy({ left: dir * 140, behavior: "smooth" });
   };
 
+  const scrollRecents = (dir: -1 | 1) => scrollRail(recentRailRef, dir);
+
   const activeCategoryMeta = activeCategory
     ? ELEMENT_CATEGORIES.find((c) => c.id === activeCategory)
     : null;
+
+  const resetCategoryFilters = () => {
+    setPatternSub("all");
+    setShapeSub("all");
+  };
 
   return (
     <div className="space-y-5">
@@ -261,6 +298,7 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
             if (e.target.value.trim()) {
               setActiveCategory(null);
               setShowAllRecents(false);
+              resetCategoryFilters();
             }
           }}
           placeholder="Search elements…"
@@ -283,18 +321,85 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
             </div>
           )}
         </div>
+      ) : showAllRecents ? (
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => setShowAllRecents(false)}
+            className="inline-flex items-center gap-1 text-sm font-semibold text-black hover:text-signature"
+          >
+            <ChevronLeftIcon className="h-3.5 w-3.5" />
+            Recently used
+          </button>
+          {recents.length === 0 ? (
+            <p className="text-sm text-grey">
+              Elements you add will show up here.
+            </p>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {(activeCategory === "shapes"
+                ? recents.filter((r) => r.category === "shapes")
+                : recents
+              ).map((item) => (
+                <div key={item.id} className="h-[88px]">
+                  <ElementTile item={item} onSelect={handleSelect} size="sm" />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : activeCategory === "shapes" && shapeSub === "all" ? (
+        <div className="space-y-5">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveCategory(null);
+              resetCategoryFilters();
+            }}
+            className="inline-flex items-center gap-1 text-sm font-semibold text-black hover:text-signature"
+          >
+            <ChevronLeftIcon className="h-3.5 w-3.5" />
+            Shapes
+          </button>
+
+          {recents.filter((r) => r.category === "shapes").length > 0 ? (
+            <ShapeGroupRail
+              title="Recently used"
+              items={recents.filter((r) => r.category === "shapes")}
+              onSelect={handleSelect}
+              onSeeAll={() => setShowAllRecents(true)}
+            />
+          ) : null}
+
+          {shapeItemsByGroup.map((group) => (
+            <ShapeGroupRail
+              key={group.id}
+              title={group.label}
+              items={group.items}
+              onSelect={handleSelect}
+              onSeeAll={() => setShapeSub(group.id)}
+            />
+          ))}
+        </div>
       ) : activeCategory ? (
         <div className="space-y-3">
           <button
             type="button"
             onClick={() => {
+              if (activeCategory === "shapes" && shapeSub !== "all") {
+                setShapeSub("all");
+                return;
+              }
               setActiveCategory(null);
-              setPatternSub("all");
+              resetCategoryFilters();
             }}
             className="inline-flex items-center gap-1 text-sm font-semibold text-black hover:text-signature"
           >
             <ChevronLeftIcon className="h-3.5 w-3.5" />
-            {activeCategoryMeta?.label ?? "Back"}
+            {activeCategory === "shapes" && shapeSub !== "all"
+              ? SHAPE_SUBCATEGORIES.find((s) => s.id === shapeSub)?.label ??
+                "Shapes"
+              : (activeCategoryMeta?.label ?? "Back")}
           </button>
 
           {activeCategory === "patterns" && (
@@ -323,30 +428,6 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
               </div>
             ))}
           </div>
-        </div>
-      ) : showAllRecents ? (
-        <div className="space-y-3">
-          <button
-            type="button"
-            onClick={() => setShowAllRecents(false)}
-            className="inline-flex items-center gap-1 text-sm font-semibold text-black hover:text-signature"
-          >
-            <ChevronLeftIcon className="h-3.5 w-3.5" />
-            Recently used
-          </button>
-          {recents.length === 0 ? (
-            <p className="text-sm text-grey">
-              Elements you add will show up here.
-            </p>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              {recents.map((item) => (
-                <div key={item.id} className="h-[88px]">
-                  <ElementTile item={item} onSelect={handleSelect} size="sm" />
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       ) : (
         <>
@@ -419,7 +500,7 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
                     type="button"
                     onClick={() => {
                       setActiveCategory(category.id);
-                      setPatternSub("all");
+                      resetCategoryFilters();
                     }}
                     className="group flex flex-col items-center gap-2 text-center"
                   >
@@ -438,6 +519,68 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function ShapeGroupRail({
+  title,
+  items,
+  onSelect,
+  onSeeAll,
+}: {
+  title: string;
+  items: LibraryElement[];
+  onSelect: (item: LibraryElement) => void;
+  onSeeAll: () => void;
+}) {
+  const railRef = useRef<HTMLDivElement>(null);
+  if (items.length === 0) return null;
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-sm font-semibold text-black">{title}</p>
+        <button
+          type="button"
+          onClick={onSeeAll}
+          className="text-xs font-semibold text-signature hover:underline"
+        >
+          See all
+        </button>
+      </div>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() =>
+            railRef.current?.scrollBy({ left: -140, behavior: "smooth" })
+          }
+          className="absolute -left-1 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-black/10 bg-white text-grey shadow-sm hover:text-black"
+          aria-label={`Scroll ${title} left`}
+        >
+          ‹
+        </button>
+        <div
+          ref={railRef}
+          className="flex items-stretch gap-2 overflow-x-auto px-5 scrollbar-none"
+        >
+          {items.map((item) => (
+            <div key={item.id} className="h-[88px] w-[68px] shrink-0">
+              <ElementTile item={item} onSelect={onSelect} size="sm" />
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() =>
+            railRef.current?.scrollBy({ left: 140, behavior: "smooth" })
+          }
+          className="absolute -right-1 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-black/10 bg-white text-grey shadow-sm hover:text-black"
+          aria-label={`Scroll ${title} right`}
+        >
+          ›
+        </button>
+      </div>
     </div>
   );
 }

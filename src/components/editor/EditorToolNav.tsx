@@ -6,6 +6,7 @@ import {
   ElementsToolIcon,
   HelpIcon,
   ImagesToolIcon,
+  InteractiveToolIcon,
   LayoutToolIcon,
   QrToolIcon,
   TemplatesToolIcon,
@@ -24,6 +25,7 @@ const toolIcons: Record<
   text: TextToolIcon,
   images: ImagesToolIcon,
   uploads: UploadsToolIcon,
+  interactive: InteractiveToolIcon,
   background: BackgroundToolIcon,
   qr: QrToolIcon,
   brand: BrandToolIcon,
@@ -42,7 +44,7 @@ export function EditorToolNav({
 }: EditorToolNavProps) {
   return (
     <nav
-      className="flex w-[72px] shrink-0 flex-col border-r border-black/5 bg-white"
+      className="flex w-[72px] shrink-0 flex-col overflow-hidden rounded-2xl border border-black/[0.04] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)]"
       aria-label="Editor tools"
     >
       <ul className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-1.5 py-3">

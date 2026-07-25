@@ -287,3 +287,13 @@ export function BrandToolIcon({ className = "h-5 w-5" }: IconProps) {
     </svg>
   );
 }
+
+export function InteractiveToolIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+      <rect x="4" y="4" width="16" height="16" rx="3" />
+      <path strokeLinecap="round" d="M8 10h8M8 14h5" />
+      <circle cx="16.5" cy="14" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}

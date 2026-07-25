@@ -16,6 +16,7 @@ import {
 } from "@/lib/data/invitation-templates";
 import type { Invitation } from "@/lib/data/types";
 import { upsertUser } from "@/lib/data/users-db";
+import { invitationEditPath } from "@/lib/invitation-paths";
 
 /** Ensure the user exists in Supabase, create a draft, then open the editor. */
 export async function createInvitationAction() {
@@ -36,7 +37,7 @@ export async function createInvitationAction() {
     userId: session.user.id,
   });
 
-  redirect(`/invitations/${invitation.id}/edit`);
+  redirect(invitationEditPath(invitation));
 }
 
 /** Create a draft from a catalog template and open the editor. */
@@ -67,7 +68,7 @@ export async function createInvitationFromTemplateAction(
     content: contentFromTemplate(template),
   });
 
-  redirect(`/invitations/${invitation.id}/edit`);
+  redirect(invitationEditPath(invitation));
 }
 
 export async function saveInvitationAction(input: {
@@ -98,7 +99,7 @@ export async function saveInvitationAction(input: {
     );
 
     revalidatePath("/home");
-    revalidatePath(`/invitations/${input.invitationId}/edit`);
+    revalidatePath(invitationEditPath(invitation));
 
     return { invitation };
   } catch (error) {
@@ -130,7 +131,7 @@ export async function renameInvitationAction(
     );
 
     revalidatePath("/home");
-    revalidatePath(`/invitations/${invitationId}/edit`);
+    revalidatePath(invitationEditPath(invitation));
 
     return { invitation };
   } catch (error) {

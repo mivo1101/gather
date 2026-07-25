@@ -5,13 +5,14 @@ export type EditorToolId =
   | "text"
   | "images"
   | "uploads"
+  | "interactive"
   | "background"
   | "qr"
   | "brand";
 
 export type InvitationShape = "portrait" | "landscape" | "square" | "custom";
 export type PreviewDevice = "desktop" | "mobile" | "fullscreen";
-export type PropertiesTab = "style" | "position" | "content";
+export type PropertiesTab = "style" | "position";
 
 export type SizeUnit = "px" | "cm" | "mm" | "in";
 
@@ -57,6 +58,7 @@ export const EDITOR_TOOLS: {
   { id: "text", label: "Text" },
   { id: "images", label: "Images" },
   { id: "uploads", label: "Uploads" },
+  { id: "interactive", label: "Interactive" },
   { id: "background", label: "Background" },
   { id: "qr", label: "QR Code" },
   { id: "brand", label: "Brand Kit" },

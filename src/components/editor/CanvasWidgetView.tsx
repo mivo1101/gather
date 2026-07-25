@@ -1,0 +1,385 @@
+"use client";
+
+import {
+  googleMapsEmbedUrl,
+  googleMapsOpenUrl,
+} from "@/lib/data/invitation-content";
+import { normalizeRadius } from "@/lib/data/canvas-elements";
+import type {
+  WidgetChromeStyle,
+  WidgetConfig,
+} from "@/lib/data/canvas-elements";
+import { fillBoxStyle, contrastingInk, isGradient, isLightColor, isTransparent } from "@/lib/color-utils";
+
+interface CanvasWidgetViewProps {
+  widget: WidgetConfig;
+  /** Editor: no navigation / no answering. Preview/guest: interactive. */
+  interactive?: boolean;
+  /** Editor: inline-edit labels / placeholders / options. */
+  editing?: boolean;
+  onChange?: (widget: WidgetConfig) => void;
+  onStopEdit?: () => void;
+  className?: string;
+}
+
+/** Prefer configured text colour when it contrasts with the fill; otherwise flip. */
+function readableChromeText(chrome: WidgetChromeStyle): string {
+  const fallback = contrastingInk(chrome.background).ink;
+  const raw = chrome.textColor || fallback;
+  if (isGradient(raw) || isTransparent(raw)) return fallback;
+  if (isLightColor(raw) === isLightColor(chrome.background)) return fallback;
+  return raw;
+}
+
+export function chromeBoxStyle(
+  chrome: WidgetChromeStyle,
+): React.CSSProperties {
+  const borderWidth =
+    chrome.borderStyle === "none" ? 0 : Math.max(0, chrome.borderWidth);
+  const fill = fillBoxStyle(chrome.background);
+  return {
+    ...fill,
+    borderColor: chrome.borderColor,
+    borderWidth,
+    borderStyle: borderWidth > 0 ? chrome.borderStyle : "none",
+    borderRadius: normalizeRadius(chrome.radius),
+    color: readableChromeText(chrome),
+  };
+}
+
+const editInputClass =
+  "w-full bg-transparent outline outline-1 outline-dashed outline-signature/50 outline-offset-1 rounded-sm";
+
+function EditableLine({
+  value,
+  onChange,
+  onStopEdit,
+  className = "",
+  style,
+  placeholder,
+  autoFocus,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onStopEdit?: () => void;
+  className?: string;
+  style?: React.CSSProperties;
+  placeholder?: string;
+  autoFocus?: boolean;
+}) {
+  return (
+    <input
+      type="text"
+      autoFocus={autoFocus}
+      value={value}
+      placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onStopEdit?.();
+        e.stopPropagation();
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      className={`${editInputClass} ${className}`}
+      style={style}
+    />
+  );
+}
+
+/** Renders a placeable interactive widget on the invitation canvas. */
+export function CanvasWidgetView({
+  widget,
+  interactive = false,
+  editing = false,
+  onChange,
+  onStopEdit,
+  className = "",
+}: CanvasWidgetViewProps) {
+  const patch = (partial: Partial<WidgetConfig>) => {
+    if (!onChange) return;
+    onChange({ ...widget, ...partial } as WidgetConfig);
+  };
+
+  if (widget.kind === "map") {
+    const query = widget.mapsQuery.trim() || "Melbourne, Australia";
+    const embedUrl = googleMapsEmbedUrl(query);
+    const openUrl = googleMapsOpenUrl(query);
+    const mapRadius = normalizeRadius(widget.radius);
+    const buttonStyle = chromeBoxStyle(widget.buttonStyle);
+    const buttonLabel = widget.buttonLabel.trim() || "Open in Google Maps";
+
+    return (
+      <div className={`flex h-full w-full flex-col gap-2 ${className}`}>
+        <div
+          className="relative min-h-0 flex-1 overflow-hidden"
+          style={{ borderRadius: mapRadius }}
+        >
+          <iframe
+            title={`Map of ${query}`}
+            src={embedUrl}
+            className="h-full min-h-[80px] w-full border-0"
+            style={{ borderRadius: mapRadius }}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            tabIndex={interactive ? undefined : -1}
+          />
+          {!interactive ? (
+            <div className="absolute inset-0 z-10" aria-hidden="true" />
+          ) : null}
+          {editing ? (
+            <div
+              className="absolute inset-x-2 top-2 z-20"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <EditableLine
+                value={widget.mapsQuery}
+                onChange={(mapsQuery) => patch({ mapsQuery })}
+                onStopEdit={onStopEdit}
+                autoFocus
+                placeholder="Venue name, city"
+                className="rounded-lg bg-white/95 px-2 py-1.5 text-[11px] font-medium text-black shadow"
+              />
+            </div>
+          ) : null}
+        </div>
+        {widget.showButton ? (
+          editing ? (
+            <EditableLine
+              value={widget.buttonLabel}
+              onChange={(buttonLabel) => patch({ buttonLabel })}
+              onStopEdit={onStopEdit}
+              placeholder="Open in Google Maps"
+              className="shrink-0 px-3 py-2 text-center text-[11px] font-semibold"
+              style={buttonStyle}
+            />
+          ) : interactive ? (
+            <a
+              href={openUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 px-3 py-2 text-center text-[11px] font-semibold"
+              style={buttonStyle}
+            >
+              {buttonLabel}
+            </a>
+          ) : (
+            <span
+              className="shrink-0 px-3 py-2 text-center text-[11px] font-semibold"
+              style={buttonStyle}
+            >
+              {buttonLabel}
+            </span>
+          )
+        ) : null}
+      </div>
+    );
+  }
+
+  if (widget.kind === "attend") {
+    const buttonStyle = chromeBoxStyle(widget.buttonStyle);
+    const btnClass = "block w-full px-3 py-2 text-center text-[11px] font-semibold";
+    return (
+      <div
+        className={`flex h-full w-full flex-col justify-center gap-2 ${className}`}
+      >
+        {editing ? (
+          <EditableLine
+            value={widget.label}
+            onChange={(label) => patch({ label })}
+            onStopEdit={onStopEdit}
+            autoFocus
+            placeholder="Add question…"
+            className="text-center text-[12px] font-semibold"
+            style={{ color: widget.labelStyle.color }}
+          />
+        ) : widget.label ? (
+          <p
+            className="text-center text-[12px] font-semibold"
+            style={{ color: widget.labelStyle.color }}
+          >
+            {widget.label}
+          </p>
+        ) : null}
+        {editing ? (
+          <>
+            <EditableLine
+              value={widget.yesLabel}
+              onChange={(yesLabel) => patch({ yesLabel })}
+              onStopEdit={onStopEdit}
+              className={btnClass}
+              style={buttonStyle}
+            />
+            <EditableLine
+              value={widget.noLabel}
+              onChange={(noLabel) => patch({ noLabel })}
+              onStopEdit={onStopEdit}
+              className={btnClass}
+              style={buttonStyle}
+            />
+          </>
+        ) : interactive ? (
+          <>
+            <button type="button" className={btnClass} style={buttonStyle}>
+              {widget.yesLabel}
+            </button>
+            <button type="button" className={btnClass} style={buttonStyle}>
+              {widget.noLabel}
+            </button>
+          </>
+        ) : (
+          <>
+            <div className={btnClass} style={buttonStyle}>
+              {widget.yesLabel}
+            </div>
+            <div className={btnClass} style={buttonStyle}>
+              {widget.noLabel}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  if (widget.kind === "short_text") {
+    const fieldStyle = chromeBoxStyle(widget.fieldStyle);
+    return (
+      <div
+        className={`flex h-full w-full flex-col justify-center gap-1.5 ${className}`}
+      >
+        {editing ? (
+          <EditableLine
+            value={widget.label}
+            onChange={(label) => patch({ label })}
+            onStopEdit={onStopEdit}
+            autoFocus
+            placeholder="Add question…"
+            className="text-[12px] font-semibold"
+            style={{ color: widget.labelStyle.color }}
+          />
+        ) : widget.label ? (
+          <p
+            className="text-[12px] font-semibold"
+            style={{ color: widget.labelStyle.color }}
+          >
+            {widget.label}
+          </p>
+        ) : null}
+        {editing ? (
+          <EditableLine
+            value={widget.placeholder}
+            onChange={(placeholder) => patch({ placeholder })}
+            onStopEdit={onStopEdit}
+            placeholder="Placeholder…"
+            className="w-full px-3 py-2 text-[11px] opacity-80"
+            style={fieldStyle}
+          />
+        ) : interactive ? (
+          <input
+            type="text"
+            placeholder={widget.placeholder || "Type here…"}
+            className="w-full px-3 py-2 text-[11px] outline-none placeholder:opacity-55"
+            style={fieldStyle}
+          />
+        ) : (
+          <div className="w-full px-3 py-2 text-[11px]" style={fieldStyle}>
+            <span className="opacity-55">
+              {widget.placeholder || "Type here…"}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (
+    widget.kind !== "single_choice" &&
+    widget.kind !== "multi_choice"
+  ) {
+    return null;
+  }
+
+  const optionStyle = chromeBoxStyle(widget.optionStyle);
+  const options = widget.options ?? [];
+  return (
+    <div
+      className={`flex h-full w-full flex-col justify-center gap-1.5 ${className}`}
+    >
+      {editing ? (
+        <EditableLine
+          value={widget.label}
+          onChange={(label) => patch({ label })}
+          onStopEdit={onStopEdit}
+          autoFocus
+          placeholder="Add question…"
+          className="text-[12px] font-semibold"
+          style={{ color: widget.labelStyle.color }}
+        />
+      ) : widget.label ? (
+        <p
+          className="text-[12px] font-semibold"
+          style={{ color: widget.labelStyle.color }}
+        >
+          {widget.label}
+        </p>
+      ) : null}
+      <div className="flex flex-col gap-1">
+        {options.map((option) =>
+          editing ? (
+            <div
+              key={option.id}
+              className="flex items-center gap-2 px-2.5 py-1.5 text-[11px]"
+              style={optionStyle}
+            >
+              <span
+                className={`inline-block h-3 w-3 shrink-0 border border-current ${
+                  widget.kind === "multi_choice" ? "rounded-[2px]" : "rounded-full"
+                }`}
+                aria-hidden="true"
+              />
+              <EditableLine
+                value={option.label}
+                onChange={(label) => {
+                  const nextOptions = options.map((o) =>
+                    o.id === option.id ? { ...o, label } : o,
+                  );
+                  patch({ options: nextOptions });
+                }}
+                onStopEdit={onStopEdit}
+                placeholder="Option"
+                className="flex-1 text-[11px]"
+                style={{ color: "inherit" }}
+              />
+            </div>
+          ) : interactive ? (
+            <label
+              key={option.id}
+              className="flex items-center gap-2 px-2.5 py-1.5 text-[11px]"
+              style={optionStyle}
+            >
+              <input
+                type={widget.kind === "multi_choice" ? "checkbox" : "radio"}
+                name={widget.kind === "single_choice" ? "choice" : undefined}
+                className="accent-current"
+                onChange={() => undefined}
+              />
+              <span>{option.label}</span>
+            </label>
+          ) : (
+            <div
+              key={option.id}
+              className="flex items-center gap-2 px-2.5 py-1.5 text-[11px]"
+              style={optionStyle}
+            >
+              <span
+                className={`inline-block h-3 w-3 shrink-0 border border-current ${
+                  widget.kind === "multi_choice" ? "rounded-[2px]" : "rounded-full"
+                }`}
+                aria-hidden="true"
+              />
+              <span>{option.label}</span>
+            </div>
+          ),
+        )}
+      </div>
+    </div>
+  );
+}

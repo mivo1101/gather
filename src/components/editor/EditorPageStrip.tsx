@@ -1,12 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import type { CanvasElement } from "@/lib/data/canvas-elements";
-import type {
-  InvitationPage,
-  InvitationPageKind,
-} from "@/lib/data/invitation-content";
+import type { InvitationPage } from "@/lib/data/invitation-content";
 import { CanvasImageContent } from "./CanvasImageContent";
+import { CanvasWidgetView } from "./CanvasWidgetView";
 import { ChevronLeftIcon, FitIcon, PlusIcon, TrashIcon } from "./editor-icons";
 import { ShapeGraphic } from "./ShapeGraphic";
 
@@ -32,39 +29,8 @@ function fontFamilyClass(family: CanvasElement["style"]["fontFamily"]) {
  * Renders the page at full card proportions, then scales it down.
  * That keeps layout identical to the canvas (not a denser reflow).
  */
-function PageThumbnail({
-  page,
-}: {
-  page: InvitationPage;
-}) {
+function PageThumbnail({ page }: { page: InvitationPage }) {
   const backgroundColor = page.backgroundColor || "#fff8f4";
-
-  if (page.kind === "rsvp") {
-    return (
-      <div
-        className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-white to-[#fff5f9] px-1"
-        aria-hidden="true"
-      >
-        <span className="text-[7px] font-bold uppercase tracking-wide text-signature">
-          RSVP
-        </span>
-      </div>
-    );
-  }
-
-  if (page.kind === "location") {
-    return (
-      <div
-        className="absolute inset-0 flex flex-col items-center justify-center bg-soft-grey px-1"
-        aria-hidden="true"
-      >
-        <span className="text-[7px] font-bold uppercase tracking-wide text-black">
-          Map
-        </span>
-      </div>
-    );
-  }
-
   const elements = page.elements;
   const cardHeight = CARD_HEIGHT;
 
@@ -122,6 +88,10 @@ function PageThumbnail({
                 src={el.content}
                 color={el.style.color}
                 frame={el.style.frame}
+                effects={el.style.effects}
+                imageScale={el.style.imageScale}
+                imageOffsetX={el.style.imageOffsetX}
+                imageOffsetY={el.style.imageOffsetY}
                 className="relative h-full min-h-[40px] w-full"
               />
             )}
@@ -132,6 +102,13 @@ function PageThumbnail({
               <div
                 className="h-0.5 w-full rounded-full"
                 style={{ backgroundColor: el.style.color }}
+              />
+            )}
+            {el.type === "widget" && el.widget && (
+              <CanvasWidgetView
+                widget={el.widget}
+                interactive={false}
+                className="h-full w-full"
               />
             )}
           </div>
@@ -150,19 +127,9 @@ interface EditorPageStripProps {
   pages: InvitationPage[];
   activePageId: string;
   onSelectPage: (pageId: string) => void;
-  onAddPage: (kind?: InvitationPageKind) => void;
+  onAddPage: () => void;
   onDeletePage: (pageId: string) => void;
 }
-
-const ADD_PAGE_OPTIONS: {
-  kind: InvitationPageKind;
-  label: string;
-  hint: string;
-}[] = [
-  { kind: "design", label: "Design", hint: "Blank canvas page" },
-  { kind: "rsvp", label: "RSVP", hint: "Questions guests answer" },
-  { kind: "location", label: "Location", hint: "Venue + map" },
-];
 
 export function EditorPageStrip({
   collapsed,
@@ -176,27 +143,6 @@ export function EditorPageStrip({
   onAddPage,
   onDeletePage,
 }: EditorPageStripProps) {
-  const [addMenuOpen, setAddMenuOpen] = useState(false);
-  const addMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!addMenuOpen) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (!addMenuRef.current?.contains(event.target as Node)) {
-        setAddMenuOpen(false);
-      }
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setAddMenuOpen(false);
-    };
-    document.addEventListener("mousedown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [addMenuOpen]);
-
   if (collapsed) {
     return (
       <div className="absolute inset-x-0 bottom-0 z-20 flex justify-center border-t border-black/5 bg-white/95 px-4 py-2 backdrop-blur">
@@ -259,43 +205,15 @@ export function EditorPageStrip({
             );
           })}
 
-          <div ref={addMenuRef} className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => setAddMenuOpen((open) => !open)}
-              className="flex items-center justify-center rounded-lg border border-dashed border-black/20 text-grey transition-colors hover:border-signature/40 hover:text-signature"
-              style={{ width: THUMB_WIDTH, height: THUMB_HEIGHT }}
-              aria-label="Add page"
-              aria-expanded={addMenuOpen}
-              aria-haspopup="menu"
-            >
-              <PlusIcon />
-            </button>
-            {addMenuOpen && (
-              <div
-                role="menu"
-                className="absolute bottom-full left-0 z-30 mb-2 w-48 overflow-hidden rounded-xl border border-black/10 bg-white py-1 shadow-[0_12px_32px_rgba(0,0,0,0.14)]"
-              >
-                {ADD_PAGE_OPTIONS.map((option) => (
-                  <button
-                    key={option.kind}
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      onAddPage(option.kind);
-                      setAddMenuOpen(false);
-                    }}
-                    className="flex w-full flex-col items-start px-3 py-2 text-left hover:bg-soft-grey"
-                  >
-                    <span className="text-sm font-semibold text-black">
-                      {option.label}
-                    </span>
-                    <span className="text-[11px] text-grey">{option.hint}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={onAddPage}
+            className="flex shrink-0 items-center justify-center rounded-lg border border-dashed border-black/20 text-grey transition-colors hover:border-signature/40 hover:text-signature"
+            style={{ width: THUMB_WIDTH, height: THUMB_HEIGHT }}
+            aria-label="Add page"
+          >
+            <PlusIcon />
+          </button>
         </div>
 
         <div className="flex items-center gap-1">

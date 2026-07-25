@@ -3,11 +3,12 @@
 import { useEffect, useId } from "react";
 import type { CanvasElement } from "@/lib/data/canvas-elements";
 import type { InvitationPage } from "@/lib/data/invitation-content";
-import { InteractiveRsvpPanel } from "@/components/invitation/InteractiveRsvpPanel";
-import { LocationMapPanel } from "@/components/invitation/LocationMapPanel";
 import { CanvasImageContent, cardAspectRatio } from "./CanvasImageContent";
+import { CanvasWidgetView } from "./CanvasWidgetView";
 import { CloseIcon, DesktopIcon, MobileIcon } from "./editor-icons";
 import { ShapeGraphic } from "./ShapeGraphic";
+import { fillBoxStyle, fillTextStyle } from "@/lib/color-utils";
+import { invitationSlug } from "@/lib/invitation-paths";
 import type {
   CustomCanvasSize,
   InvitationShape,
@@ -23,15 +24,6 @@ function fontFamilyClass(family: CanvasElement["style"]["fontFamily"]) {
     default:
       return "font-[family-name:var(--font-playfair)]";
   }
-}
-
-function inviteSlug(title: string) {
-  return (
-    title
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "") || "preview"
-  );
 }
 
 function PreviewInvitation({
@@ -51,7 +43,7 @@ function PreviewInvitation({
     <div
       className="relative w-full overflow-hidden bg-white shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
       style={{
-        backgroundColor,
+        ...fillBoxStyle(backgroundColor),
         aspectRatio: String(aspect),
       }}
     >
@@ -74,7 +66,7 @@ function PreviewInvitation({
                 fontSize: `${Math.max(7, el.style.fontSize * 0.72)}px`,
                 fontWeight:
                   el.style.bold || el.style.fontWeight === "bold" ? 700 : 400,
-                color: el.style.color,
+                ...fillTextStyle(el.style.color),
                 textAlign: el.style.textAlign,
                 lineHeight: el.style.lineHeight,
                 letterSpacing: `${el.style.letterSpacing}px`,
@@ -89,6 +81,10 @@ function PreviewInvitation({
               src={el.content}
               color={el.style.color}
               frame={el.style.frame}
+              effects={el.style.effects}
+              imageScale={el.style.imageScale}
+              imageOffsetX={el.style.imageOffsetX}
+              imageOffsetY={el.style.imageOffsetY}
               className="relative h-full min-h-[20px] w-full"
             />
           )}
@@ -98,9 +94,26 @@ function PreviewInvitation({
           {el.type === "divider" && (
             <div
               className="h-0.5 w-full rounded-full"
-              style={{ backgroundColor: el.style.color }}
+              style={fillBoxStyle(el.style.color)}
             />
           )}
+          {el.type === "widget" && el.widget && (
+            <CanvasWidgetView
+              widget={el.widget}
+              interactive
+              className="h-full w-full"
+            />
+          )}
+          {el.type === "text" && el.href ? (
+            <a
+              href={el.href}
+              target="_blank"
+              rel="noreferrer"
+              className="absolute inset-0 z-10"
+              aria-label={`Open link: ${el.content}`}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : null}
         </div>
       ))}
     </div>
@@ -145,7 +158,7 @@ function MacBookFrame({
   title: string;
   children: React.ReactNode;
 }) {
-  const slug = inviteSlug(title);
+  const slug = invitationSlug(title);
 
   return (
     <div className="mx-auto w-full max-w-[820px]">
@@ -217,32 +230,14 @@ export function EditorPreviewModal({
 
   if (!open || !activePage) return null;
 
-  const card =
-    activePage.kind === "rsvp" ? (
-      <div className="aspect-[9/16] w-full overflow-hidden bg-white">
-        <InteractiveRsvpPanel
-          config={activePage.rsvpConfig}
-          prompt={rsvp?.prompt}
-          note={rsvp?.note}
-          interactive
-          className="h-full w-full"
-        />
-      </div>
-    ) : activePage.kind === "location" && activePage.location ? (
-      <div className="aspect-[9/16] w-full overflow-hidden bg-white">
-        <LocationMapPanel
-          location={activePage.location}
-          className="h-full w-full"
-        />
-      </div>
-    ) : (
-      <PreviewInvitation
-        elements={activePage.elements}
-        backgroundColor={activePage.backgroundColor || "#fff8f4"}
-        shape={shape}
-        customSize={customSize}
-      />
-    );
+  const card = (
+    <PreviewInvitation
+      elements={activePage.elements}
+      backgroundColor={activePage.backgroundColor || "#fff8f4"}
+      shape={shape}
+      customSize={customSize}
+    />
+  );
 
   return (
     <div

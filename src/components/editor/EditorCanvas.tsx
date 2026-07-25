@@ -10,6 +10,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import type { CanvasElement } from "@/lib/data/canvas-elements";
+import { widgetKindLabel } from "@/lib/data/canvas-elements";
 import type { InvitationPage } from "@/lib/data/invitation-content";
 import {
   DuplicateIcon,
@@ -24,26 +25,27 @@ import type {
   CustomCanvasSize,
   InvitationShape,
 } from "./editor-types";
-import { CanvasImageContent, cardAspectRatio } from "./CanvasImageContent";
+import {
+  CanvasImageContent,
+  cardAspectRatio,
+  clampImageFit,
+  isSquareFrame,
+  normalizeImageOffset,
+  normalizeImageScale,
+} from "./CanvasImageContent";
+import { CanvasWidgetView } from "./CanvasWidgetView";
 import { isPatternGraphicSrc } from "@/lib/data/element-library";
 import { ShapeGraphic } from "./ShapeGraphic";
+import {
+  fillBoxStyle,
+  fillTextStyle,
+  isGradient,
+  normalizeHex,
+} from "@/lib/color-utils";
+import { effectsToCss } from "@/lib/element-effects";
 
 function effectStyle(el: CanvasElement): CSSProperties {
-  const effects = el.style.effects ?? {};
-  const filter: string[] = [];
-  if (effects.glow) filter.push("drop-shadow(0 0 6px rgba(255,96,170,0.55))");
-  let boxShadow: string | undefined;
-  if (effects.shadowInset) {
-    boxShadow = "inset 0 2px 8px rgba(0,0,0,0.28)";
-  } else if (effects.shadow) {
-    boxShadow = "0 6px 16px rgba(0,0,0,0.22)";
-  }
-  return {
-    filter: filter.length ? filter.join(" ") : undefined,
-    boxShadow,
-    outline: effects.outline ? `1.5px solid ${el.style.color}` : undefined,
-    outlineOffset: effects.outline ? 2 : undefined,
-  };
+  return effectsToCss(el.style.effects, el.style.color);
 }
 
 function patternOverlay(
@@ -88,11 +90,14 @@ function DividerElementView({
   variant: string;
   color: string;
 }) {
+  const solid = isGradient(color) ? normalizeHex("#1F2D22") : color;
+  const box = fillBoxStyle(color);
+
   if (variant === "dashed") {
     return (
       <div
         className="w-full border-t-2 border-dashed"
-        style={{ borderColor: color }}
+        style={{ borderColor: solid }}
       />
     );
   }
@@ -100,7 +105,7 @@ function DividerElementView({
     return (
       <div
         className="w-full border-t-2 border-dotted"
-        style={{ borderColor: color }}
+        style={{ borderColor: solid }}
       />
     );
   }
@@ -108,27 +113,18 @@ function DividerElementView({
     return (
       <div
         className="w-full border-t-[3px] border-double"
-        style={{ borderColor: color }}
+        style={{ borderColor: solid }}
       />
     );
   }
   if (variant === "thick") {
-    return (
-      <div
-        className="h-2 w-full rounded-full"
-        style={{ backgroundColor: color }}
-      />
-    );
+    return <div className="h-2 w-full rounded-full" style={box} />;
   }
   if (variant === "dots") {
     return (
       <div className="flex w-full items-center justify-between px-1">
         {Array.from({ length: 9 }).map((_, i) => (
-          <span
-            key={i}
-            className="h-1.5 w-1.5 rounded-full"
-            style={{ backgroundColor: color }}
-          />
+          <span key={i} className="h-1.5 w-1.5 rounded-full" style={box} />
         ))}
       </div>
     );
@@ -136,21 +132,13 @@ function DividerElementView({
   if (variant === "diamond") {
     return (
       <div className="flex w-full items-center gap-2">
-        <span className="h-px flex-1" style={{ backgroundColor: color }} />
-        <span
-          className="h-2 w-2 rotate-45"
-          style={{ backgroundColor: color }}
-        />
-        <span className="h-px flex-1" style={{ backgroundColor: color }} />
+        <span className="h-px flex-1" style={box} />
+        <span className="h-2 w-2 rotate-45" style={box} />
+        <span className="h-px flex-1" style={box} />
       </div>
     );
   }
-  return (
-    <div
-      className="h-0.5 w-full rounded-full"
-      style={{ backgroundColor: color }}
-    />
-  );
+  return <div className="h-0.5 w-full rounded-full" style={box} />;
 }
 
 interface EditorCanvasProps {
@@ -198,7 +186,8 @@ function fontWeightValue(style: CanvasElement["style"]) {
   return 400;
 }
 
-type DragMode = "move" | "resize";
+type ResizeHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
+type DragMode = "move" | "resize" | "pan-image" | "scale-image";
 
 export function EditorCanvas({
   shape,
@@ -229,17 +218,36 @@ export function EditorCanvas({
   const canvasRef = useRef<HTMLDivElement>(null);
   const photoFitIdsRef = useRef(new Set<string>());
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    elementId: string;
+  } | null>(null);
+  const [linkPrompt, setLinkPrompt] = useState<{
+    elementId: string;
+    value: string;
+  } | null>(null);
   const dragRef = useRef<{
     id: string;
     mode: DragMode;
-    handle: "nw" | "ne" | "sw" | "se";
+    handle: ResizeHandle;
     startX: number;
     startY: number;
     origX: number;
     origY: number;
     origW: number;
     origH: number;
+    origScale: number;
+    origOffsetX: number;
+    origOffsetY: number;
   } | null>(null);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    window.addEventListener("pointerdown", close);
+    return () => window.removeEventListener("pointerdown", close);
+  }, [contextMenu]);
 
   useEffect(() => {
     const node = viewportRef.current;
@@ -307,8 +315,44 @@ export function EditorCanvas({
           x: Math.min(95, Math.max(-20, drag.origX + dx)),
           y: Math.min(95, Math.max(-20, drag.origY + dy)),
         });
+      } else if (drag.mode === "pan-image") {
+        // dx/dy are in card %; convert roughly to frame-relative %
+        const frameW = Math.max(1, drag.origW);
+        const frameH = Math.max(1, drag.origH);
+        const fit = clampImageFit({
+          imageScale: drag.origScale,
+          imageOffsetX: drag.origOffsetX + (dx / frameW) * 100,
+          imageOffsetY: drag.origOffsetY + (dy / frameH) * 100,
+        });
+        onChangeElement(drag.id, {
+          style: {
+            ...el.style,
+            ...fit,
+          },
+        });
+      } else if (drag.mode === "scale-image") {
+        // Outward drag on any corner should zoom in.
+        const sx = drag.handle.includes("w") ? -1 : 1;
+        const sy = drag.handle.includes("n") ? -1 : 1;
+        const delta =
+          (sx * (dx / Math.max(1, drag.origW)) +
+            sy * (dy / Math.max(1, drag.origH))) /
+          2;
+        const fit = clampImageFit({
+          imageScale: drag.origScale * (1 + delta * 1.5),
+          imageOffsetX: drag.origOffsetX,
+          imageOffsetY: drag.origOffsetY,
+        });
+        onChangeElement(drag.id, {
+          style: {
+            ...el.style,
+            ...fit,
+          },
+        });
       } else {
         const keepRatio = el.type === "image";
+        const forceVisualSquare =
+          el.type === "image" && isSquareFrame(el.style.frame);
         let nextW = drag.origW;
         let nextH = drag.origH;
         let nextX = drag.origX;
@@ -330,18 +374,29 @@ export function EditorCanvas({
         }
 
         if (keepRatio && drag.origW > 0 && drag.origH > 0) {
-          const ratio = drag.origH / drag.origW;
-          if (drag.handle === "se" || drag.handle === "ne") {
+          const cardAspect = cardAspectRatio(shape, customSize);
+          const ratio = forceVisualSquare
+            ? cardAspect
+            : drag.origH / drag.origW;
+          if (
+            drag.handle === "e" ||
+            drag.handle === "w" ||
+            drag.handle === "se" ||
+            drag.handle === "ne"
+          ) {
             nextH = Math.min(100, Math.max(6, nextW * ratio));
-            if (drag.handle === "ne") {
+            if (drag.handle.includes("n")) {
               nextY = drag.origY + (drag.origH - nextH);
             }
-          } else {
-            nextW = Math.min(100, Math.max(8, nextH / ratio));
-            if (drag.handle === "nw" || drag.handle === "sw") {
+            if (drag.handle.includes("w")) {
               nextX = drag.origX + (drag.origW - nextW);
             }
-            if (drag.handle === "nw") {
+          } else {
+            nextW = Math.min(100, Math.max(8, nextH / Math.max(ratio, 0.001)));
+            if (drag.handle.includes("w")) {
+              nextX = drag.origX + (drag.origW - nextW);
+            }
+            if (drag.handle.includes("n")) {
               nextY = drag.origY + (drag.origH - nextH);
             }
           }
@@ -356,7 +411,7 @@ export function EditorCanvas({
         });
       }
     },
-    [clientToPercent, elements, onChangeElement],
+    [clientToPercent, customSize, elements, onChangeElement, shape],
   );
 
   const endDrag = useCallback(() => {
@@ -374,6 +429,11 @@ export function EditorCanvas({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (editingId && event.key === "Escape") {
+        event.preventDefault();
+        onStopEdit();
+        return;
+      }
       if (!selectedId || editingId) return;
       const target = event.target as HTMLElement | null;
       if (
@@ -399,6 +459,16 @@ export function EditorCanvas({
         event.preventDefault();
         onDuplicate(selectedId);
       }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        const selected = elements.find((el) => el.id === selectedId);
+        if (selected?.type === "text") {
+          event.preventDefault();
+          setLinkPrompt({
+            elementId: selected.id,
+            value: selected.href || "",
+          });
+        }
+      }
       if (event.key === "Escape") {
         onClearSelection();
         onStopEdit();
@@ -409,6 +479,7 @@ export function EditorCanvas({
   }, [
     canvasSelected,
     editingId,
+    elements,
     onClearSelection,
     onDelete,
     onDuplicate,
@@ -420,14 +491,16 @@ export function EditorCanvas({
     event: ReactPointerEvent,
     id: string,
     mode: DragMode,
-    handle: "nw" | "ne" | "sw" | "se" = "se",
+    handle: ResizeHandle = "se",
   ) => {
     event.preventDefault();
     event.stopPropagation();
     const el = elements.find((item) => item.id === id);
     if (!el) return;
     onSelect(id);
-    onStopEdit();
+    if (mode !== "pan-image" && mode !== "scale-image") {
+      onStopEdit();
+    }
     if (el.locked) return;
     onBeforeChange?.();
     const point = clientToPercent(event.clientX, event.clientY);
@@ -441,12 +514,21 @@ export function EditorCanvas({
       origY: el.y,
       origW: el.width,
       origH: el.height ?? 20,
+      origScale: normalizeImageScale(el.style.imageScale),
+      origOffsetX: normalizeImageOffset(
+        el.style.imageOffsetX,
+        el.style.imageScale,
+      ),
+      origOffsetY: normalizeImageOffset(
+        el.style.imageOffsetY,
+        el.style.imageScale,
+      ),
     };
   };
 
   return (
     <section
-      className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-[#f3f1ef]"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-soft-grey"
       onPointerDown={() => {
         onClearSelection();
         onStopEdit();
@@ -483,7 +565,7 @@ export function EditorCanvas({
                   : ""
               }`}
               style={{
-                backgroundColor,
+                ...fillBoxStyle(backgroundColor),
                 boxShadow:
                   border && border.style !== "none"
                     ? undefined
@@ -539,17 +621,76 @@ export function EditorCanvas({
                     transform: `rotate(${el.rotation}deg)`,
                   }}
                   onPointerDown={(event) => {
+                    if (isEditing && el.type === "image") {
+                      startDrag(event, el.id, "pan-image");
+                      return;
+                    }
                     if (isEditing) return;
                     startDrag(event, el.id, "move");
                   }}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onSelect(el.id);
+                    setContextMenu({
+                      x: event.clientX,
+                      y: event.clientY,
+                      elementId: el.id,
+                    });
+                  }}
                   onDoubleClick={(event) => {
                     event.stopPropagation();
-                    if (el.type === "text" && !el.locked) {
+                    if (el.locked) return;
+                    if (
+                      el.type === "text" ||
+                      el.type === "widget" ||
+                      (el.type === "image" && !isPatternGraphicSrc(el.content))
+                    ) {
                       onSelect(el.id);
                       onStartEdit(el.id);
                     }
                   }}
+                  onWheel={(event) => {
+                    if (!isEditing || el.type !== "image" || el.locked) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const delta = event.deltaY > 0 ? -0.08 : 0.08;
+                    const fit = clampImageFit({
+                      imageScale: (el.style.imageScale ?? 1) + delta,
+                      imageOffsetX: el.style.imageOffsetX,
+                      imageOffsetY: el.style.imageOffsetY,
+                    });
+                    onChangeElement(el.id, {
+                      style: {
+                        ...el.style,
+                        ...fit,
+                      },
+                    });
+                  }}
                 >
+                  {isSelected && isEditing && el.type === "image" && !el.locked && (
+                    <div
+                      className="absolute left-1/2 z-40 flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-black/5 bg-white px-1.5 py-1 shadow-[0_8px_20px_rgba(0,0,0,0.12)]"
+                      style={{
+                        top: 0,
+                        transform: `translate(-50%, calc(-100% - 8px)) scale(${uiScale})`,
+                        transformOrigin: "bottom center",
+                      }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                    >
+                      <span className="whitespace-nowrap px-2 text-[10px] font-semibold text-grey">
+                        Drag to pan · scroll to zoom
+                      </span>
+                      <button
+                        type="button"
+                        className="rounded-full bg-black px-2.5 py-1 text-[11px] font-semibold text-white"
+                        onClick={onStopEdit}
+                      >
+                        Done
+                      </button>
+                    </div>
+                  )}
+
                   {isSelected && !isEditing && (
                     <div
                       className="absolute left-1/2 z-40 flex items-center gap-0.5 rounded-full border border-black/5 bg-white px-1.5 py-1 shadow-[0_8px_20px_rgba(0,0,0,0.12)]"
@@ -560,10 +701,16 @@ export function EditorCanvas({
                       }}
                       onPointerDown={(e) => e.stopPropagation()}
                     >
-                      <span className="rounded-full bg-signature/10 px-2 py-0.5 text-[10px] font-semibold capitalize text-signature">
-                        {el.type}
+                      <span className="shrink-0 whitespace-nowrap rounded-full bg-signature/10 px-2 py-0.5 text-[10px] font-semibold capitalize text-signature">
+                        {el.type === "widget" && el.widget
+                          ? widgetKindLabel(el.widget.kind)
+                          : el.type}
                       </span>
-                      {el.type === "text" && !el.locked && (
+                      {(el.type === "text" ||
+                        el.type === "widget" ||
+                        (el.type === "image" &&
+                          !isPatternGraphicSrc(el.content))) &&
+                        !el.locked && (
                         <button
                           type="button"
                           className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-semibold text-grey hover:bg-soft-grey hover:text-black"
@@ -574,7 +721,23 @@ export function EditorCanvas({
                           }}
                         >
                           <PencilIcon className="h-3.5 w-3.5" />
-                          Edit
+                          {el.type === "image" ? "Fit" : "Edit"}
+                        </button>
+                      )}
+                      {el.type === "text" && !el.locked && (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-semibold text-grey hover:bg-soft-grey hover:text-black"
+                          aria-label="Link"
+                          title="Link ⌘K"
+                          onClick={() => {
+                            setLinkPrompt({
+                              elementId: el.id,
+                              value: el.href || "",
+                            });
+                          }}
+                        >
+                          Link
                         </button>
                       )}
                       <button
@@ -610,8 +773,14 @@ export function EditorCanvas({
                       isSelected
                         ? "outline outline-2 outline-signature outline-offset-2"
                         : "hover:outline hover:outline-1 hover:outline-signature/40 hover:outline-offset-2"
-                    } ${el.locked ? "cursor-default opacity-90" : "cursor-move"}`}
-                    style={effectStyle(el)}
+                    } ${
+                      el.locked
+                        ? "cursor-default opacity-90"
+                        : isEditing && el.type === "image"
+                          ? "cursor-grab active:cursor-grabbing"
+                          : "cursor-move"
+                    }`}
+                    style={el.type === "image" ? undefined : effectStyle(el)}
                   >
                     {el.type === "text" &&
                       (isEditing ? (
@@ -630,7 +799,11 @@ export function EditorCanvas({
                           style={{
                             fontSize: `${el.style.fontSize}px`,
                             fontWeight: fontWeightValue(el.style),
-                            color: el.style.color,
+                            ...fillTextStyle(
+                              isGradient(el.style.color)
+                                ? normalizeHex("#1F2D22")
+                                : el.style.color,
+                            ),
                             textAlign: el.style.textAlign,
                             lineHeight: el.style.lineHeight,
                             letterSpacing: `${el.style.letterSpacing}px`,
@@ -659,13 +832,13 @@ export function EditorCanvas({
                             style={{
                               fontSize: `${el.style.fontSize}px`,
                               fontWeight: fontWeightValue(el.style),
-                              color: el.style.color,
+                              ...fillTextStyle(el.style.color),
                               textAlign: el.style.textAlign,
                               lineHeight: el.style.lineHeight,
                               letterSpacing: `${el.style.letterSpacing}px`,
                               fontStyle: el.style.italic ? "italic" : "normal",
                               textDecoration: [
-                                el.style.underline ? "underline" : "",
+                                el.style.underline || el.href ? "underline" : "",
                                 el.style.strike ? "line-through" : "",
                               ]
                                 .filter(Boolean)
@@ -682,6 +855,11 @@ export function EditorCanvas({
                         src={el.content}
                         color={el.style.color}
                         frame={el.style.frame}
+                        effects={el.style.effects}
+                        imageScale={el.style.imageScale}
+                        imageOffsetX={el.style.imageOffsetX}
+                        imageOffsetY={el.style.imageOffsetY}
+                        cropEditing={isEditing}
                         onNaturalSize={
                           isPatternGraphicSrc(el.content)
                             ? undefined
@@ -719,34 +897,175 @@ export function EditorCanvas({
                       />
                     )}
 
+                    {el.type === "widget" && el.widget && (
+                      <CanvasWidgetView
+                        widget={el.widget}
+                        interactive={false}
+                        editing={isEditing}
+                        onChange={(widget) =>
+                          onChangeElement(el.id, {
+                            widget,
+                            content: widget.kind,
+                          })
+                        }
+                        onStopEdit={onStopEdit}
+                        className="h-full w-full"
+                      />
+                    )}
+
+                    {isSelected && isEditing && el.type === "image" && !el.locked && (
+                      <>
+                        {(() => {
+                          const fit = clampImageFit({
+                            imageScale: el.style.imageScale,
+                            imageOffsetX: el.style.imageOffsetX,
+                            imageOffsetY: el.style.imageOffsetY,
+                          });
+                          const { imageScale: scale, imageOffsetX: ox, imageOffsetY: oy } =
+                            fit;
+                          return (
+                            <div
+                              className="pointer-events-none absolute z-20 border border-dashed border-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]"
+                              style={{
+                                left: `calc(50% + ${ox}% - ${scale * 50}%)`,
+                                top: `calc(50% + ${oy}% - ${scale * 50}%)`,
+                                width: `${scale * 100}%`,
+                                height: `${scale * 100}%`,
+                              }}
+                            >
+                              {(
+                                [
+                                  [
+                                    "nw",
+                                    "left-0 top-0 -translate-x-1/2 -translate-y-1/2",
+                                    "nwse-resize",
+                                  ],
+                                  [
+                                    "ne",
+                                    "right-0 top-0 translate-x-1/2 -translate-y-1/2",
+                                    "nesw-resize",
+                                  ],
+                                  [
+                                    "sw",
+                                    "left-0 bottom-0 -translate-x-1/2 translate-y-1/2",
+                                    "nesw-resize",
+                                  ],
+                                  [
+                                    "se",
+                                    "right-0 bottom-0 translate-x-1/2 translate-y-1/2",
+                                    "nwse-resize",
+                                  ],
+                                ] as const
+                              ).map(([id, pos, cursor]) => (
+                                <span
+                                  key={id}
+                                  role="presentation"
+                                  className={`pointer-events-auto absolute z-30 h-2.5 w-2.5 rounded-full border border-black/15 bg-white shadow-sm ${pos}`}
+                                  style={{ cursor }}
+                                  onPointerDown={(event) =>
+                                    startDrag(event, el.id, "scale-image", id)
+                                  }
+                                />
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </>
+                    )}
+
                     {isSelected && !isEditing && !el.locked && (
                       <>
                         {(
                           [
-                            ["nw", "-left-1 -top-1", "nwse-resize"],
-                            ["ne", "-right-1 -top-1", "nesw-resize"],
-                            ["sw", "-left-1 -bottom-1", "nesw-resize"],
-                            ["se", "-right-1 -bottom-1", "nwse-resize"],
+                            {
+                              id: "nw" as const,
+                              style: {
+                                left: 0,
+                                top: 0,
+                                transform: `translate(-50%, -50%) scale(${uiScale})`,
+                              },
+                              className: "h-2.5 w-2.5 rounded-full",
+                              cursor: "nwse-resize",
+                            },
+                            {
+                              id: "n" as const,
+                              style: {
+                                left: "50%",
+                                top: 0,
+                                transform: `translate(-50%, -50%) scale(${uiScale})`,
+                              },
+                              className: "h-1.5 w-3 rounded-full",
+                              cursor: "ns-resize",
+                            },
+                            {
+                              id: "ne" as const,
+                              style: {
+                                right: 0,
+                                top: 0,
+                                transform: `translate(50%, -50%) scale(${uiScale})`,
+                              },
+                              className: "h-2.5 w-2.5 rounded-full",
+                              cursor: "nesw-resize",
+                            },
+                            {
+                              id: "e" as const,
+                              style: {
+                                right: 0,
+                                top: "50%",
+                                transform: `translate(50%, -50%) scale(${uiScale})`,
+                              },
+                              className: "h-3 w-1.5 rounded-full",
+                              cursor: "ew-resize",
+                            },
+                            {
+                              id: "se" as const,
+                              style: {
+                                right: 0,
+                                bottom: 0,
+                                transform: `translate(50%, 50%) scale(${uiScale})`,
+                              },
+                              className: "h-2.5 w-2.5 rounded-full",
+                              cursor: "nwse-resize",
+                            },
+                            {
+                              id: "s" as const,
+                              style: {
+                                left: "50%",
+                                bottom: 0,
+                                transform: `translate(-50%, 50%) scale(${uiScale})`,
+                              },
+                              className: "h-1.5 w-3 rounded-full",
+                              cursor: "ns-resize",
+                            },
+                            {
+                              id: "sw" as const,
+                              style: {
+                                left: 0,
+                                bottom: 0,
+                                transform: `translate(-50%, 50%) scale(${uiScale})`,
+                              },
+                              className: "h-2.5 w-2.5 rounded-full",
+                              cursor: "nesw-resize",
+                            },
+                            {
+                              id: "w" as const,
+                              style: {
+                                left: 0,
+                                top: "50%",
+                                transform: `translate(-50%, -50%) scale(${uiScale})`,
+                              },
+                              className: "h-3 w-1.5 rounded-full",
+                              cursor: "ew-resize",
+                            },
                           ] as const
-                        ).map(([handle, pos, cursor]) => (
+                        ).map((handle) => (
                           <span
-                            key={handle}
+                            key={handle.id}
                             role="presentation"
-                            className={`absolute z-30 h-2 w-2 rounded-full bg-signature ${pos}`}
-                            style={{
-                              cursor,
-                              transform: `scale(${uiScale})`,
-                              transformOrigin:
-                                handle === "nw"
-                                  ? "top left"
-                                  : handle === "ne"
-                                    ? "top right"
-                                    : handle === "sw"
-                                      ? "bottom left"
-                                      : "bottom right",
-                            }}
+                            className={`absolute z-30 border border-black/15 bg-white shadow-sm ${handle.className}`}
+                            style={{ ...handle.style, cursor: handle.cursor }}
                             onPointerDown={(event) =>
-                              startDrag(event, el.id, "resize", handle)
+                              startDrag(event, el.id, "resize", handle.id)
                             }
                           />
                         ))}
@@ -810,6 +1129,131 @@ export function EditorCanvas({
           </div>
         </div>
       </div>
+
+      {contextMenu && (
+        <div
+          className="fixed z-[90] min-w-[180px] overflow-hidden rounded-xl border border-black/10 bg-white py-1 shadow-[0_12px_32px_rgba(0,0,0,0.16)]"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onPointerDown={(e) => e.stopPropagation()}
+          role="menu"
+        >
+          {(() => {
+            const target = elements.find((el) => el.id === contextMenu.elementId);
+            if (!target) return null;
+            return (
+              <>
+                {target.type === "text" && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-soft-grey"
+                    onClick={() => {
+                      setLinkPrompt({
+                        elementId: target.id,
+                        value: target.href || "",
+                      });
+                      setContextMenu(null);
+                    }}
+                  >
+                    <span>Link</span>
+                    <span className="text-[11px] text-grey">⌘K</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-soft-grey"
+                  onClick={() => {
+                    onDuplicate(target.id);
+                    setContextMenu(null);
+                  }}
+                >
+                  <span>Duplicate</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-signature hover:bg-soft-grey"
+                  onClick={() => {
+                    onDelete(target.id);
+                    setContextMenu(null);
+                  }}
+                >
+                  <span>Delete</span>
+                </button>
+              </>
+            );
+          })()}
+        </div>
+      )}
+
+      {linkPrompt && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/30 p-4">
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-5 shadow-[0_20px_48px_rgba(0,0,0,0.2)]"
+            role="dialog"
+            aria-label="Edit link"
+          >
+            <p className="text-sm font-semibold text-black">Link</p>
+            <p className="mt-1 text-xs text-grey">
+              Add a URL to this text (Google Maps, website, RSVP form…).
+            </p>
+            <input
+              autoFocus
+              type="url"
+              value={linkPrompt.value}
+              onChange={(e) =>
+                setLinkPrompt({ ...linkPrompt, value: e.target.value })
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  onBeforeChange?.();
+                  onChangeElement(linkPrompt.elementId, {
+                    href: linkPrompt.value.trim() || null,
+                  });
+                  setLinkPrompt(null);
+                }
+                if (e.key === "Escape") setLinkPrompt(null);
+              }}
+              placeholder="https://"
+              className="mt-3 w-full rounded-xl border border-black/10 px-3 py-2.5 text-sm outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/20"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  onBeforeChange?.();
+                  onChangeElement(linkPrompt.elementId, { href: null });
+                  setLinkPrompt(null);
+                }}
+                className="rounded-full px-3 py-2 text-sm font-semibold text-grey hover:bg-soft-grey hover:text-black"
+              >
+                Remove
+              </button>
+              <button
+                type="button"
+                onClick={() => setLinkPrompt(null)}
+                className="rounded-full border border-black/10 px-3 py-2 text-sm font-semibold text-black hover:bg-soft-grey"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onBeforeChange?.();
+                  onChangeElement(linkPrompt.elementId, {
+                    href: linkPrompt.value.trim() || null,
+                  });
+                  setLinkPrompt(null);
+                }}
+                className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/90"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

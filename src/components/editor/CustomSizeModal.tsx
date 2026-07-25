@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { createPortal } from "react-dom";
 import { CloseIcon } from "./editor-icons";
 import {
-  DEFAULT_CUSTOM_SIZE,
   SIZE_UNITS,
   type CustomCanvasSize,
   type SizeUnit,
@@ -45,7 +45,10 @@ export function CustomSizeModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!open || !mounted) return null;
 
   const submit = () => {
     const w = Number.parseFloat(width);
@@ -69,9 +72,9 @@ export function CustomSizeModal({
     });
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/35 p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 p-4"
       role="presentation"
       onClick={onClose}
     >
@@ -175,6 +178,7 @@ export function CustomSizeModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -1,6 +1,8 @@
 import type { CanvasElement, ElementStyle, ImageFrame } from "./canvas-elements";
 import {
   createDefaultContent,
+  elementsFromLocationPage,
+  elementsFromRsvpPage,
   type InvitationContent,
   type InvitationPage,
   type RsvpConfig,
@@ -1614,12 +1616,43 @@ export function getTemplatesByCategory(
   );
 }
 
+/** Search catalog templates by title, description, or category name. */
+export function searchTemplates(query: string): InvitationTemplate[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return INVITATION_TEMPLATES;
+
+  return INVITATION_TEMPLATES.filter((template) => {
+    const category = TEMPLATE_CATEGORIES.find(
+      (c) => c.id === template.categoryId,
+    );
+    const haystack = [
+      template.title,
+      template.description,
+      template.categoryId,
+      category?.title ?? "",
+      category?.description ?? "",
+    ]
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(q);
+  });
+}
+
 function remappedElements(elements: CanvasElement[]): CanvasElement[] {
   const stamp = Math.random().toString(36).slice(2, 7);
   return elements.map((el) => ({
     ...el,
     id: `${el.id}_${stamp}`,
+    href: el.href ?? null,
     style: { ...el.style, effects: { ...el.style.effects } },
+    widget: el.widget
+      ? {
+          ...el.widget,
+          ...("options" in el.widget && el.widget.options
+            ? { options: el.widget.options.map((o) => ({ ...o })) }
+            : {}),
+        }
+      : null,
   }));
 }
 
@@ -1629,24 +1662,36 @@ export function contentFromTemplate(
 ): InvitationContent {
   const pages: InvitationPage[] = template.pages.map((templatePage, index) => {
     const pageId = `page_${Math.random().toString(36).slice(2, 9)}`;
+    let elements: CanvasElement[] = [];
+    if (templatePage.kind === "design") {
+      elements = remappedElements(templatePage.elements);
+    } else if (templatePage.kind === "location") {
+      elements = remappedElements(
+        elementsFromLocationPage(
+          templatePage.location,
+          templatePage.backgroundColor,
+        ),
+      );
+    } else if (templatePage.kind === "rsvp") {
+      elements = remappedElements(
+        elementsFromRsvpPage(templatePage.rsvpConfig),
+      );
+    }
+
     return {
       id: pageId,
       name: templatePage.name || `Page ${index + 1}`,
-      kind: templatePage.kind,
-      elements:
-        templatePage.kind === "design"
-          ? remappedElements(templatePage.elements)
-          : [],
+      kind: "design" as const,
+      elements,
       backgroundColor: templatePage.backgroundColor,
       backgroundPattern: "none" as const,
       border: null,
-      location: templatePage.kind === "location" ? templatePage.location ?? null : null,
-      rsvpConfig: templatePage.kind === "rsvp" ? templatePage.rsvpConfig ?? null : null,
+      location: null,
+      rsvpConfig: null,
     };
   });
 
-  const firstDesign =
-    pages.find((page) => page.kind === "design") ?? pages[0];
+  const firstDesign = pages[0];
   const location = template.pages.find((page) => page.kind === "location");
   const rsvp = template.pages.find((page) => page.kind === "rsvp");
   const base = createDefaultContent({ title: template.title });

@@ -10,6 +10,10 @@ import {
 } from "@/lib/actions/invitations";
 import type { Invitation } from "@/lib/data/types";
 import { formatEventDate, formatRelativeTime } from "@/lib/format";
+import {
+  invitationEditPath,
+  invitationViewPath,
+} from "@/lib/invitation-paths";
 import { BrandCheckbox } from "./BrandCheckbox";
 import { MoreIcon, PencilIcon } from "./icons";
 import { InvitationPagePreview } from "./InvitationPagePreview";
@@ -116,8 +120,8 @@ export function InvitationCard({
   const titleInputRef = useRef<HTMLInputElement>(null);
   const menuId = useId();
   const inTrash = invitation.status === "archived";
-  const editHref = `/invitations/${invitation.id}/edit`;
-  const viewHref = `/invitations/${invitation.id}`;
+  const editHref = invitationEditPath(invitation);
+  const viewHref = invitationViewPath(invitation);
 
   const firstPage = useMemo(() => {
     const pages = invitation.content.pages;
