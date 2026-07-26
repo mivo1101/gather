@@ -8,10 +8,13 @@ export const metadata = { title: "Edit Invitation · Gather" };
 
 export default async function EditInvitationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ customizeSize?: string }>;
 }) {
   const { id: routeKey } = await params;
+  const { customizeSize } = await searchParams;
   const user = await getCurrentUser();
   const invitation = await getInvitationByRouteKeyForUser(user.id, routeKey);
 
@@ -20,8 +23,14 @@ export default async function EditInvitationPage({
   }
 
   if (routeKey !== invitation.slug) {
-    redirect(invitationEditPath(invitation));
+    const qs = customizeSize === "1" ? "?customizeSize=1" : "";
+    redirect(`${invitationEditPath(invitation)}${qs}`);
   }
 
-  return <InvitationEditor invitation={invitation} />;
+  return (
+    <InvitationEditor
+      invitation={invitation}
+      openCustomSize={customizeSize === "1"}
+    />
+  );
 }

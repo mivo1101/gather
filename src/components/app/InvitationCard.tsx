@@ -14,6 +14,7 @@ import {
   invitationEditPath,
   invitationViewPath,
 } from "@/lib/invitation-paths";
+import { cardAspectRatio } from "@/components/editor/CanvasImageContent";
 import { BrandCheckbox } from "./BrandCheckbox";
 import { MoreIcon, PencilIcon } from "./icons";
 import { InvitationPagePreview } from "./InvitationPagePreview";
@@ -29,6 +30,39 @@ const statusLabels = {
   published: "Published",
   archived: "Trash",
 } as const;
+
+const shapeLabels = {
+  portrait: "Portrait",
+  landscape: "Landscape",
+  square: "Square",
+  custom: "Custom",
+} as const;
+
+function ShapeGlyph({
+  shape,
+  className = "h-3 w-3",
+}: {
+  shape: keyof typeof shapeLabels;
+  className?: string;
+}) {
+  const rect =
+    shape === "portrait"
+      ? { x: 8, y: 4, width: 8, height: 16 }
+      : shape === "landscape"
+        ? { x: 4, y: 8, width: 16, height: 8 }
+        : { x: 6, y: 6, width: 12, height: 12 };
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect
+        {...rect}
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeDasharray={shape === "custom" ? "3 2.5" : undefined}
+      />
+    </svg>
+  );
+}
 
 interface InvitationCardProps {
   invitation: Invitation;
@@ -138,6 +172,9 @@ export function InvitationCard({
   }, [invitation.content]);
 
   const pageCount = invitation.content.pages?.length || 1;
+  const cardShape = invitation.content.shape ?? "portrait";
+  const customSize = invitation.content.customSize;
+  const previewAspect = cardAspectRatio(cardShape, customSize);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -246,46 +283,46 @@ export function InvitationCard({
 
   return (
     <article
-      className={`group relative flex flex-col overflow-hidden rounded-2xl border bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-shadow hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] ${
+      className={`group relative flex rounded-2xl border bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-shadow hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] ${
         selected ? "border-black/25 ring-2 ring-black/10" : "border-black/8"
-      }`}
-    >      <Link
+      } ${menuOpen ? "z-30" : "z-0"}`}
+    >
+      <Link
         href={editHref}
-        className="flex min-h-0 flex-1 flex-col outline-none focus-visible:ring-2 focus-visible:ring-signature/40 focus-visible:ring-inset"
+        className="flex min-w-0 flex-1 outline-none focus-visible:ring-2 focus-visible:ring-signature/40 focus-visible:ring-inset"
         aria-label={`Edit ${displayTitle}`}
       >
-        <div className="relative aspect-[4/3] overflow-hidden bg-[#f3f1ef]">
-          <div className="absolute inset-0 flex items-center justify-center p-4">
-            <div className="relative aspect-[9/16] h-full overflow-hidden rounded-sm shadow-[0_8px_24px_rgba(0,0,0,0.1)] transition-transform duration-500 group-hover:scale-[1.02]">
-              <InvitationPagePreview
-                page={firstPage}
-                className="h-full w-full"
-              />
-            </div>
-          </div>
-
-          <span
-            className={`absolute ${selectable ? "left-12" : "left-3"} top-3 z-10 rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyles[invitation.status]}`}
+        <div className="relative flex h-[9.5rem] w-[7.25rem] shrink-0 items-center justify-center overflow-hidden rounded-l-2xl bg-[#f3f1ef] p-3 sm:h-[10.5rem] sm:w-32">
+          <div
+            className="relative overflow-hidden rounded-md shadow-[0_6px_18px_rgba(0,0,0,0.1)] transition-transform duration-500 group-hover:scale-[1.02]"
+            style={{
+              aspectRatio: String(previewAspect),
+              maxHeight: "100%",
+              maxWidth: "100%",
+              width: previewAspect >= 1 ? "100%" : undefined,
+              height: previewAspect < 1 ? "100%" : undefined,
+            }}
           >
-            {statusLabels[invitation.status]}
-          </span>
+            <InvitationPagePreview
+              page={firstPage}
+              shape={cardShape}
+              customSize={customSize}
+              className="h-full w-full"
+            />
+          </div>
         </div>
 
-        <div className="flex flex-1 flex-col gap-1 p-4">
+        <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 px-4 py-3">
           <h3 className="truncate text-base font-semibold text-black">
             {displayTitle}
           </h3>
-          {invitation.eventDate ? (
-            <p className="text-sm text-grey">
-              {formatEventDate(invitation.eventDate)}
-              {invitation.location ? ` · ${invitation.location}` : null}
-            </p>
-          ) : (
-            <p className="text-sm text-grey">Event date not set</p>
-          )}
-          <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-grey">
-            <PencilIcon className="h-3 w-3 shrink-0" />
-            <span>Last edited {formatRelativeTime(invitation.updatedAt)}</span>
+          <p className="truncate text-sm text-grey">
+            {invitation.eventDate
+              ? formatEventDate(invitation.eventDate)
+              : "Event date not set"}
+          </p>
+          <p className="truncate text-sm text-grey">
+            {invitation.location || "Location not set"}
           </p>
           {error && (
             <p className="mt-1 text-xs font-medium text-signature">{error}</p>
@@ -293,9 +330,36 @@ export function InvitationCard({
         </div>
       </Link>
 
+      <div className="flex shrink-0 flex-col items-end justify-center gap-1.5 border-l border-black/[0.06] px-4 py-3 pr-11 sm:min-w-[9.5rem]">
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusStyles[invitation.status]}`}
+        >
+          {statusLabels[invitation.status]}
+        </span>
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          <span className="inline-flex items-center gap-1 rounded-full bg-soft-grey px-2 py-0.5 text-[11px] font-medium text-black/70">
+            <ShapeGlyph shape={cardShape} />
+            {shapeLabels[cardShape]}
+          </span>
+          <span className="inline-flex items-center rounded-full bg-soft-grey px-2 py-0.5 text-[11px] font-medium text-black/70">
+            {pageCount} {pageCount === 1 ? "page" : "pages"}
+          </span>
+        </div>
+        <p className="inline-flex items-center gap-1 text-right text-[11px] text-grey">
+          <PencilIcon className="h-3 w-3 shrink-0" />
+          <span>Edited {formatRelativeTime(invitation.updatedAt)}</span>
+        </p>
+        <Link
+          href={editHref}
+          className="mt-1 rounded-full bg-signature/10 px-3 py-1.5 text-xs font-semibold text-signature transition-colors hover:bg-signature/15"
+        >
+          {invitation.status === "published" ? "View / edit" : "Continue editing"}
+        </Link>
+      </div>
+
       {selectable && (
         <div
-          className={`absolute left-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-md border bg-white shadow-[0_2px_8px_rgba(0,0,0,0.12)] ${
+          className={`absolute left-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-md border bg-white shadow-[0_2px_8px_rgba(0,0,0,0.12)] ${
             selected ? "border-black" : "border-black/15"
           }`}
         >
@@ -307,9 +371,8 @@ export function InvitationCard({
         </div>
       )}
 
-      {/* Canva-style hover control on the cover */}
       <div
-        className={`absolute right-3 top-3 z-20 transition-opacity ${
+        className={`absolute right-2.5 top-2.5 z-40 ${
           menuOpen
             ? "opacity-100"
             : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"
@@ -318,7 +381,7 @@ export function InvitationCard({
       >
         <button
           type="button"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-white shadow-[0_6px_16px_rgba(0,0,0,0.18)] transition-colors hover:bg-black/85"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-white shadow-[0_6px_16px_rgba(0,0,0,0.18)] transition-colors hover:bg-black/85"
           aria-label={`Details for ${displayTitle}`}
           aria-haspopup="menu"
           aria-expanded={menuOpen}
@@ -336,7 +399,7 @@ export function InvitationCard({
           <div
             id={menuId}
             role="menu"
-            className="absolute right-0 top-full z-30 mt-2 w-[17.5rem] overflow-hidden rounded-2xl border border-black/5 bg-white shadow-[0_16px_40px_rgba(0,0,0,0.14)]"
+            className="absolute right-0 top-full z-50 mt-2 w-[17.5rem] overflow-hidden rounded-2xl border border-black/5 bg-white shadow-[0_16px_40px_rgba(0,0,0,0.14)]"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="border-b border-black/5 px-3.5 py-3">

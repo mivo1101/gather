@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CanvasElement } from "@/lib/data/canvas-elements";
-import type { InvitationPage } from "@/lib/data/invitation-content";
-import { CanvasImageContent } from "@/components/editor/CanvasImageContent";
+import type {
+  InvitationCustomSize,
+  InvitationPage,
+} from "@/lib/data/invitation-content";
+import { CanvasImageContent, cardAspectRatio } from "@/components/editor/CanvasImageContent";
 import { CanvasWidgetView } from "@/components/editor/CanvasWidgetView";
+import type { InvitationShape } from "@/components/editor/editor-types";
 import { ShapeGraphic } from "@/components/editor/ShapeGraphic";
 import { fillBoxStyle, fillTextStyle } from "@/lib/color-utils";
 
 const DESIGN_WIDTH = 320;
-const DESIGN_HEIGHT = DESIGN_WIDTH * (16 / 9);
 
 function fontFamilyClass(family: CanvasElement["style"]["fontFamily"]) {
   switch (family) {
@@ -22,18 +25,27 @@ function fontFamilyClass(family: CanvasElement["style"]["fontFamily"]) {
   }
 }
 
-/** Scaled preview of an invitation page — matches editor layout. */
+/** Scaled preview of an invitation page — matches editor layout & canvas shape. */
 export function InvitationPagePreview({
   page,
+  shape = "portrait",
+  customSize,
   className = "",
 }: {
   page: Pick<InvitationPage, "elements" | "backgroundColor">;
+  shape?: InvitationShape;
+  customSize?: InvitationCustomSize;
   className?: string;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.35);
   const backgroundColor = page.backgroundColor || "#fff8f4";
   const elements = page.elements ?? [];
+  const aspect = cardAspectRatio(shape, customSize);
+  const designHeight = useMemo(
+    () => DESIGN_WIDTH / Math.max(aspect, 0.001),
+    [aspect],
+  );
 
   useEffect(() => {
     const node = frameRef.current;
@@ -41,13 +53,13 @@ export function InvitationPagePreview({
     const update = () => {
       const { width, height } = node.getBoundingClientRect();
       if (width <= 0 || height <= 0) return;
-      setScale(Math.min(width / DESIGN_WIDTH, height / DESIGN_HEIGHT));
+      setScale(Math.min(width / DESIGN_WIDTH, height / designHeight));
     };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(node);
     return () => observer.disconnect();
-  }, []);
+  }, [designHeight]);
 
   return (
     <div
@@ -63,7 +75,7 @@ export function InvitationPagePreview({
           className="absolute left-1/2 top-1/2 origin-center"
           style={{
             width: DESIGN_WIDTH,
-            height: DESIGN_HEIGHT,
+            height: designHeight,
             transform: `translate(-50%, -50%) scale(${scale})`,
             ...fillBoxStyle(backgroundColor),
           }}

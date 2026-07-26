@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { createInvitationFromTemplateAction } from "@/lib/actions/invitations";
 import {
   TEMPLATE_CATEGORIES,
@@ -10,6 +10,7 @@ import {
   type InvitationTemplate,
   type TemplateCategory,
 } from "@/lib/data/invitation-templates";
+import { useHubSearch } from "./HubSearchContext";
 import { InvitationPagePreview } from "./InvitationPagePreview";
 import { TemplatePreviewModal } from "./TemplatePreviewModal";
 
@@ -76,8 +77,14 @@ function TemplateCard({ template }: { template: InvitationTemplate }) {
   );
 }
 
-function CategorySection({ category }: { category: TemplateCategory }) {
-  const templates = getTemplatesByCategory(category.id);
+function CategorySection({
+  category,
+  templates,
+}: {
+  category: TemplateCategory;
+  templates: InvitationTemplate[];
+}) {
+  if (templates.length === 0) return null;
 
   if (category.id === "other") {
     return (
@@ -118,7 +125,7 @@ function CategorySection({ category }: { category: TemplateCategory }) {
         <div>
           <h2
             id={`heading-${category.id}`}
-            className="text-xl font-semibold tracking-tight text-black"
+            className="text-2xl font-semibold tracking-tight text-black"
           >
             {category.title}
           </h2>
@@ -136,11 +143,35 @@ function CategorySection({ category }: { category: TemplateCategory }) {
 
 /** Templates hub: event categories with starter designs. */
 export function TemplateCategories() {
+  const { query } = useHubSearch();
+  const search = query.trim().toLowerCase();
+
+  const sections = useMemo(() => {
+    return TEMPLATE_CATEGORIES.map((category) => {
+      const templates = getTemplatesByCategory(category.id).filter(
+        (template) => {
+          if (!search) return true;
+          const haystack = [
+            template.title,
+            template.description,
+            category.title,
+          ]
+            .join(" ")
+            .toLowerCase();
+          return haystack.includes(search);
+        },
+      );
+      return { category, templates };
+    }).filter(({ category, templates }) =>
+      category.id === "other" ? !search : templates.length > 0,
+    );
+  }, [search]);
+
   return (
     <div className="flex flex-col gap-12">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight text-black">
+          <h2 className="text-2xl font-semibold tracking-tight text-black">
             Browse by event
           </h2>
           <p className="mt-1 text-sm text-grey">
@@ -155,21 +186,38 @@ export function TemplateCategories() {
         </Link>
       </div>
 
-      <nav aria-label="Event categories" className="flex flex-wrap gap-2">
-        {TEMPLATE_CATEGORIES.map((category) => (
-          <a
-            key={category.id}
-            href={`#category-${category.id}`}
-            className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${category.tint} text-black hover:opacity-90`}
-          >
-            {category.title}
-          </a>
-        ))}
-      </nav>
+      {!search && (
+        <nav aria-label="Event categories" className="flex flex-wrap gap-2">
+          {TEMPLATE_CATEGORIES.map((category) => (
+            <a
+              key={category.id}
+              href={`#category-${category.id}`}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${category.tint} text-black hover:opacity-90`}
+            >
+              {category.title}
+            </a>
+          ))}
+        </nav>
+      )}
 
-      {TEMPLATE_CATEGORIES.map((category) => (
-        <CategorySection key={category.id} category={category} />
-      ))}
+      {sections.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-black/10 bg-white px-6 py-16 text-center">
+          <p className="text-base font-semibold text-black">
+            No matching templates
+          </p>
+          <p className="mt-2 text-sm text-grey">
+            Nothing matched “{query.trim()}”. Try another title or category.
+          </p>
+        </div>
+      ) : (
+        sections.map(({ category, templates }) => (
+          <CategorySection
+            key={category.id}
+            category={category}
+            templates={templates}
+          />
+        ))
+      )}
     </div>
   );
 }

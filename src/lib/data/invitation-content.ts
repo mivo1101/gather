@@ -89,6 +89,26 @@ export interface InvitationPage {
   rsvpConfig?: RsvpConfig | null;
 }
 
+export type InvitationCanvasShape =
+  | "portrait"
+  | "landscape"
+  | "square"
+  | "custom";
+
+export type InvitationSizeUnit = "px" | "cm" | "mm" | "in";
+
+export interface InvitationCustomSize {
+  width: number;
+  height: number;
+  unit: InvitationSizeUnit;
+}
+
+export const DEFAULT_INVITATION_CUSTOM_SIZE: InvitationCustomSize = {
+  width: 10,
+  height: 15,
+  unit: "cm",
+};
+
 export interface InvitationContent {
   invite: {
     eyebrow: string;
@@ -111,6 +131,9 @@ export interface InvitationContent {
     message: string;
     signOff: string;
   };
+  /** Card layout orientation / custom canvas size */
+  shape: InvitationCanvasShape;
+  customSize: InvitationCustomSize;
   /** Active page elements (kept in sync for compatibility) */
   elements: CanvasElement[];
   /** All invitation cards/pages */
@@ -140,9 +163,46 @@ function createPage(
   };
 }
 
+function normalizeCanvasShape(raw: unknown): InvitationCanvasShape {
+  if (
+    raw === "portrait" ||
+    raw === "landscape" ||
+    raw === "square" ||
+    raw === "custom"
+  ) {
+    return raw;
+  }
+  return "portrait";
+}
+
+function normalizeCustomSize(raw: unknown): InvitationCustomSize {
+  if (!raw || typeof raw !== "object") return { ...DEFAULT_INVITATION_CUSTOM_SIZE };
+  const value = raw as Partial<InvitationCustomSize>;
+  const unit =
+    value.unit === "px" ||
+    value.unit === "cm" ||
+    value.unit === "mm" ||
+    value.unit === "in"
+      ? value.unit
+      : DEFAULT_INVITATION_CUSTOM_SIZE.unit;
+  const width =
+    typeof value.width === "number" && Number.isFinite(value.width) && value.width > 0
+      ? value.width
+      : DEFAULT_INVITATION_CUSTOM_SIZE.width;
+  const height =
+    typeof value.height === "number" &&
+    Number.isFinite(value.height) &&
+    value.height > 0
+      ? value.height
+      : DEFAULT_INVITATION_CUSTOM_SIZE.height;
+  return { width, height, unit };
+}
+
 export function createDefaultContent(input?: {
   title?: string;
   location?: string;
+  shape?: InvitationCanvasShape;
+  customSize?: InvitationCustomSize;
 }): InvitationContent {
   const title = input?.title?.trim() || "a special gathering";
   const location = input?.location?.trim() || "The Grand Pavilion";
@@ -173,6 +233,10 @@ export function createDefaultContent(input?: {
       message: "We can't wait to celebrate with you.",
       signOff: "With love,",
     },
+    shape: input?.shape ?? "portrait",
+    customSize: input?.customSize
+      ? normalizeCustomSize(input.customSize)
+      : { ...DEFAULT_INVITATION_CUSTOM_SIZE },
     elements,
     pages: [page],
     activePageId: page.id,
@@ -564,6 +628,8 @@ export function normalizeContent(
     details: { ...defaults.details, ...value.details },
     rsvp: { ...defaults.rsvp, ...value.rsvp },
     thanks: { ...defaults.thanks, ...value.thanks },
+    shape: normalizeCanvasShape(value.shape),
+    customSize: normalizeCustomSize(value.customSize),
     pages: normalized.pages,
     activePageId: active.id,
     elements: active.elements,

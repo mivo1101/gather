@@ -19,6 +19,7 @@ import type {
   InvitationStatusFilter,
 } from "@/lib/data/types";
 import { BrandCheckbox } from "./BrandCheckbox";
+import { useHubSearch } from "./HubSearchContext";
 import { ChevronDownIcon } from "./icons";
 import { InvitationCard } from "./InvitationCard";
 
@@ -71,6 +72,7 @@ function sortList(list: Invitation[], sort: InvitationSort): Invitation[] {
 /** Recent invitations grid with client-side status filter and sort */
 export function RecentInvitations({ invitations }: RecentInvitationsProps) {
   const router = useRouter();
+  const { query } = useHubSearch();
   const [status, setStatus] = useState<InvitationStatusFilter>("all");
   const [sort, setSort] = useState<InvitationSort>("updated_desc");
   const [trashedIds, setTrashedIds] = useState<Set<string>>(() => new Set());
@@ -79,6 +81,7 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const inTrashView = status === "archived";
+  const search = query.trim().toLowerCase();
 
   useEffect(() => {
     setSelectedIds(new Set());
@@ -130,8 +133,22 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
         : withOptimisticTrash.filter(
             (invitation) => invitation.status === status,
           );
-    return sortList(filtered, sort);
-  }, [invitations, status, sort, trashedIds, deletedIds]);
+    const searched = search
+      ? filtered.filter((invitation) => {
+          const haystack = [
+            invitation.title,
+            invitation.location,
+            invitation.status,
+            invitation.slug,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          return haystack.includes(search);
+        })
+      : filtered;
+    return sortList(searched, sort);
+  }, [invitations, status, sort, trashedIds, deletedIds, search]);
 
   const allVisibleSelected =
     visible.length > 0 && visible.every((item) => selectedIds.has(item.id));
@@ -210,15 +227,15 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
         <div>
           <h2
             id="recent-invitations-heading"
-            className="text-xl font-semibold tracking-tight text-black"
+            className="text-2xl font-semibold tracking-tight text-black"
           >
             {inTrashView ? "Trash" : "Recent invitations"}
           </h2>
-          <p className="mt-1 text-sm text-grey">
-            {inTrashView
-              ? "Select invitations to permanently delete, or empty trash."
-              : "Pick up where you left off, or jump back into a draft."}
-          </p>
+          {inTrashView ? (
+            <p className="mt-1 text-sm text-grey">
+              Select invitations to permanently delete, or empty trash.
+            </p>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -313,12 +330,18 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
       {visible.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-dashed border-black/10 bg-white px-6 py-16 text-center">
           <p className="text-base font-semibold text-black">
-            {inTrashView ? "Trash is empty" : "No invitations yet"}
+            {search
+              ? "No matching invitations"
+              : inTrashView
+                ? "Trash is empty"
+                : "No invitations yet"}
           </p>
           <p className="mt-2 text-sm text-grey">
-            {inTrashView
-              ? "Invitations you move to trash will appear here."
-              : "Create your first invitation to see it here."}
+            {search
+              ? `Nothing matched “${query.trim()}”. Try another title, location, or status.`
+              : inTrashView
+                ? "Invitations you move to trash will appear here."
+                : "Create your first invitation to see it here."}
           </p>
           {!inTrashView && (
             <Link
@@ -330,7 +353,7 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
           )}
         </div>
       ) : (
-        <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
           {visible.map((invitation) => (
             <InvitationCard
               key={invitation.id}

@@ -66,6 +66,8 @@ import { saveElementRecent } from "./ElementsBrowser";
 
 interface InvitationEditorProps {
   invitation: Invitation;
+  /** Open the custom size modal once on mount (e.g. from Home → Custom). */
+  openCustomSize?: boolean;
 }
 
 type EditorSnapshot = {
@@ -129,6 +131,8 @@ function buildContent(
   base: InvitationContent,
   pages: InvitationPage[],
   activePageId: string,
+  shape: InvitationShape,
+  customSize: CustomCanvasSize,
 ): InvitationContent {
   const elements = activeElements(pages, activePageId);
   return {
@@ -136,6 +140,8 @@ function buildContent(
     pages: clonePages(pages),
     activePageId,
     elements,
+    shape,
+    customSize,
   };
 }
 
@@ -143,16 +149,23 @@ function serializeSavePayload(
   title: string,
   pages: InvitationPage[],
   activePageId: string,
+  shape: InvitationShape,
+  customSize: CustomCanvasSize,
 ) {
   return JSON.stringify({
     title: title.trim() || "Untitled Invitation",
     activePageId,
     pages: clonePages(pages),
+    shape,
+    customSize,
   });
 }
 
 /** Fully interactive Gather invitation editor */
-export function InvitationEditor({ invitation }: InvitationEditorProps) {
+export function InvitationEditor({
+  invitation,
+  openCustomSize = false,
+}: InvitationEditorProps) {
   const router = useRouter();
   const initialSnapshot = useMemo<EditorSnapshot>(
     () => ({
@@ -162,8 +175,8 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
           : invitation.title,
       pages: clonePages(invitation.content.pages),
       activePageId: invitation.content.activePageId,
-      shape: "portrait",
-      customSize: DEFAULT_CUSTOM_SIZE,
+      shape: invitation.content.shape ?? "portrait",
+      customSize: invitation.content.customSize ?? DEFAULT_CUSTOM_SIZE,
     }),
     [invitation],
   );
@@ -191,6 +204,8 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
     useState<ImageFrame>("none");
   const [pendingTemplate, setPendingTemplate] =
     useState<InvitationTemplate | null>(null);
+  const [customSizeModalOpen, setCustomSizeModalOpen] =
+    useState(openCustomSize);
 
   const savingRef = useRef(false);
   const pendingAutosaveRef = useRef(false);
@@ -199,6 +214,8 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
       initialSnapshot.title,
       initialSnapshot.pages,
       initialSnapshot.activePageId,
+      initialSnapshot.shape,
+      initialSnapshot.customSize,
     ),
   );
   const autosaveTimerRef = useRef<number | null>(null);
@@ -232,8 +249,8 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
           : invitation.title,
       pages: clonePages(invitation.content.pages),
       activePageId: invitation.content.activePageId,
-      shape: "portrait",
-      customSize: DEFAULT_CUSTOM_SIZE,
+      shape: invitation.content.shape ?? "portrait",
+      customSize: invitation.content.customSize ?? DEFAULT_CUSTOM_SIZE,
     });
     setContentMeta(invitation.content);
     setStatus(invitation.status);
@@ -244,9 +261,19 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
         : invitation.title,
       invitation.content.pages,
       invitation.content.activePageId,
+      invitation.content.shape ?? "portrait",
+      invitation.content.customSize ?? DEFAULT_CUSTOM_SIZE,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invitation.id, invitation.updatedAt]);
+
+  useEffect(() => {
+    if (!openCustomSize) return;
+    setCustomSizeModalOpen(true);
+    setActiveTool("layout");
+    setLeftPanelCollapsed(false);
+    router.replace(invitationEditPath(invitation), { scroll: false });
+  }, [openCustomSize, invitation, router]);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -396,7 +423,13 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
     }) => {
       const nextStatus = options?.nextStatus;
       const quiet = options?.quiet ?? false;
-      const payload = serializeSavePayload(title, pages, activePageId);
+      const payload = serializeSavePayload(
+        title,
+        pages,
+        activePageId,
+        shape,
+        customSize,
+      );
 
       if (
         !options?.force &&
@@ -415,7 +448,13 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
       setSaveLabel("Saving…");
 
       startTransition(async () => {
-        const content = buildContent(contentMeta, pages, activePageId);
+        const content = buildContent(
+          contentMeta,
+          pages,
+          activePageId,
+          shape,
+          customSize,
+        );
         const result = await saveInvitationAction({
           invitationId: invitation.id,
           title: title.trim() || "Untitled Invitation",
@@ -438,6 +477,8 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
           result.invitation.title,
           result.invitation.content.pages,
           result.invitation.content.activePageId,
+          result.invitation.content.shape ?? "portrait",
+          result.invitation.content.customSize ?? DEFAULT_CUSTOM_SIZE,
         );
         setContentMeta(result.invitation.content);
         setStatus(result.invitation.status);
@@ -470,18 +511,26 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
     [
       activePageId,
       contentMeta,
+      customSize,
       invitation.eventDate,
       invitation.id,
       invitation.location,
       pages,
       router,
+      shape,
       title,
     ],
   );
 
   // Debounced autosave after edits settle
   useEffect(() => {
-    const payload = serializeSavePayload(title, pages, activePageId);
+    const payload = serializeSavePayload(
+      title,
+      pages,
+      activePageId,
+      shape,
+      customSize,
+    );
     if (payload === lastSavedPayloadRef.current) return;
 
     if (autosaveTimerRef.current) {
@@ -496,7 +545,7 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
         window.clearTimeout(autosaveTimerRef.current);
       }
     };
-  }, [activePageId, pages, persist, title]);
+  }, [activePageId, customSize, pages, persist, shape, title]);
 
   const onChangeStyle = (patch: Partial<ElementStyle>) => {
     if (!selectedId || canvasSelected || !selected) return;
@@ -895,6 +944,8 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
             activeTool={activeTool}
             selectedShape={shape}
             customSize={customSize}
+            customSizeOpen={customSizeModalOpen}
+            onCustomSizeOpenChange={setCustomSizeModalOpen}
             pages={pages}
             defaultElementColor={defaultElementColor}
             onDefaultElementColorChange={setDefaultElementColor}
@@ -902,7 +953,11 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
               commit((current) => ({ ...current, shape: next }))
             }
             onCustomSizeChange={(next) =>
-              commit((current) => ({ ...current, customSize: next }))
+              commit((current) => ({
+                ...current,
+                shape: "custom",
+                customSize: next,
+              }))
             }
             onAddText={addTextPreset}
             onAddLibraryElement={(item: LibraryElement) => {

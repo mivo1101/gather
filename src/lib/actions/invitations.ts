@@ -9,7 +9,11 @@ import {
   permanentlyDeleteInvitationsForUser,
   updateInvitationForUser,
 } from "@/lib/data/invitations";
-import type { InvitationContent } from "@/lib/data/invitation-content";
+import {
+  createDefaultContent,
+  type InvitationCanvasShape,
+  type InvitationContent,
+} from "@/lib/data/invitation-content";
 import {
   contentFromTemplate,
   getTemplateById,
@@ -18,8 +22,20 @@ import type { Invitation } from "@/lib/data/types";
 import { upsertUser } from "@/lib/data/users-db";
 import { invitationEditPath } from "@/lib/invitation-paths";
 
+function parseCanvasShape(raw: FormDataEntryValue | null): InvitationCanvasShape {
+  if (
+    raw === "portrait" ||
+    raw === "landscape" ||
+    raw === "square" ||
+    raw === "custom"
+  ) {
+    return raw;
+  }
+  return "portrait";
+}
+
 /** Ensure the user exists in Supabase, create a draft, then open the editor. */
-export async function createInvitationAction() {
+export async function createInvitationAction(formData?: FormData) {
   const session = await auth();
 
   if (!session?.user?.id || !session.user.email) {
@@ -33,11 +49,14 @@ export async function createInvitationAction() {
     image: session.user.image,
   });
 
+  const shape = parseCanvasShape(formData?.get("shape") ?? null);
   const invitation = await createInvitation({
     userId: session.user.id,
+    content: createDefaultContent({ shape }),
   });
 
-  redirect(invitationEditPath(invitation));
+  const editPath = invitationEditPath(invitation);
+  redirect(shape === "custom" ? `${editPath}?customizeSize=1` : editPath);
 }
 
 /** Create a draft from a catalog template and open the editor. */

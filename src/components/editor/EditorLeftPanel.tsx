@@ -27,6 +27,8 @@ interface EditorLeftPanelProps {
   activeTool: EditorToolId;
   selectedShape: InvitationShape;
   customSize: CustomCanvasSize;
+  customSizeOpen?: boolean;
+  onCustomSizeOpenChange?: (open: boolean) => void;
   pages: InvitationPage[];
   defaultElementColor: string;
   onDefaultElementColorChange: (color: string) => void;
@@ -82,15 +84,21 @@ function ShapePreview({
 function LayoutPanel({
   selectedShape,
   customSize,
+  customSizeOpen,
+  onCustomSizeOpenChange,
   onShapeChange,
   onCustomSizeChange,
 }: {
   selectedShape: InvitationShape;
   customSize: CustomCanvasSize;
+  customSizeOpen?: boolean;
+  onCustomSizeOpenChange?: (open: boolean) => void;
   onShapeChange: (shape: InvitationShape) => void;
   onCustomSizeChange: (size: CustomCanvasSize) => void;
 }) {
-  const [customOpen, setCustomOpen] = useState(false);
+  const [internalCustomOpen, setInternalCustomOpen] = useState(false);
+  const customOpen = customSizeOpen ?? internalCustomOpen;
+  const setCustomOpen = onCustomSizeOpenChange ?? setInternalCustomOpen;
 
   return (
     <div className="space-y-6">
@@ -142,7 +150,6 @@ function LayoutPanel({
         onClose={() => setCustomOpen(false)}
         onApply={(size) => {
           onCustomSizeChange(size);
-          onShapeChange("custom");
           setCustomOpen(false);
         }}
       />
@@ -281,6 +288,8 @@ export function EditorLeftPanel({
   activeTool,
   selectedShape,
   customSize,
+  customSizeOpen,
+  onCustomSizeOpenChange,
   pages,
   defaultElementColor,
   onDefaultElementColorChange,
@@ -315,6 +324,8 @@ export function EditorLeftPanel({
           <LayoutPanel
             selectedShape={selectedShape}
             customSize={customSize}
+            customSizeOpen={customSizeOpen}
+            onCustomSizeOpenChange={onCustomSizeOpenChange}
             onShapeChange={onShapeChange}
             onCustomSizeChange={onCustomSizeChange}
           />
