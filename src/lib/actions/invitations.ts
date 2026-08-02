@@ -36,6 +36,18 @@ function parseCanvasShape(raw: FormDataEntryValue | null): InvitationCanvasShape
 
 /** Ensure the user exists in Supabase, create a draft, then open the editor. */
 export async function createInvitationAction(formData?: FormData) {
+  const shape = parseCanvasShape(formData?.get("shape") ?? null);
+  redirect(await createInvitationEditPath(shape));
+}
+
+/** Create a draft with a chosen canvas shape and return the editor path. */
+export async function createInvitationWithShapeAction(
+  shape: InvitationCanvasShape,
+): Promise<{ path: string }> {
+  return { path: await createInvitationEditPath(shape) };
+}
+
+async function createInvitationEditPath(shape: InvitationCanvasShape) {
   const session = await auth();
 
   if (!session?.user?.id || !session.user.email) {
@@ -49,14 +61,16 @@ export async function createInvitationAction(formData?: FormData) {
     image: session.user.image,
   });
 
-  const shape = parseCanvasShape(formData?.get("shape") ?? null);
   const invitation = await createInvitation({
     userId: session.user.id,
     content: createDefaultContent({ shape }),
   });
 
+  revalidatePath("/home");
+  revalidatePath("/invitations");
+
   const editPath = invitationEditPath(invitation);
-  redirect(shape === "custom" ? `${editPath}?customizeSize=1` : editPath);
+  return shape === "custom" ? `${editPath}?customizeSize=1` : editPath;
 }
 
 /** Create a draft from a catalog template and open the editor. */
@@ -118,7 +132,6 @@ export async function saveInvitationAction(input: {
     );
 
     revalidatePath("/home");
-    revalidatePath(invitationEditPath(invitation));
 
     return { invitation };
   } catch (error) {

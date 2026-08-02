@@ -7,9 +7,12 @@ import type {
   ElementEffects,
   ElementStyle,
   EffectKind,
-  ImageFrame,
   VerticalAlign,
 } from "@/lib/data/canvas-elements";
+import {
+  CANVAS_FONT_GROUPS,
+  canvasFontCssFamily,
+} from "@/lib/canvas-fonts";
 import { isPatternGraphicSrc } from "@/lib/data/element-library";
 import {
   effectParams,
@@ -22,7 +25,14 @@ import {
   AlignLeftIcon,
   AlignRightIcon,
 } from "../editor-icons";
-import { ColourField, EmptyHint, PanelSection, ThinSlider } from "./shared";
+import { ImageFramePicker } from "../ImageFramePicker";
+import {
+  ColourField,
+  EditableNumberInput,
+  EmptyHint,
+  PanelSection,
+  ThinSlider,
+} from "./shared";
 
 const DIVIDER_STYLES: { id: DividerStyle; label: string }[] = [
   { id: "solid", label: "Solid" },
@@ -32,14 +42,6 @@ const DIVIDER_STYLES: { id: DividerStyle; label: string }[] = [
   { id: "thick", label: "Thick" },
   { id: "dots", label: "Dots" },
   { id: "diamond", label: "Diamond" },
-];
-
-const FRAMES: { id: ImageFrame; label: string }[] = [
-  { id: "none", label: "None" },
-  { id: "square", label: "Square" },
-  { id: "circle", label: "Circle" },
-  { id: "heart", label: "Heart" },
-  { id: "rounded", label: "Rounded" },
 ];
 
 interface StyleHandlers {
@@ -73,10 +75,21 @@ export function SelectedTextStyles({
             })
           }
           className="w-full appearance-none rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/20"
+          style={{ fontFamily: canvasFontCssFamily(style.fontFamily) }}
         >
-          <option value="playfair">Playfair Display</option>
-          <option value="urbanist">Urbanist</option>
-          <option value="caveat">Caveat</option>
+          {CANVAS_FONT_GROUPS.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.fonts.map((font) => (
+                <option
+                  key={font.id}
+                  value={font.id}
+                  style={{ fontFamily: font.cssFamily }}
+                >
+                  {font.label}
+                </option>
+              ))}
+            </optgroup>
+          ))}
         </select>
       </label>
 
@@ -104,13 +117,13 @@ export function SelectedTextStyles({
             Size
           </span>
           <div className="flex items-center rounded-xl border border-black/10 px-3 py-2">
-            <input
-              type="number"
+            <EditableNumberInput
               value={style.fontSize}
-              onChange={(e) =>
-                onChangeStyle({ fontSize: Number(e.target.value) || 8 })
-              }
+              min={8}
+              max={400}
+              onChange={(fontSize) => onChangeStyle({ fontSize })}
               className="w-full bg-transparent text-sm outline-none"
+              ariaLabel="Font size"
             />
             <span className="text-xs text-grey">px</span>
           </div>
@@ -415,17 +428,13 @@ function EffectSlider({
           >
             −
           </button>
-          <input
-            type="number"
+          <EditableNumberInput
             min={min}
             max={max}
             value={value}
-            onChange={(e) => {
-              const next = Number(e.target.value);
-              if (!Number.isFinite(next)) return;
-              onChange(Math.min(max, Math.max(min, Math.round(next))));
-            }}
+            onChange={onChange}
             className="w-10 border-x border-black/10 bg-transparent py-1.5 text-center text-xs font-semibold outline-none"
+            ariaLabel={label}
           />
           <button
             type="button"
@@ -468,22 +477,10 @@ export function SelectedImageStyles({
       )}
 
       <PanelSection title="Frames">
-        <div className="grid grid-cols-2 gap-1.5">
-          {FRAMES.map((frame) => (
-            <button
-              key={frame.id}
-              type="button"
-              onClick={() => onChangeStyle({ frame: frame.id })}
-              className={`rounded-xl border px-2.5 py-2 text-left text-xs font-semibold ${
-                (style.frame ?? "none") === frame.id
-                  ? "border-signature bg-signature/10 text-signature"
-                  : "border-black/10 text-black hover:bg-soft-grey"
-              }`}
-            >
-              {frame.label}
-            </button>
-          ))}
-        </div>
+        <ImageFramePicker
+          value={style.frame ?? "none"}
+          onChange={(frame) => onChangeStyle({ frame })}
+        />
       </PanelSection>
 
       <EffectsPicker
@@ -508,6 +505,26 @@ export function SelectedShapeStyles({
         value={selected.style.color}
         onChange={(color) => onChangeStyle({ color })}
       />
+      <PanelSection title="Border">
+        <ColourField
+          label="Border colour"
+          value={selected.style.shapeBorderColor ?? "#1F2D22"}
+          onChange={(shapeBorderColor) =>
+            onChangeStyle({ shapeBorderColor })
+          }
+        />
+        <ThinSlider
+          label="Weight"
+          value={selected.style.shapeBorderWidth ?? 0}
+          min={0}
+          max={12}
+          step={0.5}
+          display={`${selected.style.shapeBorderWidth ?? 0}px`}
+          onChange={(shapeBorderWidth) =>
+            onChangeStyle({ shapeBorderWidth })
+          }
+        />
+      </PanelSection>
       <EffectsPicker
         effects={selected.style.effects ?? {}}
         onChange={(effects) => onChangeStyle({ effects })}

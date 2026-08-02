@@ -7,7 +7,7 @@ import type {
   WidgetKind,
 } from "@/lib/data/canvas-elements";
 import { widgetKindLabel } from "@/lib/data/canvas-elements";
-import { ColourField, PanelSection } from "./shared";
+import { ColourField, EditableNumberInput, PanelSection } from "./shared";
 
 interface SelectedWidgetStylesProps {
   widget: WidgetConfig;
@@ -56,16 +56,12 @@ function NumberInput({
   step?: number;
 }) {
   return (
-    <input
-      type="number"
+    <EditableNumberInput
       min={min}
       max={max}
       step={step}
       value={value}
-      onChange={(e) => {
-        const next = Number(e.target.value);
-        onChange(Number.isFinite(next) ? Math.max(min, next) : min);
-      }}
+      onChange={onChange}
       className="w-full rounded-xl border border-black/10 px-3 py-2.5 text-sm outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/20"
     />
   );

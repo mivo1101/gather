@@ -3,10 +3,12 @@ import {
   createDefaultContent,
   elementsFromLocationPage,
   elementsFromRsvpPage,
+  type InvitationCanvasShape,
   type InvitationContent,
   type InvitationPage,
   type RsvpConfig,
 } from "./invitation-content";
+import velvetVowsSnapshot from "./template-snapshots/velvet-vows.json";
 
 export type TemplateCategoryId =
   | "wedding"
@@ -27,6 +29,12 @@ export interface TemplatePage {
   name: string;
   kind: "design" | "rsvp" | "location";
   backgroundColor: string;
+  backgroundPattern?: InvitationPage["backgroundPattern"];
+  backgroundTexture?: InvitationPage["backgroundTexture"];
+  backgroundTextureOpacity?: number;
+  backgroundTextureTint?: string;
+  backgroundTextureBlend?: InvitationPage["backgroundTextureBlend"];
+  border?: InvitationPage["border"];
   elements: CanvasElement[];
   location?: {
     venue: string;
@@ -41,6 +49,7 @@ export interface InvitationTemplate {
   categoryId: Exclude<TemplateCategoryId, "other">;
   title: string;
   description: string;
+  shape?: InvitationCanvasShape;
   pages: TemplatePage[];
 }
 
@@ -281,8 +290,20 @@ function rsvpPage(config: RsvpConfig): TemplatePage {
   };
 }
 
+const VELVET_VOWS_PAGES =
+  velvetVowsSnapshot.pages as unknown as TemplatePage[];
+
 /** Catalog — multi-page templates with interactive Location + RSVP. */
 export const INVITATION_TEMPLATES: InvitationTemplate[] = [
+  {
+    id: "wedding-velvet-vows",
+    categoryId: "wedding",
+    title: "Velvet Vows",
+    description:
+      "Burgundy landscape wedding suite with paper texture, venue map, and RSVP",
+    shape: "landscape",
+    pages: VELVET_VOWS_PAGES,
+  },
   {
     id: "wedding-photo-suite",
     categoryId: "wedding",
@@ -574,6 +595,431 @@ export const INVITATION_TEMPLATES: InvitationTemplate[] = [
   },
 
   // ── Birthday ─────────────────────────────────────────────,
+  {
+    id: "birthday-after-five",
+    categoryId: "birthday",
+    title: "After Five",
+    description:
+      "Burgundy birthday suite with party photography, venue map, and RSVP",
+    shape: "square",
+    pages: [
+      {
+        ...design("Cover", "#840000", [
+          text("af_c_name", "Rosie.", 20, 31.307, 60, {
+            fontFamily: "caveat",
+            fontSize: 90,
+            fontWeight: "bold",
+            bold: true,
+            color: "#FFFFFF",
+            lineHeight: 1.15,
+          }),
+          text(
+            "af_c_details",
+            "Birthday Party\nMelbourne\nSince 1999",
+            20,
+            50.367,
+            60,
+            {
+              fontFamily: "urbanist",
+              fontSize: 13,
+              fontWeight: "bold",
+              color: "#FFFFFF",
+            },
+          ),
+        ]),
+        backgroundPattern: "none",
+        border: null,
+      },
+      {
+        ...design("Invitation", "#840000", [
+          {
+            ...shape(
+              "af_i_corner_triangle",
+              "triangle",
+              0.863,
+              43.523,
+              4.169,
+              4.169,
+              "#840000",
+            ),
+            rotation: 45,
+          },
+          {
+            ...image(
+              "af_i_photo",
+              "https://images.unsplash.com/photo-1558301211-0d8c8ddee6ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMDA3ODc0fDB8MXxzZWFyY2h8OHx8YmlydGhkYXklMjBwYXJ0eXxlbnwxfHx8fDE3ODUxMzgzMzR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+              3.524,
+              2.829,
+              60.981,
+              94.342,
+              { frame: "square" },
+            ),
+            style: style({
+              color: "#000000",
+              frame: "square",
+              imageScale: 1,
+              imageOffsetX: 50,
+              imageOffsetY: 29.251,
+              effects: {
+                kind: "none",
+                direction: -180,
+                offset: 5,
+                blur: 10,
+                transparency: 30,
+              },
+            }),
+          },
+          {
+            ...shape(
+              "af_i_corner_square",
+              "square",
+              0,
+              45.589,
+              7.881,
+              8.823,
+              "#840000",
+            ),
+            style: style({
+              color: "#840000",
+              effects: {
+                kind: "drop",
+                direction: -180,
+                offset: 0,
+                blur: 5,
+                transparency: 40,
+              },
+            }),
+          },
+          text("af_i_title", "You're Invited!", 9.787, 14.681, 48.456, {
+            fontFamily: "caveat",
+            fontSize: 50,
+            fontWeight: "bold",
+            bold: true,
+            color: "#840000",
+            textAlign: "left",
+            lineHeight: 1.15,
+          }),
+          text("af_i_hey", "Hey,", 31.234, 10.823, 5.562, {
+            fontFamily: "urbanist",
+            fontSize: 13,
+            italic: true,
+            bold: true,
+            color: "#840000",
+            textAlign: "left",
+          }),
+          shape(
+            "af_i_calendar",
+            "icon_calendar",
+            60.303,
+            63.368,
+            3.233,
+            3.233,
+            "#840000",
+          ),
+          text(
+            "af_i_date",
+            "Saturday,  August 1st 2026",
+            65.794,
+            63.656,
+            26.642,
+            {
+              fontFamily: "urbanist",
+              fontSize: 12,
+              fontWeight: "medium",
+              color: "#FFFFFF",
+              textAlign: "left",
+            },
+          ),
+          shape(
+            "af_i_clock",
+            "icon_clock",
+            60.38,
+            68.198,
+            3.155,
+            3.155,
+            "#840000",
+          ),
+          text(
+            "af_i_time",
+            "5.00 PM - Midnight",
+            65.794,
+            68.448,
+            26.642,
+            {
+              fontFamily: "urbanist",
+              fontSize: 12,
+              fontWeight: "medium",
+              color: "#FFFFFF",
+              textAlign: "left",
+            },
+          ),
+          shape(
+            "af_i_camera",
+            "icon_camera",
+            60.679,
+            73.164,
+            2.857,
+            2.857,
+            "#840000",
+          ),
+          text(
+            "af_i_dress",
+            "Dress code:",
+            65.794,
+            73.264,
+            13.472,
+            {
+              fontFamily: "urbanist",
+              fontSize: 12,
+              fontWeight: "medium",
+              color: "#FFFFFF",
+              textAlign: "left",
+            },
+          ),
+          shape(
+            "af_i_dress_silver",
+            "circle",
+            78.872,
+            73.323,
+            2.538,
+            2.538,
+            "#E4E4E4",
+          ),
+          shape(
+            "af_i_dress_pink",
+            "circle",
+            82.358,
+            73.323,
+            2.538,
+            2.538,
+            "#EAA2C4",
+          ),
+          shape(
+            "af_i_dress_blue",
+            "circle",
+            85.874,
+            73.323,
+            2.538,
+            2.538,
+            "#8ECFD1",
+          ),
+        ]),
+        backgroundPattern: "stripes",
+        border: null,
+      },
+      {
+        ...design("Venue", "#840000", [
+          shape(
+            "af_v_left_rule",
+            "square",
+            0,
+            33.072,
+            21.037,
+            3.561,
+            "#FFFFFF",
+          ),
+          text("af_v_title", "Let's meet at", 28.083, 8.857, 43.833, {
+            fontFamily: "caveat",
+            fontSize: 50,
+            fontWeight: "bold",
+            bold: true,
+            color: "#FFFFFF",
+            textAlign: "left",
+            lineHeight: 1.15,
+          }),
+          shape(
+            "af_v_right_rule",
+            "square",
+            78.963,
+            33.072,
+            21.037,
+            3.561,
+            "#FFFFFF",
+          ),
+          {
+            ...shape(
+              "af_v_card",
+              "rounded_square",
+              17.803,
+              23.8,
+              64.393,
+              21.687,
+              "#840000",
+            ),
+            style: style({
+              color: "#840000",
+              effects: {
+                kind: "drop",
+                direction: 50,
+                offset: 10,
+                blur: 7,
+                transparency: 50,
+              },
+            }),
+          },
+          text(
+            "af_v_name",
+            "The Glasshouse",
+            32.258,
+            32.006,
+            35.484,
+            {
+              fontFamily: "urbanist",
+              fontSize: 25,
+              fontWeight: "bold",
+              bold: true,
+              color: "#FFFFFF",
+              textAlign: "left",
+            },
+          ),
+          text(
+            "af_v_city",
+            "Melbourne CBD",
+            40.323,
+            39.002,
+            19.355,
+            {
+              fontFamily: "urbanist",
+              fontSize: 12,
+              fontWeight: "bold",
+              bold: true,
+              color: "#FFFFFF",
+            },
+          ),
+          shape(
+            "af_v_pin",
+            "icon_location",
+            48.164,
+            27.294,
+            3.671,
+            3.671,
+            "#FFFFFF",
+          ),
+          {
+            id: "af_v_map",
+            type: "widget",
+            x: 9.336,
+            y: 50.952,
+            width: 81.328,
+            height: 39.684,
+            rotation: 0,
+            locked: false,
+            content: "map",
+            style: style({
+              fontFamily: "urbanist",
+              fontSize: 14,
+            }),
+            widget: {
+              kind: "map",
+              radius: 18,
+              mapsQuery: "The glasshouse, melbourne",
+              showButton: true,
+              buttonLabel: "Open in Google Maps",
+              buttonStyle: {
+                radius: 999,
+                textColor: "#1F2D22",
+                background: "#FFFFFF",
+                borderColor: "#FFFFFF",
+                borderStyle: "none",
+                borderWidth: 0,
+              },
+            },
+          },
+        ]),
+        backgroundPattern: "stripes",
+        border: null,
+      },
+      {
+        ...design("RSVP", "#840000", [
+          {
+            ...shape(
+              "af_r_card",
+              "rounded_square",
+              17.803,
+              54.573,
+              64.393,
+              26.29,
+              "#840000",
+            ),
+            style: style({
+              color: "#840000",
+              effects: {
+                kind: "drop",
+                direction: 50,
+                offset: 10,
+                blur: 7,
+                transparency: 50,
+              },
+            }),
+          },
+          {
+            id: "af_r_attend",
+            type: "widget",
+            x: 35.186,
+            y: 56.718,
+            width: 29.628,
+            height: 22,
+            rotation: 0,
+            locked: false,
+            content: "attend",
+            style: style({
+              fontFamily: "urbanist",
+              fontSize: 14,
+            }),
+            widget: {
+              kind: "attend",
+              label: "Can you make it?",
+              noLabel: "Sorry, I can't",
+              required: true,
+              yesLabel: "Yes, can't wait ❤️",
+              labelStyle: {
+                color: "#FFFFFF",
+              },
+              buttonStyle: {
+                radius: 999,
+                textColor: "#FFFFFF",
+                background: "#FFFFFF",
+                borderColor: "#FFFFFF",
+                borderStyle: "none",
+                borderWidth: 0,
+              },
+            },
+          },
+          text(
+            "af_r_title",
+            "Can't wait to celebrate with you!\n",
+            18.337,
+            20.169,
+            63.326,
+            {
+              fontFamily: "caveat",
+              fontSize: 50,
+              fontWeight: "bold",
+              bold: true,
+              color: "#FFFFFF",
+              lineHeight: 0.9,
+            },
+          ),
+          text(
+            "af_r_note",
+            "Please respond before July 20",
+            33.681,
+            48.633,
+            32.638,
+            {
+              fontFamily: "urbanist",
+              fontSize: 12,
+              fontWeight: "bold",
+              bold: true,
+              color: "#FFFFFF",
+            },
+          ),
+        ]),
+        backgroundPattern: "stripes",
+        border: null,
+      },
+    ],
+  },
   {
     id: "birthday-milestone-70",
     categoryId: "birthday",
@@ -1599,6 +2045,568 @@ export const INVITATION_TEMPLATES: InvitationTemplate[] = [
     ],
   },
 
+  // ── Landscape collection ─────────────────────────────────,
+  {
+    id: "wedding-coastal-editorial-landscape",
+    categoryId: "wedding",
+    title: "Coastal Editorial",
+    description: "Landscape photo story with modern ceremony details",
+    shape: "landscape",
+    pages: [
+      design("Cover", "#f7f1ea", [
+        shape("wce_c_block", "rounded_square", 3, 6, 40, 88, "#fffaf6"),
+        shape("wce_c_dot", "circle", 34, 12, 5, 9, "#ff60aa"),
+        text("wce_c_eye", "TOGETHER BY THE SEA", 7, 16, 30, {
+          fontFamily: "urbanist",
+          fontSize: 9,
+          letterSpacing: 2.6,
+          fontWeight: "bold",
+          color: "#9d496f",
+          textAlign: "left",
+        }),
+        text("wce_c_names", "Maya\n& Theo", 7, 31, 31, {
+          fontFamily: "playfair",
+          fontSize: 27,
+          lineHeight: 1.04,
+          color: "#30241f",
+          textAlign: "left",
+        }),
+        divider("wce_c_rule", 7, 69, 18, "#cda99b"),
+        text("wce_c_date", "18 · 10 · 2027   PORTSEA", 7, 76, 30, {
+          fontFamily: "urbanist",
+          fontSize: 10,
+          letterSpacing: 1.4,
+          fontWeight: "medium",
+          color: "#6e554a",
+          textAlign: "left",
+        }),
+        image("wce_c_photo", IMG.weddingWalk, 46, 6, 51, 88, {
+          frame: "rounded",
+        }),
+      ]),
+      design("The celebration", "#fffaf6", [
+        image("wce_d_photo", IMG.weddingDetail, 4, 8, 40, 84, {
+          frame: "rounded",
+        }),
+        text("wce_d_eye", "THE CELEBRATION", 50, 13, 42, {
+          fontFamily: "urbanist",
+          fontSize: 9,
+          letterSpacing: 3,
+          fontWeight: "bold",
+          color: "#ff60aa",
+          textAlign: "left",
+        }),
+        text("wce_d_title", "A ceremony\nat golden hour", 50, 27, 42, {
+          fontFamily: "playfair",
+          fontSize: 20,
+          lineHeight: 1.12,
+          color: "#30241f",
+          textAlign: "left",
+        }),
+        text(
+          "wce_d_info",
+          "18 OCTOBER 2027 · 4:30 PM\nTHE DUNES HOUSE · PORTSEA",
+          50,
+          70,
+          42,
+          {
+            fontFamily: "urbanist",
+            fontSize: 8,
+            letterSpacing: 0.8,
+            lineHeight: 1.5,
+            color: "#6e554a",
+            textAlign: "left",
+          },
+        ),
+        shape("wce_d_arc", "semicircle", 86, 74, 10, 18, "#f7d7e6"),
+      ]),
+      locationPage(
+        "The Dunes House",
+        "Portsea, Victoria",
+        "The Dunes House Portsea Victoria",
+      ),
+      rsvpPage({
+        eyebrow: "Meet us by the sea",
+        title: "Will you be there?",
+        note: "Please reply by 18 August 2027",
+        theme: {
+          background: "#f7f1ea",
+          surface: "#fffaf6",
+          accent: "#ff60aa",
+          text: "#30241f",
+          muted: "#806b61",
+          buttonStyle: "outline",
+          headingFont: "playfair",
+          bodyFont: "urbanist",
+        },
+        questions: [
+          {
+            id: "attend",
+            type: "attend",
+            label: "",
+            yesLabel: "Meet you by the sea",
+            noLabel: "Sending our love",
+          },
+          {
+            id: "meal",
+            type: "single_choice",
+            label: "Dinner preference",
+            required: true,
+            options: [
+              { id: "fish", label: "Market fish" },
+              { id: "beef", label: "Slow-roasted beef" },
+              { id: "garden", label: "Garden menu" },
+            ],
+          },
+        ],
+      }),
+    ],
+  },
+  {
+    id: "birthday-rooftop-afterglow-landscape",
+    categoryId: "birthday",
+    title: "Rooftop Afterglow",
+    description: "Landscape night-out invite with bold graphic energy",
+    shape: "landscape",
+    pages: [
+      design("Cover", "#161415", [
+        image("bra_c_photo", IMG.birthdayParty, 3, 6, 58, 88, {
+          frame: "rounded",
+        }),
+        shape("bra_c_panel", "rounded_square", 64, 6, 33, 88, "#ff60aa"),
+        shape("bra_c_orb", "circle", 82, 10, 10, 18, "#ffd8e9"),
+        text("bra_c_eye", "ROOFTOP · SUNSET · LATE", 69, 18, 24, {
+          fontFamily: "urbanist",
+          fontSize: 8,
+          letterSpacing: 2,
+          fontWeight: "bold",
+          color: "#5b1836",
+        }),
+        text("bra_c_age", "30", 67, 29, 28, {
+          fontFamily: "urbanist",
+          fontSize: 46,
+          fontWeight: "bold",
+          color: "#ffffff",
+        }),
+        text("bra_c_name", "Nia's\nAfterglow", 68, 67, 26, {
+          fontFamily: "caveat",
+          fontSize: 17,
+          lineHeight: 0.95,
+          color: "#ffffff",
+        }),
+        text("bra_c_when", "SAT · 8 PM", 68, 87, 26, {
+          fontFamily: "urbanist",
+          fontSize: 8,
+          letterSpacing: 2,
+          fontWeight: "bold",
+          color: "#5b1836",
+        }),
+      ]),
+      design("Party plan", "#fff7fa", [
+        text("bra_d_title", "Sunset first.\nAfterglow later.", 6, 12, 43, {
+          fontFamily: "playfair",
+          fontSize: 19,
+          lineHeight: 1.12,
+          color: "#281a21",
+          textAlign: "left",
+        }),
+        text(
+          "bra_d_plan",
+          "7:30  SUNSET SPRITZ\n8:30  DINNER BITES\n10:00  DANCE FLOOR\nLATE  ONE MORE SONG",
+          7,
+          57,
+          40,
+          {
+            fontFamily: "urbanist",
+            fontSize: 8,
+            letterSpacing: 1,
+            lineHeight: 1.55,
+            fontWeight: "bold",
+            color: "#8d3159",
+            textAlign: "left",
+          },
+        ),
+        image("bra_d_friends", IMG.friends, 54, 9, 40, 82, {
+          frame: "arch",
+        }),
+        shape("bra_d_star1", "star", 45, 14, 6, 11, "#ff60aa"),
+        shape("bra_d_star2", "circle", 48, 73, 4, 7, "#ffd068"),
+      ]),
+      locationPage(
+        "Luma Rooftop",
+        "Melbourne CBD, Victoria",
+        "Luma Rooftop Melbourne",
+      ),
+      rsvpPage({
+        eyebrow: "Guest list",
+        title: "Are you coming up?",
+        note: "Reply by Friday so we can save your spot",
+        theme: {
+          background: "#161415",
+          surface: "#282125",
+          accent: "#ff60aa",
+          text: "#ffffff",
+          muted: "#c9b9c1",
+          buttonStyle: "pill",
+          headingFont: "urbanist",
+          bodyFont: "urbanist",
+        },
+        questions: [
+          {
+            id: "attend",
+            type: "attend",
+            label: "",
+            yesLabel: "Up to the rooftop",
+            noLabel: "Dancing elsewhere",
+          },
+          {
+            id: "arrival",
+            type: "single_choice",
+            label: "When should we expect you?",
+            options: [
+              { id: "sunset", label: "Sunset drinks" },
+              { id: "dinner", label: "Dinner time" },
+              { id: "dance", label: "Straight to dancing" },
+            ],
+          },
+        ],
+      }),
+    ],
+  },
+  {
+    id: "baby-little-wildflower-landscape",
+    categoryId: "baby",
+    title: "Little Wildflower",
+    description: "Landscape garden shower with soft organic layers",
+    shape: "landscape",
+    pages: [
+      design("Cover", "#f8f1ec", [
+        shape("blw_c_blob", "oval", 4, 10, 48, 80, "#e6eee2"),
+        image("blw_c_photo", IMG.softBaby, 7, 9, 43, 82, {
+          frame: "arch",
+        }),
+        image("blw_c_flower", "/images/flowers/flower-4.png", 43, 54, 22, 40),
+        text("blw_c_eye", "A GARDEN SHOWER FOR", 59, 20, 33, {
+          fontFamily: "urbanist",
+          fontSize: 9,
+          letterSpacing: 2.7,
+          fontWeight: "bold",
+          color: "#71806a",
+        }),
+        text("blw_c_title", "our little\nwildflower", 57, 35, 37, {
+          fontFamily: "caveat",
+          fontSize: 24,
+          lineHeight: 1,
+          color: "#654b56",
+        }),
+        divider("blw_c_rule", 66, 72, 20, "#cbb2bd"),
+        text("blw_c_when", "SUNDAY · 11 AM · MAY 16", 59, 80, 33, {
+          fontFamily: "urbanist",
+          fontSize: 9,
+          letterSpacing: 1.6,
+          fontWeight: "medium",
+          color: "#71806a",
+        }),
+      ]),
+      design("Shower details", "#fbf8f4", [
+        image("blw_d_nursery", IMG.nursery, 57, 8, 38, 84, {
+          frame: "rounded",
+        }),
+        shape("blw_d_leaf", "semicircle", 5, 9, 11, 20, "#dce8d6"),
+        text("blw_d_title", "Tea, treats\n& sweet wishes", 8, 21, 42, {
+          fontFamily: "playfair",
+          fontSize: 18,
+          lineHeight: 1.12,
+          color: "#654b56",
+          textAlign: "left",
+        }),
+        text(
+          "blw_d_info",
+          "SUNDAY, 16 MAY · 11 AM\nTHE GLASSHOUSE GARDEN\nBOOKS INSTEAD OF CARDS",
+          8,
+          58,
+          42,
+          {
+            fontFamily: "urbanist",
+            fontSize: 8,
+            letterSpacing: 0.6,
+            lineHeight: 1.5,
+            color: "#71806a",
+            textAlign: "left",
+          },
+        ),
+      ]),
+      locationPage(
+        "The Glasshouse Garden",
+        "36 Willow Lane, Melbourne",
+        "The Glasshouse Garden Melbourne",
+      ),
+      rsvpPage({
+        eyebrow: "A tiny reply",
+        title: "Will you join the garden party?",
+        note: "Please respond by 1 May",
+        theme: {
+          background: "#f8f1ec",
+          surface: "#fbf8f4",
+          accent: "#9b5875",
+          text: "#654b56",
+          muted: "#71806a",
+          buttonStyle: "chip",
+          headingFont: "caveat",
+          bodyFont: "urbanist",
+        },
+        questions: [
+          {
+            id: "attend",
+            type: "attend",
+            label: "",
+            yesLabel: "I'll be blooming there",
+            noLabel: "Sending sweet wishes",
+          },
+          {
+            id: "prediction",
+            type: "single_choice",
+            label: "Your playful prediction",
+            options: [
+              { id: "early", label: "Early arrival" },
+              { id: "on-time", label: "Right on time" },
+              { id: "late", label: "Fashionably late" },
+              { id: "secret", label: "Keeping it secret" },
+            ],
+          },
+        ],
+      }),
+    ],
+  },
+  {
+    id: "corporate-future-forum-landscape",
+    categoryId: "corporate",
+    title: "Future Forum",
+    description: "Landscape conference system with modular geometry",
+    shape: "landscape",
+    pages: [
+      design("Cover", "#111111", [
+        image("cff_c_photo", IMG.conference, 47, 7, 50, 86, {
+          frame: "rounded",
+        }),
+        shape("cff_c_pink", "rounded_square", 4, 7, 39, 86, "#ff60aa"),
+        shape("cff_c_cut", "circle", 34, 13, 5, 9, "#111111"),
+        text("cff_c_eye", "GATHER PRESENTS", 8, 17, 28, {
+          fontFamily: "urbanist",
+          fontSize: 8,
+          letterSpacing: 2.8,
+          fontWeight: "bold",
+          color: "#58132f",
+          textAlign: "left",
+        }),
+        text("cff_c_title", "FUTURE\nFORUM 27", 8, 32, 31, {
+          fontFamily: "urbanist",
+          fontSize: 22,
+          lineHeight: 1,
+          fontWeight: "bold",
+          color: "#ffffff",
+          textAlign: "left",
+        }),
+        text("cff_c_when", "IDEAS · PEOPLE · MOMENTUM\n14 SEPTEMBER · MELBOURNE", 8, 70, 30, {
+          fontFamily: "urbanist",
+          fontSize: 7,
+          letterSpacing: 1.1,
+          lineHeight: 1.6,
+          fontWeight: "bold",
+          color: "#58132f",
+          textAlign: "left",
+        }),
+      ]),
+      design("Programme", "#f6f3f4", [
+        text("cff_d_title", "ONE DAY.\nFOUR TRACKS.", 6, 12, 26, {
+          fontFamily: "urbanist",
+          fontSize: 20,
+          lineHeight: 1.05,
+          fontWeight: "bold",
+          color: "#111111",
+          textAlign: "left",
+        }),
+        shape("cff_d_line", "line", 34, 9, 2, 82, "#ff60aa"),
+        text(
+          "cff_d_a",
+          "09:00\nOPENING SIGNAL\n\n10:30\nDESIGNING TRUST",
+          40,
+          14,
+          23,
+          {
+            fontFamily: "urbanist",
+            fontSize: 10,
+            lineHeight: 1.45,
+            fontWeight: "bold",
+            color: "#383034",
+            textAlign: "left",
+          },
+        ),
+        text(
+          "cff_d_b",
+          "13:00\nTHE HUMAN SYSTEM\n\n15:00\nBUILDING WHAT'S NEXT",
+          68,
+          14,
+          25,
+          {
+            fontFamily: "urbanist",
+            fontSize: 8,
+            lineHeight: 1.35,
+            fontWeight: "bold",
+            color: "#383034",
+            textAlign: "left",
+          },
+        ),
+        image("cff_d_team", IMG.team, 40, 68, 53, 23, { frame: "rounded" }),
+        shape("cff_d_hex", "hexagon_flat", 10, 64, 13, 23, "#ff60aa"),
+      ]),
+      locationPage(
+        "Northbank Exchange",
+        "1 Harbour Esplanade, Docklands VIC",
+        "Northbank Exchange Docklands Melbourne",
+      ),
+      rsvpPage({
+        eyebrow: "Delegate registration",
+        title: "Build your forum day",
+        note: "Registration closes 1 September",
+        theme: {
+          background: "#111111",
+          surface: "#242124",
+          accent: "#ff60aa",
+          text: "#ffffff",
+          muted: "#bdb4b9",
+          buttonStyle: "square",
+          headingFont: "urbanist",
+          bodyFont: "urbanist",
+        },
+        questions: [
+          {
+            id: "attend",
+            type: "attend",
+            label: "Registration",
+            yesLabel: "Reserve my place",
+            noLabel: "Not this year",
+          },
+          {
+            id: "tracks",
+            type: "multi_choice",
+            label: "Choose your tracks",
+            hint: "Select all that interest you",
+            required: true,
+            options: [
+              { id: "design", label: "Designing trust" },
+              { id: "people", label: "Human systems" },
+              { id: "future", label: "What's next" },
+              { id: "studio", label: "Prototype studio" },
+            ],
+          },
+        ],
+      }),
+    ],
+  },
+  {
+    id: "dinner-mediterranean-table-landscape",
+    categoryId: "dinner",
+    title: "Mediterranean Table",
+    description: "Landscape supper invite with sun-washed editorial styling",
+    shape: "landscape",
+    pages: [
+      design("Cover", "#f2ead9", [
+        image("dmt_c_table", IMG.gardenTable, 4, 7, 55, 86, {
+          frame: "rounded",
+        }),
+        shape("dmt_c_sun", "circle", 83, 11, 9, 16, "#d58b57"),
+        text("dmt_c_eye", "A LONG TABLE SUPPER", 65, 20, 28, {
+          fontFamily: "urbanist",
+          fontSize: 8,
+          letterSpacing: 2.6,
+          fontWeight: "bold",
+          color: "#8b4e2f",
+        }),
+        text("dmt_c_title", "Under the\nlemon trees", 63, 35, 31, {
+          fontFamily: "playfair",
+          fontSize: 21,
+          lineHeight: 1.08,
+          color: "#3d4b36",
+        }),
+        divider("dmt_c_rule", 70, 70, 17, "#b27a55"),
+        text("dmt_c_when", "SUNDAY · 5 PM · 24 JAN", 64, 79, 30, {
+          fontFamily: "urbanist",
+          fontSize: 9,
+          letterSpacing: 1.4,
+          fontWeight: "bold",
+          color: "#8b4e2f",
+        }),
+      ]),
+      design("The menu", "#fbf7ed", [
+        shape("dmt_d_arch", "semicircle", 5, 8, 19, 34, "#dce2ce"),
+        text("dmt_d_title", "Pass the plates", 8, 16, 36, {
+          fontFamily: "caveat",
+          fontSize: 26,
+          color: "#3d4b36",
+          textAlign: "left",
+        }),
+        text(
+          "dmt_d_menu",
+          "MARINATED OLIVES · WARM FLATBREAD\nBURRATA · TOMATO · BASIL\nWOOD-ROASTED FISH · LEMON\nSUMMER FRUIT · MASCARPONE",
+          8,
+          50,
+          43,
+          {
+            fontFamily: "urbanist",
+            fontSize: 9,
+            letterSpacing: 0.9,
+            lineHeight: 1.65,
+            fontWeight: "medium",
+            color: "#6f573f",
+            textAlign: "left",
+          },
+        ),
+        image("dmt_d_food", IMG.dinner, 56, 8, 39, 84, { frame: "rounded" }),
+        shape("dmt_d_dot", "circle", 47, 74, 6, 11, "#d58b57"),
+      ]),
+      locationPage(
+        "The Courtyard",
+        "18 Olive Grove, Fitzroy VIC",
+        "18 Olive Grove Fitzroy Victoria",
+      ),
+      rsvpPage({
+        eyebrow: "A seat at the table",
+        title: "Shall we set a place for you?",
+        note: "Reply by 14 January",
+        theme: {
+          background: "#f2ead9",
+          surface: "#fbf7ed",
+          accent: "#b65f3e",
+          text: "#3d4b36",
+          muted: "#7b6b59",
+          buttonStyle: "chip",
+          headingFont: "playfair",
+          bodyFont: "urbanist",
+        },
+        questions: [
+          {
+            id: "attend",
+            type: "attend",
+            label: "",
+            yesLabel: "Set my place",
+            noLabel: "Another time",
+          },
+          {
+            id: "menu",
+            type: "single_choice",
+            label: "Main plate",
+            required: true,
+            options: [
+              { id: "fish", label: "Wood-roasted fish" },
+              { id: "vegetable", label: "Charred garden vegetables" },
+            ],
+          },
+        ],
+      }),
+    ],
+  },
+
 ];
 
 
@@ -1670,11 +2678,15 @@ export function contentFromTemplate(
         elementsFromLocationPage(
           templatePage.location,
           templatePage.backgroundColor,
+          template.shape ?? "portrait",
         ),
       );
     } else if (templatePage.kind === "rsvp") {
       elements = remappedElements(
-        elementsFromRsvpPage(templatePage.rsvpConfig),
+        elementsFromRsvpPage(
+          templatePage.rsvpConfig,
+          template.shape ?? "portrait",
+        ),
       );
     }
 
@@ -1684,8 +2696,14 @@ export function contentFromTemplate(
       kind: "design" as const,
       elements,
       backgroundColor: templatePage.backgroundColor,
-      backgroundPattern: "none" as const,
-      border: null,
+      backgroundPattern: templatePage.backgroundPattern ?? "none",
+      backgroundTexture: templatePage.backgroundTexture ?? "none",
+      backgroundTextureOpacity: templatePage.backgroundTextureOpacity ?? 22,
+      backgroundTextureTint:
+        templatePage.backgroundTextureTint ?? "#ffffff",
+      backgroundTextureBlend:
+        templatePage.backgroundTextureBlend ?? "soft-light",
+      border: templatePage.border ? { ...templatePage.border } : null,
       location: null,
       rsvpConfig: null,
     };
@@ -1694,7 +2712,10 @@ export function contentFromTemplate(
   const firstDesign = pages[0];
   const location = template.pages.find((page) => page.kind === "location");
   const rsvp = template.pages.find((page) => page.kind === "rsvp");
-  const base = createDefaultContent({ title: template.title });
+  const base = createDefaultContent({
+    title: template.title,
+    shape: template.shape ?? "portrait",
+  });
 
   return {
     ...base,
@@ -1720,11 +2741,28 @@ export function contentFromTemplate(
 /** Cover page for card thumbnails. */
 export function templatePreviewPage(
   template: InvitationTemplate,
-): Pick<InvitationPage, "elements" | "backgroundColor"> {
+): Pick<
+  InvitationPage,
+  | "elements"
+  | "backgroundColor"
+  | "backgroundPattern"
+  | "backgroundTexture"
+  | "backgroundTextureOpacity"
+  | "backgroundTextureTint"
+  | "backgroundTextureBlend"
+  | "border"
+> {
   const cover =
     template.pages.find((page) => page.kind === "design") ?? template.pages[0];
   return {
     elements: cover?.elements ?? [],
     backgroundColor: cover?.backgroundColor ?? "#fff8f4",
+    backgroundPattern: cover?.backgroundPattern ?? "none",
+    backgroundTexture: cover?.backgroundTexture ?? "none",
+    backgroundTextureOpacity: cover?.backgroundTextureOpacity ?? 22,
+    backgroundTextureTint: cover?.backgroundTextureTint ?? "#ffffff",
+    backgroundTextureBlend:
+      cover?.backgroundTextureBlend ?? "soft-light",
+    border: cover?.border ?? null,
   };
 }

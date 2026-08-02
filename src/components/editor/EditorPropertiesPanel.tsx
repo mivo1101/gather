@@ -33,6 +33,17 @@ interface EditorPropertiesPanelProps {
   onChangePattern: (
     pattern: NonNullable<InvitationPage["backgroundPattern"]>,
   ) => void;
+  onChangeTexture: (
+    patch: Partial<
+      Pick<
+        InvitationPage,
+        | "backgroundTexture"
+        | "backgroundTextureOpacity"
+        | "backgroundTextureTint"
+        | "backgroundTextureBlend"
+      >
+    >,
+  ) => void;
   onChangeBorder: (border: InvitationPage["border"]) => void;
   onChangeWidget: (widget: WidgetConfig) => void;
   onChangeHref: (href: string | null) => void;
@@ -216,6 +227,7 @@ export function EditorPropertiesPanel(props: EditorPropertiesPanelProps) {
           page={props.activePage}
           onChangeBackground={props.onChangeBackground}
           onChangePattern={props.onChangePattern}
+          onChangeTexture={props.onChangeTexture}
           onChangeBorder={props.onChangeBorder}
         />
       ) : (

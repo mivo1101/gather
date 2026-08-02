@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import type { CanvasElement } from "@/lib/data/canvas-elements";
@@ -29,7 +30,6 @@ import {
   CanvasImageContent,
   cardAspectRatio,
   clampImageFit,
-  isSquareFrame,
   normalizeImageOffset,
   normalizeImageScale,
 } from "./CanvasImageContent";
@@ -42,7 +42,9 @@ import {
   isGradient,
   normalizeHex,
 } from "@/lib/color-utils";
+import { canvasFontFamilyClass } from "@/lib/canvas-fonts";
 import { effectsToCss } from "@/lib/element-effects";
+import { paperTextureLayerStyle } from "@/lib/paper-textures";
 
 function effectStyle(el: CanvasElement): CSSProperties {
   return effectsToCss(el.style.effects, el.style.color);
@@ -79,8 +81,25 @@ function patternOverlay(
   }
 }
 
-function ShapeElementView({ kind, color }: { kind: string; color: string }) {
-  return <ShapeGraphic kind={kind} color={color} />;
+function ShapeElementView({
+  kind,
+  color,
+  borderColor,
+  borderWidth,
+}: {
+  kind: string;
+  color: string;
+  borderColor?: string;
+  borderWidth?: number;
+}) {
+  return (
+    <ShapeGraphic
+      kind={kind}
+      color={color}
+      borderColor={borderColor}
+      borderWidth={borderWidth}
+    />
+  );
 }
 
 function DividerElementView({
@@ -146,38 +165,37 @@ interface EditorCanvasProps {
   customSize?: CustomCanvasSize;
   elements: CanvasElement[];
   selectedId: string | null;
+  selectedIds: string[];
   editingId: string | null;
   showGrid: boolean;
   zoom: number;
   backgroundColor: string;
   backgroundPattern?: NonNullable<InvitationPage["backgroundPattern"]>;
+  backgroundTexture?: InvitationPage["backgroundTexture"];
+  backgroundTextureOpacity?: number;
+  backgroundTextureTint?: string;
+  backgroundTextureBlend?: InvitationPage["backgroundTextureBlend"];
   border?: InvitationPage["border"];
   canvasSelected: boolean;
   onToggleGrid: () => void;
   onSelect: (id: string | null) => void;
+  onToggleSelect: (id: string) => void;
+  onSelectMany: (ids: string[]) => void;
   onSelectCanvas: () => void;
   onClearSelection: () => void;
   onStartEdit: (id: string) => void;
   onStopEdit: () => void;
   onChangeElement: (id: string, patch: Partial<CanvasElement>) => void;
+  onChangeElements?: (
+    updates: Array<{ id: string; patch: Partial<CanvasElement> }>,
+  ) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
+  onDeleteMany: (ids: string[]) => void;
   onToggleLock: (id: string) => void;
   onRotate: (id: string) => void;
   /** Called before a mutating interaction so the parent can snapshot history */
   onBeforeChange?: () => void;
-}
-
-function fontFamilyClass(family: CanvasElement["style"]["fontFamily"]) {
-  switch (family) {
-    case "caveat":
-      return "font-[family-name:var(--font-cursive)]";
-    case "urbanist":
-      return "font-sans";
-    case "playfair":
-    default:
-      return "font-[family-name:var(--font-playfair)]";
-  }
 }
 
 function fontWeightValue(style: CanvasElement["style"]) {
@@ -189,34 +207,304 @@ function fontWeightValue(style: CanvasElement["style"]) {
 type ResizeHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 type DragMode = "move" | "resize" | "pan-image" | "scale-image";
 
+type Point = { x: number; y: number };
+
+function rotatedBounds(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  rotation = 0,
+) {
+  const centerX = x + width / 2;
+  const centerY = y + height / 2;
+  const radians = (rotation * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const corners = [
+    { x, y },
+    { x: x + width, y },
+    { x: x + width, y: y + height },
+    { x, y: y + height },
+  ].map((point) => {
+    const dx = point.x - centerX;
+    const dy = point.y - centerY;
+    return {
+      x: centerX + dx * cos - dy * sin,
+      y: centerY + dx * sin + dy * cos,
+    };
+  });
+
+  const left = Math.min(...corners.map((point) => point.x));
+  const right = Math.max(...corners.map((point) => point.x));
+  const top = Math.min(...corners.map((point) => point.y));
+  const bottom = Math.max(...corners.map((point) => point.y));
+  return { left, right, top, bottom };
+}
+
+const EDGE_SNAP_DISTANCE = 1.2;
+const EDGE_RELEASE_DISTANCE = 3;
+
+function applyEdgeResistance(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  rotation = 0,
+) {
+  let nextX = x;
+  let nextY = y;
+  let bounds = rotatedBounds(nextX, nextY, width, height, rotation);
+  const horizontalCandidates = [
+    bounds.left >= -EDGE_RELEASE_DISTANCE &&
+    bounds.left <= EDGE_SNAP_DISTANCE
+      ? { edge: "left" as const, correction: -bounds.left }
+      : null,
+    bounds.right <= 100 + EDGE_RELEASE_DISTANCE &&
+    bounds.right >= 100 - EDGE_SNAP_DISTANCE
+      ? { edge: "right" as const, correction: 100 - bounds.right }
+      : null,
+  ].filter(
+    (
+      candidate,
+    ): candidate is { edge: "left" | "right"; correction: number } =>
+      candidate !== null,
+  );
+  const horizontal = horizontalCandidates.sort(
+    (a, b) => Math.abs(a.correction) - Math.abs(b.correction),
+  )[0];
+  if (horizontal) nextX += horizontal.correction;
+
+  bounds = rotatedBounds(nextX, nextY, width, height, rotation);
+  const verticalCandidates = [
+    bounds.top >= -EDGE_RELEASE_DISTANCE &&
+    bounds.top <= EDGE_SNAP_DISTANCE
+      ? { edge: "top" as const, correction: -bounds.top }
+      : null,
+    bounds.bottom <= 100 + EDGE_RELEASE_DISTANCE &&
+    bounds.bottom >= 100 - EDGE_SNAP_DISTANCE
+      ? { edge: "bottom" as const, correction: 100 - bounds.bottom }
+      : null,
+  ].filter(
+    (
+      candidate,
+    ): candidate is { edge: "top" | "bottom"; correction: number } =>
+      candidate !== null,
+  );
+  const vertical = verticalCandidates.sort(
+    (a, b) => Math.abs(a.correction) - Math.abs(b.correction),
+  )[0];
+  if (vertical) nextY += vertical.correction;
+
+  return {
+    x: nextX,
+    y: nextY,
+    edges: {
+      left: horizontal?.edge === "left",
+      right: horizontal?.edge === "right",
+      top: vertical?.edge === "top",
+      bottom: vertical?.edge === "bottom",
+    },
+  };
+}
+
+function findSmartAlignment(
+  moving: ReturnType<typeof rotatedBounds>,
+  others: Array<ReturnType<typeof rotatedBounds>>,
+) {
+  const movingCenterX = (moving.left + moving.right) / 2;
+  const movingCenterY = (moving.top + moving.bottom) / 2;
+  const horizontalCandidates = [
+    { correction: 50 - movingCenterX, guide: 50 },
+    ...others.flatMap((bounds) => [
+      { correction: bounds.left - moving.left, guide: bounds.left },
+      {
+        correction:
+          (bounds.left + bounds.right) / 2 - movingCenterX,
+        guide: (bounds.left + bounds.right) / 2,
+      },
+      { correction: bounds.right - moving.right, guide: bounds.right },
+    ]),
+  ]
+    .filter((candidate) => Math.abs(candidate.correction) <= 0.8)
+    .sort(
+      (a, b) => Math.abs(a.correction) - Math.abs(b.correction),
+    );
+  const verticalCandidates = [
+    { correction: 50 - movingCenterY, guide: 50 },
+    ...others.flatMap((bounds) => [
+      { correction: bounds.top - moving.top, guide: bounds.top },
+      {
+        correction:
+          (bounds.top + bounds.bottom) / 2 - movingCenterY,
+        guide: (bounds.top + bounds.bottom) / 2,
+      },
+      { correction: bounds.bottom - moving.bottom, guide: bounds.bottom },
+    ]),
+  ]
+    .filter((candidate) => Math.abs(candidate.correction) <= 0.8)
+    .sort(
+      (a, b) => Math.abs(a.correction) - Math.abs(b.correction),
+    );
+
+  return {
+    dx: horizontalCandidates[0]?.correction ?? 0,
+    dy: verticalCandidates[0]?.correction ?? 0,
+    vertical: horizontalCandidates[0]?.guide ?? null,
+    horizontal: verticalCandidates[0]?.guide ?? null,
+  };
+}
+
+function clipPolygon(
+  polygon: Point[],
+  inside: (point: Point) => boolean,
+  intersect: (start: Point, end: Point) => Point,
+) {
+  const result: Point[] = [];
+  for (let index = 0; index < polygon.length; index += 1) {
+    const start = polygon[index];
+    const end = polygon[(index + 1) % polygon.length];
+    const startInside = inside(start);
+    const endInside = inside(end);
+    if (startInside && endInside) {
+      result.push(end);
+    } else if (startInside && !endInside) {
+      result.push(intersect(start, end));
+    } else if (!startInside && endInside) {
+      result.push(intersect(start, end), end);
+    }
+  }
+  return result;
+}
+
+function canvasClipPath(el: CanvasElement): CSSProperties["clipPath"] {
+  const width = Math.max(0.001, el.width);
+  const height = Math.max(0.001, el.height ?? 20);
+  const bounds = rotatedBounds(
+    el.x,
+    el.y,
+    width,
+    height,
+    el.rotation,
+  );
+  if (
+    bounds.left >= 0 &&
+    bounds.right <= 100 &&
+    bounds.top >= 0 &&
+    bounds.bottom <= 100
+  ) {
+    return undefined;
+  }
+
+  const centerX = el.x + width / 2;
+  const centerY = el.y + height / 2;
+  const radians = (el.rotation * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  let polygon: Point[] = [
+    { x: el.x, y: el.y },
+    { x: el.x + width, y: el.y },
+    { x: el.x + width, y: el.y + height },
+    { x: el.x, y: el.y + height },
+  ].map((point) => {
+    const dx = point.x - centerX;
+    const dy = point.y - centerY;
+    return {
+      x: centerX + dx * cos - dy * sin,
+      y: centerY + dx * sin + dy * cos,
+    };
+  });
+
+  const verticalIntersection =
+    (edgeX: number) => (start: Point, end: Point) => {
+      const progress = (edgeX - start.x) / (end.x - start.x);
+      return {
+        x: edgeX,
+        y: start.y + (end.y - start.y) * progress,
+      };
+    };
+  const horizontalIntersection =
+    (edgeY: number) => (start: Point, end: Point) => {
+      const progress = (edgeY - start.y) / (end.y - start.y);
+      return {
+        x: start.x + (end.x - start.x) * progress,
+        y: edgeY,
+      };
+    };
+
+  polygon = clipPolygon(
+    polygon,
+    (point) => point.x >= 0,
+    verticalIntersection(0),
+  );
+  polygon = clipPolygon(
+    polygon,
+    (point) => point.x <= 100,
+    verticalIntersection(100),
+  );
+  polygon = clipPolygon(
+    polygon,
+    (point) => point.y >= 0,
+    horizontalIntersection(0),
+  );
+  polygon = clipPolygon(
+    polygon,
+    (point) => point.y <= 100,
+    horizontalIntersection(100),
+  );
+  if (polygon.length < 3) return "inset(100%)";
+
+  const localPoints = polygon.map((point) => {
+    const dx = point.x - centerX;
+    const dy = point.y - centerY;
+    const unrotatedX = centerX + dx * cos + dy * sin;
+    const unrotatedY = centerY - dx * sin + dy * cos;
+    return {
+      x: ((unrotatedX - el.x) / width) * 100,
+      y: ((unrotatedY - el.y) / height) * 100,
+    };
+  });
+  return `polygon(${localPoints
+    .map((point) => `${point.x.toFixed(3)}% ${point.y.toFixed(3)}%`)
+    .join(", ")})`;
+}
+
 export function EditorCanvas({
   shape,
   customSize,
   elements,
   selectedId,
+  selectedIds,
   editingId,
   showGrid,
   zoom,
   backgroundColor,
   backgroundPattern = "none",
+  backgroundTexture = "none",
+  backgroundTextureOpacity = 22,
+  backgroundTextureTint = "#ffffff",
+  backgroundTextureBlend = "soft-light",
   border = null,
   canvasSelected,
   onToggleGrid,
   onSelect,
+  onToggleSelect,
+  onSelectMany,
   onSelectCanvas,
   onClearSelection,
   onStartEdit,
   onStopEdit,
   onChangeElement,
+  onChangeElements,
   onDuplicate,
   onDelete,
+  onDeleteMany,
   onToggleLock,
   onRotate,
   onBeforeChange,
 }: EditorCanvasProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
-  const photoFitIdsRef = useRef(new Set<string>());
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -227,6 +515,24 @@ export function EditorCanvas({
     elementId: string;
     value: string;
   } | null>(null);
+  const [marquee, setMarquee] = useState<{
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+    startedOutside: boolean;
+  } | null>(null);
+  const marqueeRef = useRef<typeof marquee>(null);
+  const [alignmentGuides, setAlignmentGuides] = useState({
+    vertical: null as number | null,
+    horizontal: null as number | null,
+  });
+  const [edgeGuides, setEdgeGuides] = useState({
+    left: false,
+    right: false,
+    top: false,
+    bottom: false,
+  });
   const dragRef = useRef<{
     id: string;
     mode: DragMode;
@@ -240,6 +546,13 @@ export function EditorCanvas({
     origScale: number;
     origOffsetX: number;
     origOffsetY: number;
+    group?: Array<{ id: string; x: number; y: number }>;
+    groupBounds?: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
   } | null>(null);
 
   useEffect(() => {
@@ -267,17 +580,55 @@ export function EditorCanvas({
   const aspect = cardAspectRatio(shape, customSize);
   const zoomScale = zoom / 100;
   const uiScale = zoom > 0 ? 100 / zoom : 1;
+  const elementBoundsOnCanvas = useCallback((el: CanvasElement) => {
+    const canvas = canvasRef.current;
+    const node = canvasRef.current?.querySelector<HTMLElement>(
+      `[data-canvas-element-id="${CSS.escape(el.id)}"]`,
+    );
+    const measuredHeight =
+      canvas && node && canvas.clientHeight > 0
+        ? (node.offsetHeight / canvas.clientHeight) * 100
+        : null;
+    const fallbackHeight = el.height ?? measuredHeight ??
+      (el.type === "text"
+        ? Math.max(2, el.content.split("\n").length * 4)
+        : 20);
+    return rotatedBounds(
+      el.x,
+      el.y,
+      el.width,
+      fallbackHeight,
+      el.rotation,
+    );
+  }, []);
+  const multiSelectionBounds = useMemo(() => {
+    if (selectedIds.length < 2) return null;
+    const selected = elements.filter((el) => selectedIds.includes(el.id));
+    if (selected.length < 2) return null;
+    const bounds = selected.map(elementBoundsOnCanvas);
+    const left = Math.min(...bounds.map((item) => item.left));
+    const top = Math.min(...bounds.map((item) => item.top));
+    const right = Math.max(...bounds.map((item) => item.right));
+    const bottom = Math.max(...bounds.map((item) => item.bottom));
+    return {
+      x: left,
+      y: top,
+      width: right - left,
+      height: bottom - top,
+    };
+  }, [elementBoundsOnCanvas, elements, selectedIds]);
 
   // 100% = card fits the workspace with breathing room for chrome
   const fitSize = useMemo(() => {
     const isTall = aspect < 0.95; // portrait / tall custom
+    const isSquarish = aspect >= 0.95 && aspect <= 1.05; // square-ish cards are height-limited too
     const padX = isTall ? 112 : 120;
     // Tall cards are height-limited — leave clearer top/bottom margin
-    const padY = isTall ? 140 : 88;
+    const padY = isTall || isSquarish ? 140 : 88;
     const availW = Math.max(160, viewportSize.width - padX);
     const availH = Math.max(160, viewportSize.height - padY);
-    // Portrait shouldn't fill the full column; keep ~same visual gaps as landscape
-    const maxH = isTall ? availH * 0.9 : availH;
+    // Portrait / square shouldn't fill the full column; keep ~same visual gaps as landscape
+    const maxH = isTall || isSquarish ? availH * 0.9 : availH;
     let width = availW;
     let height = width / aspect;
     if (height > maxH) {
@@ -302,7 +653,19 @@ export function EditorCanvas({
   const onPointerMove = useCallback(
     (event: PointerEvent) => {
       const drag = dragRef.current;
-      if (!drag) return;
+      if (!drag) {
+        const activeMarquee = marqueeRef.current;
+        if (!activeMarquee) return;
+        const current = clientToPercent(event.clientX, event.clientY);
+        const next = {
+          ...activeMarquee,
+          currentX: Math.min(100, Math.max(0, current.x)),
+          currentY: Math.min(100, Math.max(0, current.y)),
+        };
+        marqueeRef.current = next;
+        setMarquee(next);
+        return;
+      }
       const el = elements.find((item) => item.id === drag.id);
       if (!el || el.locked) return;
 
@@ -311,10 +674,82 @@ export function EditorCanvas({
       const dy = current.y - drag.startY;
 
       if (drag.mode === "move") {
-        onChangeElement(drag.id, {
-          x: Math.min(95, Math.max(-20, drag.origX + dx)),
-          y: Math.min(95, Math.max(-20, drag.origY + dy)),
-        });
+        if (drag.group && drag.groupBounds) {
+          let nextDx = dx;
+          let nextDy = dy;
+          const groupIds = new Set(drag.group.map((item) => item.id));
+          const alignment = findSmartAlignment(
+            rotatedBounds(
+              drag.groupBounds.x + nextDx,
+              drag.groupBounds.y + nextDy,
+              drag.groupBounds.width,
+              drag.groupBounds.height,
+            ),
+            elements
+              .filter((item) => !groupIds.has(item.id))
+              .map(elementBoundsOnCanvas),
+          );
+          nextDx += alignment.dx;
+          nextDy += alignment.dy;
+          const resisted = applyEdgeResistance(
+            drag.groupBounds.x + nextDx,
+            drag.groupBounds.y + nextDy,
+            drag.groupBounds.width,
+            drag.groupBounds.height,
+          );
+          nextDx += resisted.x - (drag.groupBounds.x + nextDx);
+          nextDy += resisted.y - (drag.groupBounds.y + nextDy);
+          setAlignmentGuides({
+            vertical: alignment.vertical,
+            horizontal: alignment.horizontal,
+          });
+          setEdgeGuides(resisted.edges);
+          const updates = drag.group.map((item) => ({
+            id: item.id,
+            patch: {
+              x: Math.min(95, Math.max(-20, item.x + nextDx)),
+              y: Math.min(95, Math.max(-20, item.y + nextDy)),
+            },
+          }));
+          if (onChangeElements) onChangeElements(updates);
+          else {
+            for (const update of updates) {
+              onChangeElement(update.id, update.patch);
+            }
+          }
+        } else {
+          let nextX = Math.min(95, Math.max(-20, drag.origX + dx));
+          let nextY = Math.min(95, Math.max(-20, drag.origY + dy));
+          const alignment = findSmartAlignment(
+            rotatedBounds(
+              nextX,
+              nextY,
+              drag.origW,
+              drag.origH,
+              el.rotation,
+            ),
+            elements
+              .filter((item) => item.id !== el.id)
+              .map(elementBoundsOnCanvas),
+          );
+          nextX += alignment.dx;
+          nextY += alignment.dy;
+          const resisted = applyEdgeResistance(
+            nextX,
+            nextY,
+            drag.origW,
+            drag.origH,
+            el.rotation,
+          );
+          nextX = resisted.x;
+          nextY = resisted.y;
+          setAlignmentGuides({
+            vertical: alignment.vertical,
+            horizontal: alignment.horizontal,
+          });
+          setEdgeGuides(resisted.edges);
+          onChangeElement(drag.id, { x: nextX, y: nextY });
+        }
       } else if (drag.mode === "pan-image") {
         // dx/dy are in card %; convert roughly to frame-relative %
         const frameW = Math.max(1, drag.origW);
@@ -350,41 +785,42 @@ export function EditorCanvas({
           },
         });
       } else {
-        const keepRatio = el.type === "image";
-        const forceVisualSquare =
-          el.type === "image" && isSquareFrame(el.style.frame);
+        const cornerResize = drag.handle.length === 2;
+        const keepRatio =
+          cornerResize && (el.type === "image" || el.type === "shape");
+        // Icons and other vector shapes remain crisp at very small sizes.
+        // Keep their resize floor low while retaining a selectable wrapper.
+        const minWidth = el.type === "shape" ? 2 : 8;
+        const minHeight = el.type === "shape" ? 1.5 : 6;
         let nextW = drag.origW;
         let nextH = drag.origH;
         let nextX = drag.origX;
         let nextY = drag.origY;
 
         if (drag.handle.includes("e")) {
-          nextW = Math.min(100, Math.max(8, drag.origW + dx));
+          nextW = Math.min(100, Math.max(minWidth, drag.origW + dx));
         }
         if (drag.handle.includes("w")) {
-          nextW = Math.min(100, Math.max(8, drag.origW - dx));
+          nextW = Math.min(100, Math.max(minWidth, drag.origW - dx));
           nextX = drag.origX + (drag.origW - nextW);
         }
         if (drag.handle.includes("s")) {
-          nextH = Math.min(100, Math.max(6, drag.origH + dy));
+          nextH = Math.min(100, Math.max(minHeight, drag.origH + dy));
         }
         if (drag.handle.includes("n")) {
-          nextH = Math.min(100, Math.max(6, drag.origH - dy));
+          nextH = Math.min(100, Math.max(minHeight, drag.origH - dy));
           nextY = drag.origY + (drag.origH - nextH);
         }
 
         if (keepRatio && drag.origW > 0 && drag.origH > 0) {
-          const cardAspect = cardAspectRatio(shape, customSize);
-          const ratio = forceVisualSquare
-            ? cardAspect
-            : drag.origH / drag.origW;
+          const ratio = drag.origH / drag.origW;
           if (
             drag.handle === "e" ||
             drag.handle === "w" ||
             drag.handle === "se" ||
             drag.handle === "ne"
           ) {
-            nextH = Math.min(100, Math.max(6, nextW * ratio));
+            nextH = Math.min(100, Math.max(minHeight, nextW * ratio));
             if (drag.handle.includes("n")) {
               nextY = drag.origY + (drag.origH - nextH);
             }
@@ -392,7 +828,10 @@ export function EditorCanvas({
               nextX = drag.origX + (drag.origW - nextW);
             }
           } else {
-            nextW = Math.min(100, Math.max(8, nextH / Math.max(ratio, 0.001)));
+            nextW = Math.min(
+              100,
+              Math.max(minWidth, nextH / Math.max(ratio, 0.001)),
+            );
             if (drag.handle.includes("w")) {
               nextX = drag.origX + (drag.origW - nextW);
             }
@@ -402,6 +841,19 @@ export function EditorCanvas({
           }
         }
 
+        const bounds = rotatedBounds(
+          nextX,
+          nextY,
+          nextW,
+          nextH,
+          el.rotation,
+        );
+        setEdgeGuides({
+          left: bounds.left <= 1.2,
+          right: bounds.right >= 98.8,
+          top: bounds.top <= 1.2,
+          bottom: bounds.bottom >= 98.8,
+        });
         onChangeElement(drag.id, {
           x: nextX,
           y: nextY,
@@ -411,12 +863,62 @@ export function EditorCanvas({
         });
       }
     },
-    [clientToPercent, customSize, elements, onChangeElement, shape],
+    [
+      clientToPercent,
+      customSize,
+      elementBoundsOnCanvas,
+      elements,
+      onChangeElement,
+      onChangeElements,
+      shape,
+    ],
   );
 
   const endDrag = useCallback(() => {
+    const activeMarquee = marqueeRef.current;
+    if (activeMarquee) {
+      const left = Math.min(activeMarquee.startX, activeMarquee.currentX);
+      const right = Math.max(activeMarquee.startX, activeMarquee.currentX);
+      const top = Math.min(activeMarquee.startY, activeMarquee.currentY);
+      const bottom = Math.max(activeMarquee.startY, activeMarquee.currentY);
+      const moved = right - left > 0.5 || bottom - top > 0.5;
+
+      if (moved) {
+        const ids = elements
+          .filter((el) => {
+            const bounds = elementBoundsOnCanvas(el);
+            return (
+              bounds.left < right &&
+              bounds.right > left &&
+              bounds.top < bottom &&
+              bounds.bottom > top
+            );
+          })
+          .map((el) => el.id);
+        onSelectMany(ids);
+      } else if (activeMarquee.startedOutside) {
+        onClearSelection();
+      } else {
+        onSelectCanvas();
+      }
+      marqueeRef.current = null;
+      setMarquee(null);
+    }
     dragRef.current = null;
-  }, []);
+    setAlignmentGuides({ vertical: null, horizontal: null });
+    setEdgeGuides({
+      left: false,
+      right: false,
+      top: false,
+      bottom: false,
+    });
+  }, [
+    elementBoundsOnCanvas,
+    elements,
+    onClearSelection,
+    onSelectCanvas,
+    onSelectMany,
+  ]);
 
   useEffect(() => {
     window.addEventListener("pointermove", onPointerMove);
@@ -434,7 +936,7 @@ export function EditorCanvas({
         onStopEdit();
         return;
       }
-      if (!selectedId || editingId) return;
+      if ((!selectedId && selectedIds.length === 0) || editingId) return;
       const target = event.target as HTMLElement | null;
       if (
         target &&
@@ -453,9 +955,14 @@ export function EditorCanvas({
       }
       if (event.key === "Delete" || event.key === "Backspace") {
         event.preventDefault();
-        onDelete(selectedId);
+        if (selectedIds.length > 1) onDeleteMany(selectedIds);
+        else if (selectedId) onDelete(selectedId);
       }
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d") {
+      if (
+        selectedId &&
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === "d"
+      ) {
         event.preventDefault();
         onDuplicate(selectedId);
       }
@@ -482,9 +989,11 @@ export function EditorCanvas({
     elements,
     onClearSelection,
     onDelete,
+    onDeleteMany,
     onDuplicate,
     onStopEdit,
     selectedId,
+    selectedIds,
   ]);
 
   const startDrag = (
@@ -497,13 +1006,41 @@ export function EditorCanvas({
     event.stopPropagation();
     const el = elements.find((item) => item.id === id);
     if (!el) return;
-    onSelect(id);
+    const movingSelection =
+      mode === "move" && selectedIds.length > 1 && selectedIds.includes(id);
+    if (!movingSelection) onSelect(id);
     if (mode !== "pan-image" && mode !== "scale-image") {
       onStopEdit();
     }
     if (el.locked) return;
+    setEdgeGuides({
+      left: false,
+      right: false,
+      top: false,
+      bottom: false,
+    });
     onBeforeChange?.();
     const point = clientToPercent(event.clientX, event.clientY);
+    const groupElements = movingSelection
+      ? elements.filter(
+          (item) => selectedIds.includes(item.id) && !item.locked,
+        )
+      : [];
+    const measuredGroupBounds = groupElements.map(elementBoundsOnCanvas);
+    const groupBounds =
+      groupElements.length > 1
+        ? {
+            x: Math.min(...measuredGroupBounds.map((item) => item.left)),
+            y: Math.min(...measuredGroupBounds.map((item) => item.top)),
+            width:
+              Math.max(...measuredGroupBounds.map((item) => item.right)) -
+              Math.min(...measuredGroupBounds.map((item) => item.left)),
+            height:
+              Math.max(...measuredGroupBounds.map((item) => item.bottom)) -
+              Math.min(...measuredGroupBounds.map((item) => item.top)),
+          }
+        : undefined;
+    const measuredElementBounds = elementBoundsOnCanvas(el);
     dragRef.current = {
       id,
       mode,
@@ -513,7 +1050,9 @@ export function EditorCanvas({
       origX: el.x,
       origY: el.y,
       origW: el.width,
-      origH: el.height ?? 20,
+      origH: el.height
+        ? el.height
+        : measuredElementBounds.bottom - measuredElementBounds.top,
       origScale: normalizeImageScale(el.style.imageScale),
       origOffsetX: normalizeImageOffset(
         el.style.imageOffsetX,
@@ -523,8 +1062,104 @@ export function EditorCanvas({
         el.style.imageOffsetY,
         el.style.imageScale,
       ),
+      group:
+        groupElements.length > 1
+          ? groupElements.map((item) => ({
+              id: item.id,
+              x: item.x,
+              y: item.y,
+            }))
+          : undefined,
+      groupBounds,
     };
   };
+
+  const fitTextWidth = (
+    event: ReactMouseEvent,
+    id: string,
+    edge: "e" | "w",
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const el = elements.find((item) => item.id === id);
+    const canvas = canvasRef.current;
+    if (!el || el.type !== "text" || !canvas) return;
+
+    const renderedText = canvas.querySelector<HTMLElement>(
+      `[data-canvas-element-id="${CSS.escape(id)}"] [data-canvas-text]`,
+    );
+    if (!renderedText) return;
+    const computed = window.getComputedStyle(renderedText);
+    const ruler = document.createElement("span");
+    ruler.setAttribute("aria-hidden", "true");
+    Object.assign(ruler.style, {
+      position: "fixed",
+      left: "-10000px",
+      top: "-10000px",
+      display: "inline-block",
+      width: "max-content",
+      maxWidth: "none",
+      visibility: "hidden",
+      pointerEvents: "none",
+      whiteSpace: "pre",
+      overflowWrap: "normal",
+      wordBreak: "normal",
+      fontFamily: computed.fontFamily,
+      fontSize: computed.fontSize,
+      fontWeight: computed.fontWeight,
+      fontStyle: computed.fontStyle,
+      letterSpacing: computed.letterSpacing,
+      lineHeight: computed.lineHeight,
+    });
+    ruler.textContent =
+      el.content
+        .split("\n")
+        .sort((a, b) => b.length - a.length)[0] || " ";
+    document.body.appendChild(ruler);
+    const measuredWidth = ruler.getBoundingClientRect().width;
+    ruler.remove();
+
+    const canvasWidth = Math.max(1, canvas.getBoundingClientRect().width);
+    const naturalWidth = Math.max(
+      3,
+      ((Math.ceil(measuredWidth) + 10) / canvasWidth) * 100,
+    );
+    const right = el.x + el.width;
+    const nextWidth = Math.min(100, naturalWidth);
+    const anchoredX = edge === "w" ? right - nextWidth : el.x;
+    // Preserve the double-clicked edge when possible, then shift only enough
+    // to keep the natural-width box on the canvas.
+    const nextX = Math.min(100 - nextWidth, Math.max(0, anchoredX));
+    onBeforeChange?.();
+    onChangeElement(id, {
+      x: nextX,
+      width: nextWidth,
+      height: undefined,
+    });
+  };
+
+  const beginMarquee = (
+    event: ReactPointerEvent,
+    startedOutside: boolean,
+  ) => {
+    if (event.button !== 0) return;
+    event.stopPropagation();
+    onStopEdit();
+    const point = clientToPercent(event.clientX, event.clientY);
+    const nextMarquee = {
+      startX: Math.min(100, Math.max(0, point.x)),
+      startY: Math.min(100, Math.max(0, point.y)),
+      currentX: Math.min(100, Math.max(0, point.x)),
+      currentY: Math.min(100, Math.max(0, point.y)),
+      startedOutside,
+    };
+    marqueeRef.current = nextMarquee;
+    setMarquee(nextMarquee);
+  };
+  const groupDragAnchorId =
+    selectedIds.find(
+      (id) => !elements.find((element) => element.id === id)?.locked,
+    ) ?? null;
 
   return (
     <section
@@ -537,6 +1172,18 @@ export function EditorCanvas({
       <div
         ref={viewportRef}
         className="relative flex min-h-0 flex-1 items-center justify-center overflow-auto p-6 pb-28"
+        onPointerDown={(event) => {
+          const target = event.target as HTMLElement;
+          if (
+            canvasRef.current?.contains(target) ||
+            target.closest(
+              "button, a, input, textarea, select, [role='button']",
+            )
+          ) {
+            return;
+          }
+          beginMarquee(event, true);
+        }}
       >
         <div
           className="relative shrink-0"
@@ -581,11 +1228,21 @@ export function EditorCanvas({
                 borderColor:
                   border && border.style !== "none" ? border.color : undefined,
               }}
-              onPointerDown={() => {
-                onSelectCanvas();
-                onStopEdit();
-              }}
+              onPointerDown={(event) => beginMarquee(event, false)}
             >
+            {backgroundTexture !== "none" && (
+              <div
+                className="pointer-events-none absolute inset-0"
+                data-paper-texture={backgroundTexture}
+                style={paperTextureLayerStyle({
+                  texture: backgroundTexture,
+                  opacity: backgroundTextureOpacity,
+                  tint: backgroundTextureTint,
+                  blend: backgroundTextureBlend,
+                })}
+                aria-hidden="true"
+              />
+            )}
             {backgroundPattern !== "none" && (
               <div
                 className="pointer-events-none absolute inset-0"
@@ -594,25 +1251,77 @@ export function EditorCanvas({
               />
             )}
             {showGrid && (
+              <>
+                <div
+                  className="pointer-events-none absolute inset-0 opacity-40"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(to right, rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.06) 1px, transparent 1px)",
+                    backgroundSize: "10% 10%",
+                  }}
+                  aria-hidden="true"
+                />
+                <div
+                  className="pointer-events-none absolute inset-y-0 left-1/2 z-30 w-[0.5px] -translate-x-1/2 bg-signature/40"
+                  aria-hidden="true"
+                />
+                <div
+                  className="pointer-events-none absolute inset-x-0 top-1/2 z-30 h-[0.5px] -translate-y-1/2 bg-signature/40"
+                  aria-hidden="true"
+                />
+              </>
+            )}
+
+            {alignmentGuides.vertical !== null && (
               <div
-                className="pointer-events-none absolute inset-0 opacity-40"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(to right, rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.06) 1px, transparent 1px)",
-                  backgroundSize: "10% 10%",
-                }}
+                className="pointer-events-none absolute inset-y-0 z-40 w-[0.5px] -translate-x-1/2 bg-signature/70"
+                style={{ left: `${alignmentGuides.vertical}%` }}
+                aria-hidden="true"
+              />
+            )}
+            {alignmentGuides.horizontal !== null && (
+              <div
+                className="pointer-events-none absolute inset-x-0 z-40 h-[0.5px] -translate-y-1/2 bg-signature/70"
+                style={{ top: `${alignmentGuides.horizontal}%` }}
+                aria-hidden="true"
+              />
+            )}
+            {edgeGuides.left && (
+              <div
+                className="pointer-events-none absolute inset-y-0 left-0 z-50 w-[0.5px] bg-signature/70"
+                aria-hidden="true"
+              />
+            )}
+            {edgeGuides.right && (
+              <div
+                className="pointer-events-none absolute inset-y-0 right-0 z-50 w-[0.5px] bg-signature/70"
+                aria-hidden="true"
+              />
+            )}
+            {edgeGuides.top && (
+              <div
+                className="pointer-events-none absolute inset-x-0 top-0 z-50 h-[0.5px] bg-signature/70"
+                aria-hidden="true"
+              />
+            )}
+            {edgeGuides.bottom && (
+              <div
+                className="pointer-events-none absolute inset-x-0 bottom-0 z-50 h-[0.5px] bg-signature/70"
                 aria-hidden="true"
               />
             )}
 
             {elements.map((el) => {
-              const isSelected = el.id === selectedId;
+              const isSelected = selectedIds.includes(el.id);
+              const isOnlySelection =
+                isSelected && selectedIds.length === 1;
               const isEditing = el.id === editingId;
 
               return (
                 <div
                   key={el.id}
-                  className={`absolute ${isSelected ? "z-20" : "z-10"}`}
+                  data-canvas-element-id={el.id}
+                  className="absolute z-10"
                   style={{
                     left: `${el.x}%`,
                     top: `${el.y}%`,
@@ -621,6 +1330,13 @@ export function EditorCanvas({
                     transform: `rotate(${el.rotation}deg)`,
                   }}
                   onPointerDown={(event) => {
+                    if (event.shiftKey && !isEditing) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onStopEdit();
+                      onToggleSelect(el.id);
+                      return;
+                    }
                     if (isEditing && el.type === "image") {
                       startDrag(event, el.id, "pan-image");
                       return;
@@ -668,7 +1384,7 @@ export function EditorCanvas({
                     });
                   }}
                 >
-                  {isSelected && isEditing && el.type === "image" && !el.locked && (
+                  {isOnlySelection && isEditing && el.type === "image" && !el.locked && (
                     <div
                       className="absolute left-1/2 z-40 flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-black/5 bg-white px-1.5 py-1 shadow-[0_8px_20px_rgba(0,0,0,0.12)]"
                       style={{
@@ -691,7 +1407,7 @@ export function EditorCanvas({
                     </div>
                   )}
 
-                  {isSelected && !isEditing && (
+                  {isOnlySelection && !isEditing && (
                     <div
                       className="absolute left-1/2 z-40 flex items-center gap-0.5 rounded-full border border-black/5 bg-white px-1.5 py-1 shadow-[0_8px_20px_rgba(0,0,0,0.12)]"
                       style={{
@@ -771,8 +1487,8 @@ export function EditorCanvas({
                   <div
                     className={`relative h-full w-full ${
                       isSelected
-                        ? "outline outline-2 outline-signature outline-offset-2"
-                        : "hover:outline hover:outline-1 hover:outline-signature/40 hover:outline-offset-2"
+                        ? "outline outline-1 outline-signature/80 outline-offset-0"
+                        : "hover:outline hover:outline-1 hover:outline-signature/35 hover:outline-offset-0"
                     } ${
                       el.locked
                         ? "cursor-default opacity-90"
@@ -780,23 +1496,69 @@ export function EditorCanvas({
                           ? "cursor-grab active:cursor-grabbing"
                           : "cursor-move"
                     }`}
-                    style={el.type === "image" ? undefined : effectStyle(el)}
                   >
+                    <div
+                      className="relative h-full w-full"
+                      style={{
+                        ...(el.type === "image" ? undefined : effectStyle(el)),
+                        clipPath: canvasClipPath(el),
+                      }}
+                    >
                     {el.type === "text" &&
                       (isEditing ? (
                         <textarea
                           autoFocus
+                          rows={1}
                           value={el.content}
-                          onChange={(e) =>
+                          ref={(node) => {
+                            if (!node || el.height) return;
+                            node.style.height = "0px";
+                            const lineHeight =
+                              el.style.fontSize * el.style.lineHeight;
+                            const inferredLines = Math.max(
+                              1,
+                              Math.round(
+                                (node.scrollHeight -
+                                  el.style.fontSize * 0.3) /
+                                  lineHeight,
+                              ),
+                            );
+                            const explicitLines = node.value.split("\n").length;
+                            node.style.height = `${
+                              Math.max(inferredLines, explicitLines) *
+                              lineHeight
+                            }px`;
+                          }}
+                          onChange={(e) => {
+                            if (!el.height) {
+                              e.currentTarget.style.height = "0px";
+                              const lineHeight =
+                                el.style.fontSize * el.style.lineHeight;
+                              const inferredLines = Math.max(
+                                1,
+                                Math.round(
+                                  (e.currentTarget.scrollHeight -
+                                    el.style.fontSize * 0.3) /
+                                    lineHeight,
+                                ),
+                              );
+                              const explicitLines =
+                                e.currentTarget.value.split("\n").length;
+                              e.currentTarget.style.height = `${
+                                Math.max(inferredLines, explicitLines) *
+                                lineHeight
+                              }px`;
+                            }
                             onChangeElement(el.id, { content: e.target.value })
-                          }
+                          }}
                           onBlur={onStopEdit}
                           onKeyDown={(e) => {
                             if (e.key === "Escape") onStopEdit();
                           }}
                           onPointerDown={(e) => e.stopPropagation()}
-                          className={`w-full resize-none bg-white/40 outline-none ${fontFamilyClass(el.style.fontFamily)}`}
+                          className={`w-full resize-none overflow-hidden bg-white/40 p-0 outline-none ${canvasFontFamilyClass(el.style.fontFamily)}`}
                           style={{
+                            height: el.height ? "100%" : undefined,
                             fontSize: `${el.style.fontSize}px`,
                             fontWeight: fontWeightValue(el.style),
                             ...fillTextStyle(
@@ -814,7 +1576,9 @@ export function EditorCanvas({
                             ]
                               .filter(Boolean)
                               .join(" "),
-                            minHeight: "1.5em",
+                            minHeight: el.height
+                              ? "100%"
+                              : `${el.style.fontSize * el.style.lineHeight}px`,
                           }}
                         />
                       ) : (
@@ -828,7 +1592,8 @@ export function EditorCanvas({
                           }`}
                         >
                           <div
-                            className={`w-full whitespace-pre-wrap break-words ${fontFamilyClass(el.style.fontFamily)}`}
+                            data-canvas-text
+                            className={`w-full whitespace-pre-wrap break-words ${canvasFontFamilyClass(el.style.fontFamily)}`}
                             style={{
                               fontSize: `${el.style.fontSize}px`,
                               fontWeight: fontWeightValue(el.style),
@@ -860,26 +1625,6 @@ export function EditorCanvas({
                         imageOffsetX={el.style.imageOffsetX}
                         imageOffsetY={el.style.imageOffsetY}
                         cropEditing={isEditing}
-                        onNaturalSize={
-                          isPatternGraphicSrc(el.content)
-                            ? undefined
-                            : (nw, nh) => {
-                                if (photoFitIdsRef.current.has(el.id)) return;
-                                photoFitIdsRef.current.add(el.id);
-                                const imageAspect = nw / nh;
-                                const nextH =
-                                  (el.width *
-                                    cardAspectRatio(shape, customSize)) /
-                                  imageAspect;
-                                const height = Math.min(
-                                  100,
-                                  Math.max(6, Math.round(nextH * 10) / 10),
-                                );
-                                if (Math.abs(height - (el.height || 0)) > 0.5) {
-                                  onChangeElement(el.id, { height });
-                                }
-                              }
-                        }
                       />
                     )}
 
@@ -887,6 +1632,8 @@ export function EditorCanvas({
                       <ShapeElementView
                         kind={el.content}
                         color={el.style.color}
+                        borderColor={el.style.shapeBorderColor}
+                        borderWidth={el.style.shapeBorderWidth}
                       />
                     )}
 
@@ -912,8 +1659,9 @@ export function EditorCanvas({
                         className="h-full w-full"
                       />
                     )}
+                    </div>
 
-                    {isSelected && isEditing && el.type === "image" && !el.locked && (
+                    {isOnlySelection && isEditing && el.type === "image" && !el.locked && (
                       <>
                         {(() => {
                           const fit = clampImageFit({
@@ -921,14 +1669,13 @@ export function EditorCanvas({
                             imageOffsetX: el.style.imageOffsetX,
                             imageOffsetY: el.style.imageOffsetY,
                           });
-                          const { imageScale: scale, imageOffsetX: ox, imageOffsetY: oy } =
-                            fit;
+                          const { imageScale: scale } = fit;
                           return (
                             <div
                               className="pointer-events-none absolute z-20 border border-dashed border-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]"
                               style={{
-                                left: `calc(50% + ${ox}% - ${scale * 50}%)`,
-                                top: `calc(50% + ${oy}% - ${scale * 50}%)`,
+                                left: `calc(50% - ${scale * 50}%)`,
+                                top: `calc(50% - ${scale * 50}%)`,
                                 width: `${scale * 100}%`,
                                 height: `${scale * 100}%`,
                               }}
@@ -973,7 +1720,7 @@ export function EditorCanvas({
                       </>
                     )}
 
-                    {isSelected && !isEditing && !el.locked && (
+                    {isOnlySelection && !isEditing && !el.locked && (
                       <>
                         {(
                           [
@@ -984,7 +1731,7 @@ export function EditorCanvas({
                                 top: 0,
                                 transform: `translate(-50%, -50%) scale(${uiScale})`,
                               },
-                              className: "h-2.5 w-2.5 rounded-full",
+                              className: "h-[7px] w-[7px] rounded-full",
                               cursor: "nwse-resize",
                             },
                             {
@@ -994,7 +1741,7 @@ export function EditorCanvas({
                                 top: 0,
                                 transform: `translate(-50%, -50%) scale(${uiScale})`,
                               },
-                              className: "h-1.5 w-3 rounded-full",
+                              className: "h-[5px] w-[9px] rounded-full",
                               cursor: "ns-resize",
                             },
                             {
@@ -1004,7 +1751,7 @@ export function EditorCanvas({
                                 top: 0,
                                 transform: `translate(50%, -50%) scale(${uiScale})`,
                               },
-                              className: "h-2.5 w-2.5 rounded-full",
+                              className: "h-[7px] w-[7px] rounded-full",
                               cursor: "nesw-resize",
                             },
                             {
@@ -1014,7 +1761,7 @@ export function EditorCanvas({
                                 top: "50%",
                                 transform: `translate(50%, -50%) scale(${uiScale})`,
                               },
-                              className: "h-3 w-1.5 rounded-full",
+                              className: "h-[9px] w-[5px] rounded-full",
                               cursor: "ew-resize",
                             },
                             {
@@ -1024,7 +1771,7 @@ export function EditorCanvas({
                                 bottom: 0,
                                 transform: `translate(50%, 50%) scale(${uiScale})`,
                               },
-                              className: "h-2.5 w-2.5 rounded-full",
+                              className: "h-[7px] w-[7px] rounded-full",
                               cursor: "nwse-resize",
                             },
                             {
@@ -1034,7 +1781,7 @@ export function EditorCanvas({
                                 bottom: 0,
                                 transform: `translate(-50%, 50%) scale(${uiScale})`,
                               },
-                              className: "h-1.5 w-3 rounded-full",
+                              className: "h-[5px] w-[9px] rounded-full",
                               cursor: "ns-resize",
                             },
                             {
@@ -1044,7 +1791,7 @@ export function EditorCanvas({
                                 bottom: 0,
                                 transform: `translate(-50%, 50%) scale(${uiScale})`,
                               },
-                              className: "h-2.5 w-2.5 rounded-full",
+                              className: "h-[7px] w-[7px] rounded-full",
                               cursor: "nesw-resize",
                             },
                             {
@@ -1054,18 +1801,26 @@ export function EditorCanvas({
                                 top: "50%",
                                 transform: `translate(-50%, -50%) scale(${uiScale})`,
                               },
-                              className: "h-3 w-1.5 rounded-full",
+                              className: "h-[9px] w-[5px] rounded-full",
                               cursor: "ew-resize",
                             },
                           ] as const
                         ).map((handle) => (
                           <span
                             key={handle.id}
+                            data-resize-handle={handle.id}
                             role="presentation"
-                            className={`absolute z-30 border border-black/15 bg-white shadow-sm ${handle.className}`}
+                            className={`absolute z-30 border border-signature/55 bg-white ${handle.className}`}
                             style={{ ...handle.style, cursor: handle.cursor }}
                             onPointerDown={(event) =>
                               startDrag(event, el.id, "resize", handle.id)
+                            }
+                            onDoubleClick={
+                              el.type === "text" &&
+                              (handle.id === "e" || handle.id === "w")
+                                ? (event) =>
+                                    fitTextWidth(event, el.id, handle.id)
+                                : undefined
                             }
                           />
                         ))}
@@ -1075,6 +1830,65 @@ export function EditorCanvas({
                 </div>
               );
             })}
+
+            {multiSelectionBounds && (
+              <div
+                data-multi-selection-bounds
+                className={`absolute z-30 border border-dashed border-signature/45 ${
+                  groupDragAnchorId ? "cursor-move" : "cursor-default"
+                }`}
+                style={{
+                  left: `${multiSelectionBounds.x}%`,
+                  top: `${multiSelectionBounds.y}%`,
+                  width: `${multiSelectionBounds.width}%`,
+                  height: `${multiSelectionBounds.height}%`,
+                }}
+                onPointerDown={(event) => {
+                  if (event.shiftKey) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const underlying = document
+                      .elementsFromPoint(event.clientX, event.clientY)
+                      .map((node) =>
+                        node.closest<HTMLElement>(
+                          "[data-canvas-element-id]",
+                        ),
+                      )
+                      .find((node) => node !== null);
+                    const id = underlying?.dataset.canvasElementId;
+                    if (id) onToggleSelect(id);
+                    return;
+                  }
+                  if (groupDragAnchorId) {
+                    startDrag(event, groupDragAnchorId, "move");
+                  }
+                }}
+                aria-hidden="true"
+              >
+                <span
+                  className="absolute left-1/2 top-0 -translate-x-1/2 whitespace-nowrap rounded-full bg-signature px-2 py-0.5 text-[10px] font-semibold text-white"
+                  style={{
+                    transform: `translate(-50%, calc(-100% - 6px)) scale(${uiScale})`,
+                    transformOrigin: "bottom center",
+                  }}
+                >
+                  {selectedIds.length} selected
+                </span>
+              </div>
+            )}
+
+            {marquee && (
+              <div
+                className="pointer-events-none absolute z-50 border border-signature bg-signature/10"
+                style={{
+                  left: `${Math.min(marquee.startX, marquee.currentX)}%`,
+                  top: `${Math.min(marquee.startY, marquee.currentY)}%`,
+                  width: `${Math.abs(marquee.currentX - marquee.startX)}%`,
+                  height: `${Math.abs(marquee.currentY - marquee.startY)}%`,
+                }}
+                aria-hidden="true"
+              />
+            )}
             </div>
           </div>
 
@@ -1105,7 +1919,10 @@ export function EditorCanvas({
                 {
                   label: "Delete",
                   icon: TrashIcon,
-                  onClick: () => selectedId && onDelete(selectedId),
+                  onClick: () =>
+                    selectedIds.length > 1
+                      ? onDeleteMany(selectedIds)
+                      : selectedId && onDelete(selectedId),
                 },
               ] as const
             ).map((item) => {

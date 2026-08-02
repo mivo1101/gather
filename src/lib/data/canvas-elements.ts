@@ -1,8 +1,24 @@
 import { contrastingInk } from "@/lib/color-utils";
+import type { CanvasFontFamily } from "@/lib/canvas-fonts";
 
 export type TextAlign = "left" | "center" | "right" | "justify";
 export type VerticalAlign = "top" | "middle" | "bottom";
-export type ImageFrame = "none" | "square" | "circle" | "heart" | "rounded" | "arch";
+export type ImageFrame =
+  | "none"
+  | "square"
+  | "rounded"
+  | "circle"
+  | "arch"
+  | "heart"
+  | "triangle"
+  | "inverted-triangle"
+  | "diamond"
+  | "pentagon"
+  | "hexagon"
+  | "octagon"
+  | "star"
+  | "badge"
+  | "scallop";
 
 export type EffectKind = "none" | "drop" | "glow" | "echo";
 
@@ -28,7 +44,7 @@ export interface ElementEffects {
 }
 
 export interface ElementStyle {
-  fontFamily: "playfair" | "urbanist" | "caveat";
+  fontFamily: CanvasFontFamily;
   fontSize: number;
   fontWeight: "regular" | "medium" | "bold";
   color: string;
@@ -47,6 +63,10 @@ export interface ElementStyle {
   /** Photo pan inside the frame, % of frame size from center. */
   imageOffsetX?: number;
   imageOffsetY?: number;
+  /** Optional inner border for vector/basic shape elements. */
+  shapeBorderColor?: string;
+  /** Shape border thickness in screen pixels. */
+  shapeBorderWidth?: number;
 }
 
 export type WidgetKind =
@@ -173,7 +193,17 @@ export type ShapeKind =
   | "star_4"
   | "star_6"
   | "star_8"
-  | "burst";
+  | "burst"
+  | "icon_clock"
+  | "icon_calendar"
+  | "icon_location"
+  | "icon_bell"
+  | "icon_envelope"
+  | "icon_gift"
+  | "icon_camera"
+  | "icon_music"
+  | "icon_cake"
+  | "icon_rings";
 
 export type DividerStyle =
   | "solid"
@@ -772,14 +802,15 @@ export function createShapeElement(
     kind === "parallelogram" ||
     kind === "trapezoid" ||
     kind === "semicircle";
+  const isIcon = kind.startsWith("icon_");
 
   return {
     id: uid("shape"),
     type: "shape",
-    x: 35,
+    x: isIcon ? 41 : 35,
     y: 40,
-    width: isLine || isArrow ? 50 : isWide ? 40 : 28,
-    height: isLine ? 2 : isArrow ? 10 : isWide ? 22 : 16,
+    width: isLine || isArrow ? 50 : isWide ? 40 : isIcon ? 18 : 28,
+    height: isLine ? 2 : isArrow ? 10 : isWide ? 22 : isIcon ? 18 : 16,
     rotation: 0,
     locked: false,
     content: kind,
@@ -809,5 +840,3 @@ export function createDividerElement(
 export function createBlankPageElements(): CanvasElement[] {
   return [];
 }
-
-

@@ -67,6 +67,15 @@ export interface RsvpConfig {
   questions: RsvpQuestion[];
 }
 
+export type PaperTexture =
+  | "none"
+  | "cotton"
+  | "linen"
+  | "handmade"
+  | "pressed";
+
+export type PaperTextureBlend = "soft-light" | "multiply" | "overlay";
+
 export interface InvitationPage {
   id: string;
   name: string;
@@ -77,6 +86,14 @@ export interface InvitationPage {
   backgroundColor: string;
   /** Optional decorative pattern over the background */
   backgroundPattern?: "none" | "dots" | "grid" | "stripes" | "waves";
+  /** Optional realistic paper surface layered above the card colour. */
+  backgroundTexture?: PaperTexture;
+  /** Paper texture strength from 0–100. */
+  backgroundTextureOpacity?: number;
+  /** Optional colour wash applied to the paper fibers. */
+  backgroundTextureTint?: string;
+  /** How the paper surface interacts with the base card colour. */
+  backgroundTextureBlend?: PaperTextureBlend;
   /** Optional card border */
   border?: {
     style: "none" | "solid" | "dashed" | "double" | "ornament";
@@ -157,6 +174,10 @@ function createPage(
     elements,
     backgroundColor,
     backgroundPattern: "none",
+    backgroundTexture: "none",
+    backgroundTextureOpacity: 22,
+    backgroundTextureTint: "#ffffff",
+    backgroundTextureBlend: "soft-light",
     border: null,
     location: null,
     rsvpConfig: null,
@@ -282,6 +303,7 @@ function normalizeRsvpConfig(raw: unknown): RsvpConfig | null {
 export function elementsFromLocationPage(
   location: InvitationLocation | null | undefined,
   backgroundHint?: string,
+  shape: InvitationCanvasShape = "portrait",
 ): CanvasElement[] {
   const loc = location ?? {
     venue: "Venue",
@@ -294,20 +316,21 @@ export function elementsFromLocationPage(
     loc.mapsQuery || [loc.venue, loc.address].filter(Boolean).join(", ");
   const textColor = backgroundHint === "#000000" ? "#ffffff" : "#000000";
   const muted = backgroundHint === "#000000" ? "#c7c7cc" : "#8E8E93";
+  const isLandscape = shape === "landscape";
 
   return [
     createTextElement({
       content: "LOCATION",
-      x: 10,
-      y: 6,
-      width: 80,
+      x: isLandscape ? 7 : 10,
+      y: isLandscape ? 16 : 6,
+      width: isLandscape ? 34 : 80,
       style: {
         fontFamily: "urbanist",
-        fontSize: 11,
+        fontSize: isLandscape ? 9 : 11,
         letterSpacing: 3,
         fontWeight: "bold",
         color: "#FF60AA",
-        textAlign: "center",
+        textAlign: isLandscape ? "left" : "center",
         lineHeight: 1.2,
         bold: true,
         italic: false,
@@ -317,16 +340,16 @@ export function elementsFromLocationPage(
     }),
     createTextElement({
       content: loc.venue || "Venue",
-      x: 10,
-      y: 12,
-      width: 80,
+      x: isLandscape ? 7 : 10,
+      y: isLandscape ? 31 : 12,
+      width: isLandscape ? 34 : 80,
       style: {
         fontFamily: "playfair",
-        fontSize: 28,
+        fontSize: isLandscape ? 20 : 28,
         fontWeight: "bold",
         color: textColor,
-        textAlign: "center",
-        lineHeight: 1.15,
+        textAlign: isLandscape ? "left" : "center",
+        lineHeight: isLandscape ? 1.08 : 1.15,
         bold: true,
         italic: false,
         underline: false,
@@ -336,14 +359,14 @@ export function elementsFromLocationPage(
     }),
     createTextElement({
       content: loc.address || "",
-      x: 12,
-      y: 20,
-      width: 76,
+      x: isLandscape ? 7 : 12,
+      y: isLandscape ? 62 : 20,
+      width: isLandscape ? 34 : 76,
       style: {
         fontFamily: "urbanist",
-        fontSize: 13,
+        fontSize: isLandscape ? 10 : 13,
         color: muted,
-        textAlign: "center",
+        textAlign: isLandscape ? "left" : "center",
         lineHeight: 1.3,
         fontWeight: "regular",
         bold: false,
@@ -354,10 +377,10 @@ export function elementsFromLocationPage(
       },
     }),
     createWidgetElement("map", {
-      x: 8,
-      y: 28,
-      width: 84,
-      height: 56,
+      x: isLandscape ? 47 : 8,
+      y: isLandscape ? 8 : 28,
+      width: isLandscape ? 46 : 84,
+      height: isLandscape ? 84 : 56,
       widget: {
         kind: "map",
         mapsQuery,
@@ -377,22 +400,26 @@ export function elementsFromLocationPage(
   ];
 }
 
-export function elementsFromRsvpPage(config: RsvpConfig | null | undefined): CanvasElement[] {
+export function elementsFromRsvpPage(
+  config: RsvpConfig | null | undefined,
+  shape: InvitationCanvasShape = "portrait",
+): CanvasElement[] {
   const cfg = config ?? createDefaultRsvpConfig();
   const accent = cfg.theme.accent || "#1F2D22";
+  const isLandscape = shape === "landscape";
   const elements: CanvasElement[] = [
     createTextElement({
       content: cfg.eyebrow || "RSVP",
-      x: 10,
-      y: 6,
-      width: 80,
+      x: isLandscape ? 7 : 10,
+      y: isLandscape ? 15 : 6,
+      width: isLandscape ? 31 : 80,
       style: {
         fontFamily: "urbanist",
-        fontSize: 11,
-        letterSpacing: 3,
+        fontSize: isLandscape ? 8 : 11,
+        letterSpacing: isLandscape ? 2.2 : 3,
         fontWeight: "bold",
         color: accent,
-        textAlign: "center",
+        textAlign: isLandscape ? "left" : "center",
         lineHeight: 1.2,
         bold: true,
         italic: false,
@@ -402,16 +429,16 @@ export function elementsFromRsvpPage(config: RsvpConfig | null | undefined): Can
     }),
     createTextElement({
       content: cfg.title,
-      x: 8,
-      y: 12,
-      width: 84,
+      x: isLandscape ? 7 : 8,
+      y: isLandscape ? 30 : 12,
+      width: isLandscape ? 31 : 84,
       style: {
         fontFamily: cfg.theme.headingFont || "playfair",
-        fontSize: 26,
+        fontSize: isLandscape ? 19 : 26,
         fontWeight: "bold",
         color: cfg.theme.text || "#1F2D22",
-        textAlign: "center",
-        lineHeight: 1.15,
+        textAlign: isLandscape ? "left" : "center",
+        lineHeight: isLandscape ? 1.08 : 1.15,
         bold: true,
         italic: false,
         underline: false,
@@ -425,14 +452,14 @@ export function elementsFromRsvpPage(config: RsvpConfig | null | undefined): Can
     elements.push(
       createTextElement({
         content: cfg.note,
-        x: 12,
-        y: 24,
-        width: 76,
+        x: isLandscape ? 7 : 12,
+        y: isLandscape ? 67 : 24,
+        width: isLandscape ? 31 : 76,
         style: {
           fontFamily: cfg.theme.bodyFont || "urbanist",
-          fontSize: 13,
+          fontSize: isLandscape ? 9 : 13,
           color: cfg.theme.muted || "#8E8E93",
-          textAlign: "center",
+          textAlign: isLandscape ? "left" : "center",
           lineHeight: 1.3,
           fontWeight: "regular",
           bold: false,
@@ -446,7 +473,7 @@ export function elementsFromRsvpPage(config: RsvpConfig | null | undefined): Can
   }
 
   let y = cfg.note ? 32 : 28;
-  for (const question of cfg.questions) {
+  for (const [questionIndex, question] of cfg.questions.entries()) {
     const kind =
       question.type === "attend"
         ? "attend"
@@ -456,7 +483,9 @@ export function elementsFromRsvpPage(config: RsvpConfig | null | undefined): Can
             ? "multi_choice"
             : "single_choice";
 
-    const base = createDefaultWidgetConfig(kind);
+    const base = createDefaultWidgetConfig(kind, {
+      surfaceColor: cfg.theme.surface ?? cfg.theme.background,
+    });
     let widget: WidgetConfig;
     if (kind === "attend" && base.kind === "attend") {
       widget = {
@@ -482,6 +511,8 @@ export function elementsFromRsvpPage(config: RsvpConfig | null | undefined): Can
         labelStyle: { color: cfg.theme.text || accent },
         fieldStyle: {
           ...base.fieldStyle,
+          background:
+            cfg.theme.surface ?? cfg.theme.background ?? "#ffffff",
           borderColor: accent,
           textColor: cfg.theme.text || accent,
         },
@@ -499,6 +530,8 @@ export function elementsFromRsvpPage(config: RsvpConfig | null | undefined): Can
         labelStyle: { color: cfg.theme.text || accent },
         optionStyle: {
           ...base.optionStyle,
+          background:
+            cfg.theme.surface ?? cfg.theme.background ?? "#ffffff",
           borderColor: accent,
           textColor: cfg.theme.text || accent,
         },
@@ -513,21 +546,34 @@ export function elementsFromRsvpPage(config: RsvpConfig | null | undefined): Can
         : 0;
     const height =
       kind === "attend"
-        ? 20
+        ? isLandscape
+          ? 68
+          : 20
         : kind === "short_text"
-          ? 12
-          : Math.min(28, 8 + optionCount * 5);
+          ? isLandscape
+            ? 58
+            : 12
+          : isLandscape
+            ? Math.min(76, 28 + optionCount * 16)
+            : Math.min(28, 8 + optionCount * 5);
+    const landscapeColumn = questionIndex % 2;
+    const landscapeX = landscapeColumn === 0 ? 42 : 66;
+    const landscapeY =
+      12 + Math.floor(questionIndex / 2) * 78;
+    const landscapeWidth = landscapeColumn === 0 ? 21 : 31;
 
     elements.push(
       createWidgetElement(kind, {
-        x: 10,
-        y,
-        width: 80,
+        x: isLandscape ? landscapeX : 10,
+        y: isLandscape ? landscapeY : y,
+        width: isLandscape ? landscapeWidth : 80,
         height,
         widget,
-      }),
+      }, cfg.theme.surface ?? cfg.theme.background),
     );
-    y += height + 4;
+    if (!isLandscape) {
+      y += height + 4;
+    }
   }
 
   return elements;
@@ -536,6 +582,7 @@ export function elementsFromRsvpPage(config: RsvpConfig | null | undefined): Can
 function normalizePages(
   raw: unknown,
   fallbackElements: CanvasElement[],
+  shape: InvitationCanvasShape,
 ): { pages: InvitationPage[]; activePageId: string; elements: CanvasElement[] } {
   if (Array.isArray(raw) && raw.length > 0) {
     const pages = raw.map((item, index) => {
@@ -549,9 +596,18 @@ function normalizePages(
           id: page.id ?? pageId(),
           name: page.name ?? `Page ${index + 1}`,
           kind: "design" as const,
-          elements: elementsFromLocationPage(location, page.backgroundColor),
+          elements: elementsFromLocationPage(
+            location,
+            page.backgroundColor,
+            shape,
+          ),
           backgroundColor: page.backgroundColor || "#ffffff",
           backgroundPattern: page.backgroundPattern || "none",
+          backgroundTexture: page.backgroundTexture || "none",
+          backgroundTextureOpacity: page.backgroundTextureOpacity ?? 22,
+          backgroundTextureTint: page.backgroundTextureTint || "#ffffff",
+          backgroundTextureBlend:
+            page.backgroundTextureBlend || "soft-light",
           border: page.border ?? null,
           location: null,
           rsvpConfig: null,
@@ -564,12 +620,17 @@ function normalizePages(
           id: page.id ?? pageId(),
           name: page.name ?? `Page ${index + 1}`,
           kind: "design" as const,
-          elements: elementsFromRsvpPage(rsvpConfig),
+          elements: elementsFromRsvpPage(rsvpConfig, shape),
           backgroundColor:
             page.backgroundColor ||
             rsvpConfig?.theme.background ||
             "#ffffff",
           backgroundPattern: page.backgroundPattern || "none",
+          backgroundTexture: page.backgroundTexture || "none",
+          backgroundTextureOpacity: page.backgroundTextureOpacity ?? 22,
+          backgroundTextureTint: page.backgroundTextureTint || "#ffffff",
+          backgroundTextureBlend:
+            page.backgroundTextureBlend || "soft-light",
           border: page.border ?? null,
           location: null,
           rsvpConfig: null,
@@ -583,6 +644,11 @@ function normalizePages(
         elements: normalizeElements(page.elements),
         backgroundColor: page.backgroundColor || "#ffffff",
         backgroundPattern: page.backgroundPattern || "none",
+        backgroundTexture: page.backgroundTexture || "none",
+        backgroundTextureOpacity: page.backgroundTextureOpacity ?? 22,
+        backgroundTextureTint: page.backgroundTextureTint || "#ffffff",
+        backgroundTextureBlend:
+          page.backgroundTextureBlend || "soft-light",
         border: page.border ?? null,
         location: null,
         rsvpConfig: null,
@@ -618,7 +684,8 @@ export function normalizeContent(
   };
 
   const elements = normalizeElements(value.elements);
-  const normalized = normalizePages(value.pages, elements);
+  const shape = normalizeCanvasShape(value.shape);
+  const normalized = normalizePages(value.pages, elements, shape);
   const active =
     normalized.pages.find((page) => page.id === value.activePageId) ??
     normalized.pages[0];
@@ -628,7 +695,7 @@ export function normalizeContent(
     details: { ...defaults.details, ...value.details },
     rsvp: { ...defaults.rsvp, ...value.rsvp },
     thanks: { ...defaults.thanks, ...value.thanks },
-    shape: normalizeCanvasShape(value.shape),
+    shape,
     customSize: normalizeCustomSize(value.customSize),
     pages: normalized.pages,
     activePageId: active.id,
@@ -743,6 +810,10 @@ export function createRsvpPage(_pageNumber?: number): InvitationPage {
     elements: [],
     backgroundColor: config.theme.background,
     backgroundPattern: "none",
+    backgroundTexture: "none",
+    backgroundTextureOpacity: 22,
+    backgroundTextureTint: "#ffffff",
+    backgroundTextureBlend: "soft-light",
     border: null,
     location: null,
     rsvpConfig: config,
@@ -763,6 +834,10 @@ export function createLocationPage(
     elements: [],
     backgroundColor: "#ffffff",
     backgroundPattern: "none",
+    backgroundTexture: "none",
+    backgroundTextureOpacity: 22,
+    backgroundTextureTint: "#ffffff",
+    backgroundTextureBlend: "soft-light",
     border: null,
     location: {
       venue,

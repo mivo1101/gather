@@ -21,40 +21,18 @@ import {
 
 const DocumentColorsContext = createContext<string[]>([]);
 
-/**
- * Keeps document colour swatches in a stable order for the editing session.
- * New colours are appended; existing ones never jump when re-selected.
- */
+/** Provides only colours that are currently used by the invitation. */
 export function DocumentColorsProvider({
   colors,
-  resetKey,
   children,
 }: {
   colors: string[];
-  /** Change this (e.g. invitation id) to reset the stable palette */
+  /** Kept for call-site compatibility when switching invitations. */
   resetKey?: string;
   children: React.ReactNode;
 }) {
-  const [stableColors, setStableColors] = useState(colors);
-  const prevResetKey = useRef(resetKey);
-
-  useEffect(() => {
-    if (prevResetKey.current !== resetKey) {
-      prevResetKey.current = resetKey;
-      setStableColors(colors);
-      return;
-    }
-
-    setStableColors((prev) => {
-      const prevKeys = new Set(prev.map((c) => c.toLowerCase()));
-      const added = colors.filter((c) => !prevKeys.has(c.toLowerCase()));
-      if (added.length === 0) return prev;
-      return [...prev, ...added].slice(0, 24);
-    });
-  }, [colors, resetKey]);
-
   return (
-    <DocumentColorsContext.Provider value={stableColors}>
+    <DocumentColorsContext.Provider value={colors.slice(0, 24)}>
       {children}
     </DocumentColorsContext.Provider>
   );
@@ -148,12 +126,21 @@ function SolidPane({
   const [hexInput, setHexInput] = useState(solid);
   const fieldRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
+  const lastInternalValue = useRef<string | null>(null);
 
   useEffect(() => {
     if (isGradient(value)) return;
     const next = normalizeHex(value);
+    if (lastInternalValue.current === next) {
+      lastInternalValue.current = null;
+      setHexInput(next);
+      return;
+    }
+    lastInternalValue.current = null;
     const parsed = hexToHsv(next);
-    setHue(parsed.h);
+    // Hue is undefined for greys. Keep the user's last hue so moving back
+    // into the saturation field does not jump to red.
+    if (parsed.s > 0.001) setHue(parsed.h);
     setSat(parsed.s);
     setVal(parsed.v);
     setHexInput(next);
@@ -162,6 +149,7 @@ function SolidPane({
   const commitHsv = useCallback(
     (h: number, s: number, v: number) => {
       const hex = hsvToHex(h, s, v);
+      lastInternalValue.current = hex;
       setHexInput(hex);
       onChange(hex);
     },
@@ -185,6 +173,7 @@ function SolidPane({
     <div className="space-y-3">
       <div
         ref={fieldRef}
+        data-colour-saturation-field
         className="relative h-36 w-full cursor-crosshair overflow-hidden rounded-xl"
         style={{
           backgroundColor: hueColor,

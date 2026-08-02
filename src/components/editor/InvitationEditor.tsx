@@ -17,6 +17,7 @@ import {
   type CanvasElement,
   type ElementStyle,
   type ImageFrame,
+  type ShapeKind,
   type WidgetConfig,
   type WidgetKind,
 } from "@/lib/data/canvas-elements";
@@ -63,6 +64,7 @@ import type {
 import { CANVAS_SELECTION_ID, DEFAULT_CUSTOM_SIZE } from "./editor-types";
 import { useHistory } from "./useHistory";
 import { saveElementRecent } from "./ElementsBrowser";
+import { EMPTY_IMAGE_FRAME_SRC } from "./image-frames";
 
 interface InvitationEditorProps {
   invitation: Invitation;
@@ -78,11 +80,20 @@ type EditorSnapshot = {
   customSize: CustomCanvasSize;
 };
 
+type ElementClipboard = {
+  elements: CanvasElement[];
+  sourcePageId: string;
+};
+
 function clonePages(pages: InvitationPage[]): InvitationPage[] {
   return pages.map((page) => ({
     ...page,
     kind: page.kind || "design",
     backgroundPattern: page.backgroundPattern || "none",
+    backgroundTexture: page.backgroundTexture || "none",
+    backgroundTextureOpacity: page.backgroundTextureOpacity ?? 22,
+    backgroundTextureTint: page.backgroundTextureTint || "#ffffff",
+    backgroundTextureBlend: page.backgroundTextureBlend || "soft-light",
     border: page.border ? { ...page.border } : null,
     location: page.location ? { ...page.location } : null,
     rsvpConfig: page.rsvpConfig
@@ -161,6 +172,43 @@ function serializeSavePayload(
   });
 }
 
+const WIDE_SHAPE_KINDS = new Set<ShapeKind>([
+  "rectangle",
+  "oval",
+  "parallelogram",
+  "trapezoid",
+  "semicircle",
+]);
+
+function sizeNewShapeForCard(
+  element: CanvasElement,
+  cardAspect: number,
+): CanvasElement {
+  if (element.type !== "shape") return element;
+  const kind = element.content as ShapeKind;
+  if (
+    kind === "line" ||
+    kind === "line_dashed" ||
+    kind === "line_dotted" ||
+    kind === "arrow" ||
+    kind === "arrow_thin"
+  ) {
+    return element;
+  }
+
+  const visualRatio = WIDE_SHAPE_KINDS.has(kind) ? 1.6 : 1;
+  const height = Math.min(
+    82,
+    Math.max(6, Math.round(((element.width * cardAspect) / visualRatio) * 10) / 10),
+  );
+  return {
+    ...element,
+    x: Math.round(((100 - element.width) / 2) * 10) / 10,
+    y: Math.round(((100 - height) / 2) * 10) / 10,
+    height,
+  };
+}
+
 /** Fully interactive Gather invitation editor */
 export function InvitationEditor({
   invitation,
@@ -185,6 +233,7 @@ export function InvitationEditor({
   const { title, pages, activePageId, shape, customSize } = history.present;
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [contentMeta, setContentMeta] = useState(invitation.content);
   const [status, setStatus] = useState(invitation.status);
@@ -200,8 +249,6 @@ export function InvitationEditor({
   const [toast, setToast] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [defaultElementColor, setDefaultElementColor] = useState("#1F2D22");
-  const [pendingImageFrame, setPendingImageFrame] =
-    useState<ImageFrame>("none");
   const [pendingTemplate, setPendingTemplate] =
     useState<InvitationTemplate | null>(null);
   const [customSizeModalOpen, setCustomSizeModalOpen] =
@@ -219,6 +266,11 @@ export function InvitationEditor({
     ),
   );
   const autosaveTimerRef = useRef<number | null>(null);
+  const latestSnapshotRef = useRef(history.present);
+  const contentMetaRef = useRef(contentMeta);
+  const elementClipboardRef = useRef<ElementClipboard | null>(null);
+  latestSnapshotRef.current = history.present;
+  contentMetaRef.current = contentMeta;
 
   const elements = activeElements(pages, activePageId);
   const activePage = pages.find((page) => page.id === activePageId) ?? {
@@ -228,6 +280,10 @@ export function InvitationEditor({
     elements,
     backgroundColor: "#fff8f4",
     backgroundPattern: "none" as const,
+    backgroundTexture: "none" as const,
+    backgroundTextureOpacity: 22,
+    backgroundTextureTint: "#ffffff",
+    backgroundTextureBlend: "soft-light" as const,
     border: null,
     location: null,
   };
@@ -240,6 +296,30 @@ export function InvitationEditor({
   const selected = canvasSelected
     ? null
     : (elements.find((el) => el.id === selectedId) ?? null);
+
+  useEffect(() => {
+    if (!selectedId || selectedId === CANVAS_SELECTION_ID) {
+      setSelectedIds([]);
+      return;
+    }
+    setSelectedIds((current) =>
+      current.includes(selectedId) ? current : [selectedId],
+    );
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (!selected || selectedIds.length > 1) return;
+    const matchingTool: EditorToolId =
+      selected.type === "text"
+        ? "text"
+        : selected.type === "image"
+          ? "images"
+          : selected.type === "widget"
+            ? "interactive"
+            : "elements";
+    setActiveTool(matchingTool);
+    setLeftPanelCollapsed(false);
+  }, [selected, selectedIds.length]);
 
   useEffect(() => {
     history.reset({
@@ -265,7 +345,7 @@ export function InvitationEditor({
       invitation.content.customSize ?? DEFAULT_CUSTOM_SIZE,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invitation.id, invitation.updatedAt]);
+  }, [invitation.id]);
 
   useEffect(() => {
     if (!openCustomSize) return;
@@ -359,6 +439,73 @@ export function InvitationEditor({
     [setElementsOnActivePage],
   );
 
+  const deleteElements = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return;
+      const removing = new Set(ids);
+      setElementsOnActivePage((prev) =>
+        prev.filter((el) => !removing.has(el.id)),
+      );
+      setSelectedId(null);
+      setSelectedIds([]);
+      setEditingId(null);
+    },
+    [setElementsOnActivePage],
+  );
+
+  const selectedElementsForClipboard = useCallback(() => {
+    const ids =
+      selectedIds.length > 1
+        ? new Set(selectedIds)
+        : selectedId && selectedId !== CANVAS_SELECTION_ID
+          ? new Set([selectedId])
+          : new Set<string>();
+    return elements.filter((element) => ids.has(element.id));
+  }, [elements, selectedId, selectedIds]);
+
+  const copySelectedElements = useCallback(() => {
+    const selectedElements = selectedElementsForClipboard();
+    if (selectedElements.length === 0) return false;
+    elementClipboardRef.current = {
+      elements: structuredClone(selectedElements),
+      sourcePageId: activePageId,
+    };
+    return true;
+  }, [activePageId, selectedElementsForClipboard]);
+
+  const cutSelectedElements = useCallback(() => {
+    const selectedElements = selectedElementsForClipboard();
+    if (selectedElements.length === 0) return false;
+    elementClipboardRef.current = {
+      elements: structuredClone(selectedElements),
+      sourcePageId: activePageId,
+    };
+    deleteElements(selectedElements.map((element) => element.id));
+    return true;
+  }, [activePageId, deleteElements, selectedElementsForClipboard]);
+
+  const pasteElements = useCallback(() => {
+    const clipboard = elementClipboardRef.current;
+    if (!clipboard || clipboard.elements.length === 0) return false;
+    const offset = clipboard.sourcePageId === activePageId ? 3 : 0;
+    const pasted = clipboard.elements.map((source) => ({
+      ...structuredClone(source),
+      id: `${source.type}_${Math.random().toString(36).slice(2, 9)}`,
+      x: Math.min(95, source.x + offset),
+      y: Math.min(95, source.y + offset),
+    }));
+    elementClipboardRef.current = {
+      elements: structuredClone(pasted),
+      sourcePageId: activePageId,
+    };
+    setElementsOnActivePage((current) => [...current, ...pasted]);
+    const ids = pasted.map((element) => element.id);
+    setSelectedIds(ids);
+    setSelectedId(ids[0] ?? null);
+    setEditingId(null);
+    return true;
+  }, [activePageId, setElementsOnActivePage]);
+
   const addElement = useCallback(
     (el: CanvasElement, edit = false) => {
       setElementsOnActivePage((prev) => [...prev, el]);
@@ -410,10 +557,36 @@ export function InvitationEditor({
         event.preventDefault();
         document.getElementById("editor-save-trigger")?.click();
       }
+      if (typing || !mod) return;
+      const key = event.key.toLowerCase();
+      if (key === "c" && copySelectedElements()) {
+        event.preventDefault();
+      }
+      if (key === "x" && cutSelectedElements()) {
+        event.preventDefault();
+      }
+      if (key === "v" && pasteElements()) {
+        event.preventDefault();
+      }
+      if (key === "a" && elements.length > 0) {
+        event.preventDefault();
+        const ids = elements.map((element) => element.id);
+        setSelectedIds(ids);
+        setSelectedId(ids[0] ?? null);
+        setEditingId(null);
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [editingId, handleRedo, handleUndo]);
+  }, [
+    copySelectedElements,
+    cutSelectedElements,
+    editingId,
+    elements,
+    handleRedo,
+    handleUndo,
+    pasteElements,
+  ]);
 
   const persist = useCallback(
     (options?: {
@@ -423,12 +596,13 @@ export function InvitationEditor({
     }) => {
       const nextStatus = options?.nextStatus;
       const quiet = options?.quiet ?? false;
+      const current = latestSnapshotRef.current;
       const payload = serializeSavePayload(
-        title,
-        pages,
-        activePageId,
-        shape,
-        customSize,
+        current.title,
+        current.pages,
+        current.activePageId,
+        current.shape,
+        current.customSize,
       );
 
       if (
@@ -448,77 +622,86 @@ export function InvitationEditor({
       setSaveLabel("Saving…");
 
       startTransition(async () => {
-        const content = buildContent(
-          contentMeta,
-          pages,
-          activePageId,
-          shape,
-          customSize,
-        );
-        const result = await saveInvitationAction({
-          invitationId: invitation.id,
-          title: title.trim() || "Untitled Invitation",
-          eventDate: invitation.eventDate,
-          location: invitation.location,
-          content,
-          status: nextStatus,
-        });
-
-        savingRef.current = false;
-
-        if ("error" in result) {
-          setSaveLabel("Retry");
-          if (!quiet) showToast(result.error);
-          else showToast("Autosave failed — click Save to retry");
-          return;
-        }
-
-        lastSavedPayloadRef.current = serializeSavePayload(
-          result.invitation.title,
-          result.invitation.content.pages,
-          result.invitation.content.activePageId,
-          result.invitation.content.shape ?? "portrait",
-          result.invitation.content.customSize ?? DEFAULT_CUSTOM_SIZE,
-        );
-        setContentMeta(result.invitation.content);
-        setStatus(result.invitation.status);
-        setSavedAt(result.invitation.updatedAt);
-        setSaveLabel("Saved");
-
-        if (!quiet) {
-          showToast(
-            nextStatus === "published"
-              ? "Invitation published"
-              : nextStatus === "draft"
-                ? "Reverted to draft"
-                : "Changes saved",
+        let savedSuccessfully = false;
+        try {
+          const content = buildContent(
+            contentMetaRef.current,
+            current.pages,
+            current.activePageId,
+            current.shape,
+            current.customSize,
           );
-        }
+          const result = await saveInvitationAction({
+            invitationId: invitation.id,
+            title: current.title.trim() || "Untitled Invitation",
+            eventDate: invitation.eventDate,
+            location: invitation.location,
+            content,
+            status: nextStatus,
+          });
 
-        router.replace(invitationEditPath(result.invitation), { scroll: false });
-        window.setTimeout(() => setSaveLabel("Save"), 1800);
+          if ("error" in result) {
+            setSaveLabel("Retry");
+            if (!quiet) showToast(result.error);
+            else showToast("Autosave failed — click Save to retry");
+            return;
+          }
 
-        if (pendingAutosaveRef.current) {
-          pendingAutosaveRef.current = false;
-          window.setTimeout(() => {
-            persist({ quiet: true });
-          }, 400);
+          lastSavedPayloadRef.current = serializeSavePayload(
+            result.invitation.title,
+            result.invitation.content.pages,
+            result.invitation.content.activePageId,
+            result.invitation.content.shape ?? "portrait",
+            result.invitation.content.customSize ?? DEFAULT_CUSTOM_SIZE,
+          );
+          setContentMeta(result.invitation.content);
+          setStatus(result.invitation.status);
+          setSavedAt(result.invitation.updatedAt);
+          setSaveLabel("Saved");
+          savedSuccessfully = true;
+
+          if (!quiet) {
+            showToast(
+              nextStatus === "published"
+                ? "Invitation published"
+                : nextStatus === "draft"
+                  ? "Reverted to draft"
+                  : "Changes saved",
+            );
+          }
+
+          const nextPath = invitationEditPath(result.invitation);
+          if (window.location.pathname !== nextPath) {
+            router.replace(nextPath, { scroll: false });
+          }
+          window.setTimeout(() => setSaveLabel("Save"), 1800);
+        } catch (error) {
+          setSaveLabel("Retry");
+          showToast(
+            error instanceof Error
+              ? error.message
+              : "Autosave failed — click Save to retry",
+          );
+        } finally {
+          savingRef.current = false;
+          if (savedSuccessfully && pendingAutosaveRef.current) {
+            pendingAutosaveRef.current = false;
+            window.setTimeout(() => {
+              persist({ quiet: true });
+            }, 400);
+          } else if (!savedSuccessfully) {
+            pendingAutosaveRef.current = false;
+          }
         }
       });
     },
-    // showToast is stable enough via closure; include deps that affect save body
+    // Editor state is read from refs so queued saves always use the latest snapshot.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
-      activePageId,
-      contentMeta,
-      customSize,
       invitation.eventDate,
       invitation.id,
       invitation.location,
-      pages,
       router,
-      shape,
-      title,
     ],
   );
 
@@ -549,31 +732,37 @@ export function InvitationEditor({
 
   const onChangeStyle = (patch: Partial<ElementStyle>) => {
     if (!selectedId || canvasSelected || !selected) return;
-    snapshotBeforeChange();
-    const nextStyle = {
-      ...selected.style,
-      ...patch,
-      effects: patch.effects
-        ? { ...selected.style.effects, ...patch.effects }
-        : selected.style.effects,
-    };
-    const sizePatch =
-      selected.type === "image" &&
-      patch.frame !== undefined &&
-      isSquareFrame(patch.frame)
-        ? squareElementSize(
-            selected.width,
-            selected.height || selected.width,
-            cardAspectRatio(shape, customSize),
-          )
-        : null;
-    updateElement(
-      selectedId,
-      {
-        style: nextStyle,
-        ...(sizePatch ?? {}),
-      },
-      false,
+    const targetIds = new Set(
+      selectedIds.length > 1 ? selectedIds : [selectedId],
+    );
+    setElementsOnActivePage(
+      (current) =>
+        current.map((element) => {
+          if (!targetIds.has(element.id)) return element;
+          const nextStyle = {
+            ...element.style,
+            ...patch,
+            effects: patch.effects
+              ? { ...element.style.effects, ...patch.effects }
+              : element.style.effects,
+          };
+          const sizePatch =
+            element.type === "image" &&
+            patch.frame !== undefined &&
+            isSquareFrame(patch.frame)
+              ? squareElementSize(
+                  element.width,
+                  element.height || element.width,
+                  cardAspectRatio(shape, customSize),
+                )
+              : null;
+          return {
+            ...element,
+            style: nextStyle,
+            ...(sizePatch ?? {}),
+          };
+        }),
+      { record: true },
     );
   };
 
@@ -598,6 +787,28 @@ export function InvitationEditor({
       pages: history.present.pages.map((page) =>
         page.id === history.present.activePageId
           ? { ...page, backgroundPattern: pattern }
+          : page,
+      ),
+    });
+  };
+
+  const onChangeTexture = (
+    patch: Partial<
+      Pick<
+        InvitationPage,
+        | "backgroundTexture"
+        | "backgroundTextureOpacity"
+        | "backgroundTextureTint"
+        | "backgroundTextureBlend"
+      >
+    >,
+  ) => {
+    snapshotBeforeChange();
+    history.setPresentSilent({
+      ...history.present,
+      pages: history.present.pages.map((page) =>
+        page.id === history.present.activePageId
+          ? { ...page, ...patch }
           : page,
       ),
     });
@@ -703,7 +914,12 @@ export function InvitationEditor({
   };
 
   const addImageWithOptions = (src: string, frame?: ImageFrame) => {
-    const nextFrame = frame ?? pendingImageFrame;
+    const emptyFrame =
+      selected?.type === "image" &&
+      selected.content === EMPTY_IMAGE_FRAME_SRC
+        ? selected
+        : null;
+    const nextFrame = frame ?? emptyFrame?.style.frame ?? "none";
     const base = createImageElement(
       src,
       isPatternGraphicSrc(src) ? defaultElementColor : "#000000",
@@ -716,8 +932,32 @@ export function InvitationEditor({
       },
     };
 
+    const placeImage = (size?: { width: number; height: number }) => {
+      if (emptyFrame) {
+        snapshotBeforeChange();
+        updateElement(
+          emptyFrame.id,
+          {
+            content: src,
+            ...(size ?? {}),
+            style: {
+              ...emptyFrame.style,
+              frame: nextFrame,
+              imageScale: 1,
+              imageOffsetX: 0,
+              imageOffsetY: 0,
+            },
+          },
+          false,
+        );
+        setSelectedId(emptyFrame.id);
+        return;
+      }
+      addElement(size ? { ...withFrame, ...size } : withFrame);
+    };
+
     if (isPatternGraphicSrc(src)) {
-      addElement(withFrame);
+      placeImage();
       return;
     }
 
@@ -732,10 +972,20 @@ export function InvitationEditor({
       if (isSquareFrame(nextFrame)) {
         size = squareElementSize(size.width, size.height, aspect);
       }
-      addElement({ ...withFrame, ...size });
+      placeImage(size);
     };
     probe.onerror = () => {
-      addElement({ ...withFrame, width: 52, height: 28 });
+      const aspect = cardAspectRatio(shape, customSize);
+      placeImage(
+        emptyFrame
+          ? undefined
+          : isSquareFrame(nextFrame)
+            ? squareElementSize(46, 46, aspect)
+            : {
+                width: 52,
+                height: 28,
+              },
+      );
     };
     probe.src = src;
   };
@@ -786,21 +1036,111 @@ export function InvitationEditor({
       return next;
     });
 
+  useEffect(() => {
+    const onLayerShortcut = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (
+        !(event.metaKey || event.ctrlKey) ||
+        !selectedId ||
+        canvasSelected
+      ) {
+        return;
+      }
+      if (event.code === "BracketLeft") {
+        event.preventDefault();
+        if (event.altKey) onSendToBack();
+        else onSendBackward();
+      }
+      if (event.code === "BracketRight") {
+        event.preventDefault();
+        if (event.altKey) onBringToFront();
+        else onBringForward();
+      }
+    };
+    window.addEventListener("keydown", onLayerShortcut);
+    return () => window.removeEventListener("keydown", onLayerShortcut);
+  });
+
   const onAlignToPage = (
     edge: "top" | "middle" | "bottom" | "left" | "center" | "right",
   ) => {
     if (!selected) return;
-    snapshotBeforeChange();
-    const height = selected.height ?? 12;
-    const width = selected.width;
-    const patch: Partial<CanvasElement> = {};
-    if (edge === "left") patch.x = 0;
-    if (edge === "center") patch.x = Math.max(0, (100 - width) / 2);
-    if (edge === "right") patch.x = Math.max(0, 100 - width);
-    if (edge === "top") patch.y = 0;
-    if (edge === "middle") patch.y = Math.max(0, (100 - height) / 2);
-    if (edge === "bottom") patch.y = Math.max(0, 100 - height);
-    updateElement(selected.id, patch, false);
+    const targetIds = new Set(
+      selectedIds.length > 1 ? selectedIds : [selected.id],
+    );
+    const targets = elements.filter((element) => targetIds.has(element.id));
+    if (targets.length === 0) return;
+
+    const bounds = targets.map((element) => {
+      const node = document.querySelector<HTMLElement>(
+        `[data-canvas-element-id="${CSS.escape(element.id)}"]`,
+      );
+      const canvas = node?.parentElement;
+      if (node && canvas) {
+        const nodeRect = node.getBoundingClientRect();
+        const canvasRect = canvas.getBoundingClientRect();
+        if (canvasRect.width > 0 && canvasRect.height > 0) {
+          return {
+            left: ((nodeRect.left - canvasRect.left) / canvasRect.width) * 100,
+            right:
+              ((nodeRect.right - canvasRect.left) / canvasRect.width) * 100,
+            top: ((nodeRect.top - canvasRect.top) / canvasRect.height) * 100,
+            bottom:
+              ((nodeRect.bottom - canvasRect.top) / canvasRect.height) * 100,
+          };
+        }
+      }
+      const height =
+        element.height ??
+        (element.type === "text"
+          ? Math.max(2, element.content.split("\n").length * 4)
+          : 12);
+      return {
+        left: element.x,
+        right: element.x + element.width,
+        top: element.y,
+        bottom: element.y + height,
+      };
+    });
+    const group = {
+      left: Math.min(...bounds.map((item) => item.left)),
+      right: Math.max(...bounds.map((item) => item.right)),
+      top: Math.min(...bounds.map((item) => item.top)),
+      bottom: Math.max(...bounds.map((item) => item.bottom)),
+    };
+    const delta = { x: 0, y: 0 };
+    if (edge === "left") delta.x = -group.left;
+    if (edge === "center") {
+      delta.x = 50 - (group.left + group.right) / 2;
+    }
+    if (edge === "right") delta.x = 100 - group.right;
+    if (edge === "top") delta.y = -group.top;
+    if (edge === "middle") {
+      delta.y = 50 - (group.top + group.bottom) / 2;
+    }
+    if (edge === "bottom") delta.y = 100 - group.bottom;
+
+    setElementsOnActivePage(
+      (current) =>
+        current.map((element) =>
+          targetIds.has(element.id)
+            ? {
+                ...element,
+                x: element.x + delta.x,
+                y: element.y + delta.y,
+              }
+            : element,
+        ),
+      { record: true },
+    );
   };
 
   const onChangeTransform = (patch: {
@@ -817,7 +1157,25 @@ export function InvitationEditor({
 
   const onAddPage = () => {
     commit((current) => {
-      const page = createBlankPage(current.pages.length + 1);
+      const source = current.pages.find(
+        (page) => page.id === current.activePageId,
+      );
+      const blank = createBlankPage(current.pages.length + 1);
+      const page: InvitationPage = source
+        ? {
+            ...blank,
+            backgroundColor: source.backgroundColor,
+            backgroundPattern: source.backgroundPattern || "none",
+            backgroundTexture: source.backgroundTexture || "none",
+            backgroundTextureOpacity:
+              source.backgroundTextureOpacity ?? 22,
+            backgroundTextureTint:
+              source.backgroundTextureTint || "#ffffff",
+            backgroundTextureBlend:
+              source.backgroundTextureBlend || "soft-light",
+            border: source.border ? { ...source.border } : null,
+          }
+        : blank;
       return {
         ...current,
         pages: [...current.pages, page],
@@ -825,8 +1183,9 @@ export function InvitationEditor({
       };
     });
     setSelectedId(null);
+    setSelectedIds([]);
     setEditingId(null);
-    showToast("Page added");
+    showToast("Page added with the same background");
   };
 
   const applyTemplate = (template: InvitationTemplate) => {
@@ -962,14 +1321,16 @@ export function InvitationEditor({
             onAddText={addTextPreset}
             onAddLibraryElement={(item: LibraryElement) => {
               saveElementRecent(item.id);
-              const el = createElementFromLibrary(item);
+              const el = sizeNewShapeForCard(
+                createElementFromLibrary(item),
+                cardAspectRatio(shape, customSize),
+              );
               addElement({
                 ...el,
                 style: { ...el.style, color: defaultElementColor },
               });
             }}
-            onAddImageSrc={(src, frame) => addImageWithOptions(src, frame)}
-            onPickImageFrame={setPendingImageFrame}
+            onAddImageSrc={(src) => addImageWithOptions(src)}
             onAddWidget={onAddWidget}
             onApplyTemplate={onApplyTemplate}
             onCollapse={() => setLeftPanelCollapsed(true)}
@@ -982,15 +1343,46 @@ export function InvitationEditor({
             customSize={customSize}
             elements={elements}
             selectedId={canvasSelected ? null : selectedId}
+            selectedIds={canvasSelected ? [] : selectedIds}
             editingId={editingId}
             showGrid={showGrid}
             zoom={zoom}
             backgroundColor={backgroundColor}
             backgroundPattern={activePage.backgroundPattern || "none"}
+            backgroundTexture={activePage.backgroundTexture || "none"}
+            backgroundTextureOpacity={
+              activePage.backgroundTextureOpacity ?? 22
+            }
+            backgroundTextureTint={
+              activePage.backgroundTextureTint || "#ffffff"
+            }
+            backgroundTextureBlend={
+              activePage.backgroundTextureBlend || "soft-light"
+            }
             border={activePage.border ?? null}
             canvasSelected={canvasSelected}
             onToggleGrid={() => setShowGrid((v) => !v)}
             onSelect={setSelectedId}
+            onToggleSelect={(id) => {
+              setSelectedIds((current) => {
+                const base =
+                  current.length > 0
+                    ? current
+                    : selectedId && selectedId !== CANVAS_SELECTION_ID
+                      ? [selectedId]
+                      : [];
+                const next = base.includes(id)
+                  ? base.filter((selected) => selected !== id)
+                  : [...base, id];
+                setSelectedId(next[0] ?? null);
+                return next;
+              });
+              setEditingId(null);
+            }}
+            onSelectMany={(ids) => {
+              setSelectedIds(ids);
+              setSelectedId(ids[0] ?? null);
+            }}
             onSelectCanvas={() => setSelectedId(CANVAS_SELECTION_ID)}
             onClearSelection={() => setSelectedId(null)}
             onStartEdit={(id) => {
@@ -999,8 +1391,22 @@ export function InvitationEditor({
             }}
             onStopEdit={() => setEditingId(null)}
             onChangeElement={(id, patch) => updateElement(id, patch, false)}
+            onChangeElements={(updates) => {
+              const patches = new Map(
+                updates.map((update) => [update.id, update.patch]),
+              );
+              setElementsOnActivePage(
+                (current) =>
+                  current.map((element) => {
+                    const patch = patches.get(element.id);
+                    return patch ? { ...element, ...patch } : element;
+                  }),
+                { record: false },
+              );
+            }}
             onDuplicate={duplicateElement}
             onDelete={deleteElement}
+            onDeleteMany={deleteElements}
             onToggleLock={(id) => {
               const el = elements.find((item) => item.id === id);
               if (!el) return;
@@ -1026,9 +1432,12 @@ export function InvitationEditor({
             }}
             pages={pages}
             activePageId={activePageId}
+            shape={shape}
+            customSize={customSize}
             onSelectPage={(pageId) => {
               commit((current) => ({ ...current, activePageId: pageId }));
               setSelectedId(null);
+              setSelectedIds([]);
               setEditingId(null);
             }}
             onAddPage={onAddPage}
@@ -1052,6 +1461,7 @@ export function InvitationEditor({
                 };
               });
               setSelectedId(null);
+              setSelectedIds([]);
               showToast("Page deleted");
             }}
           />
@@ -1066,6 +1476,7 @@ export function InvitationEditor({
           onChangeStyle={onChangeStyle}
           onChangeBackground={onChangeBackground}
           onChangePattern={onChangePattern}
+          onChangeTexture={onChangeTexture}
           onChangeBorder={onChangeBorder}
           onChangeWidget={onChangeWidget}
           onBringForward={onBringForward}

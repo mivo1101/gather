@@ -1,6 +1,11 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { isPatternGraphicSrc } from "@/lib/data/element-library";
 import type {
   ElementEffects,
@@ -8,28 +13,15 @@ import type {
 } from "@/lib/data/canvas-elements";
 import { effectsToCss } from "@/lib/element-effects";
 import type { InvitationShape } from "./editor-types";
-
-function frameClip(frame?: ImageFrame): string | undefined {
-  switch (frame) {
-    case "circle":
-      // closest-side keeps a true circle inside non-square boxes
-      return "circle(closest-side at 50% 50%)";
-    case "heart":
-      return "polygon(50% 92%, 8% 52%, 8% 30%, 22% 16%, 38% 16%, 50% 30%, 62% 16%, 78% 16%, 92% 30%, 92% 52%)";
-    case "rounded":
-      return "inset(0 round 16%)";
-    case "arch":
-      return "inset(0 round 50% 50% 0 0)";
-    case "square":
-      return "inset(0)";
-    default:
-      return undefined;
-  }
-}
+import {
+  EMPTY_IMAGE_FRAME_SRC,
+  imageFrameClipPath,
+  isSquareImageFrame,
+} from "./image-frames";
 
 /** Frames that should stay visually square on the card. */
 export function isSquareFrame(frame?: ImageFrame | null): boolean {
-  return frame === "circle" || frame === "heart" || frame === "square";
+  return isSquareImageFrame(frame);
 }
 
 /**
@@ -101,10 +93,12 @@ export function normalizeImageScale(scale?: number) {
   return clamp(scale ?? 1, 1, 4);
 }
 
-/** Max pan (%) so the photo still covers the frame at this scale. */
-export function maxImageOffset(scale?: number) {
-  const s = normalizeImageScale(scale);
-  return Math.max(0, (s - 1) * 50);
+/**
+ * Pan uses CSS object-position, whose full 0–100% range always keeps a
+ * cover-fitted photo inside its frame without exposing empty space.
+ */
+export function maxImageOffset(_scale?: number) {
+  return 50;
 }
 
 export function normalizeImageOffset(offset?: number, scale?: number) {
@@ -130,22 +124,57 @@ function photoLayerStyle(
   scale: number,
   offsetX: number,
   offsetY: number,
+  frameSize?: { width: number; height: number } | null,
+  naturalSize?: { width: number; height: number } | null,
 ): CSSProperties {
   const fit = clampImageFit({
     imageScale: scale,
     imageOffsetX: offsetX,
     imageOffsetY: offsetY,
   });
-  const size = fit.imageScale * 100;
+  if (
+    frameSize &&
+    naturalSize &&
+    frameSize.width > 0 &&
+    frameSize.height > 0 &&
+    naturalSize.width > 0 &&
+    naturalSize.height > 0
+  ) {
+    const frameAspect = frameSize.width / frameSize.height;
+    const imageAspect = naturalSize.width / naturalSize.height;
+    const baseWidth =
+      imageAspect >= frameAspect
+        ? (imageAspect / frameAspect) * 100
+        : 100;
+    const baseHeight =
+      imageAspect >= frameAspect
+        ? 100
+        : (frameAspect / imageAspect) * 100;
+    const renderedWidth = baseWidth * fit.imageScale;
+    const renderedHeight = baseHeight * fit.imageScale;
+    const overflowX = Math.max(0, renderedWidth - 100);
+    const overflowY = Math.max(0, renderedHeight - 100);
+    return {
+      position: "absolute",
+      left: `${(100 - renderedWidth) / 2 + (fit.imageOffsetX / 50) * (overflowX / 2)}%`,
+      top: `${(100 - renderedHeight) / 2 + (fit.imageOffsetY / 50) * (overflowY / 2)}%`,
+      width: `${renderedWidth}%`,
+      height: `${renderedHeight}%`,
+      maxWidth: "none",
+      objectFit: "fill",
+    };
+  }
+
   return {
     position: "absolute",
-    left: "50%",
-    top: "50%",
-    width: `${size}%`,
-    height: `${size}%`,
+    inset: 0,
+    width: "100%",
+    height: "100%",
     maxWidth: "none",
     objectFit: "cover",
-    transform: `translate(calc(-50% + ${fit.imageOffsetX}%), calc(-50% + ${fit.imageOffsetY}%))`,
+    objectPosition: `${50 - fit.imageOffsetX}% ${50 - fit.imageOffsetY}%`,
+    transform: `scale(${fit.imageScale})`,
+    transformOrigin: "center",
   };
 }
 
@@ -159,7 +188,6 @@ export function CanvasImageContent({
   imageOffsetY = 0,
   cropEditing = false,
   className = "relative h-full min-h-[24px] w-full",
-  onNaturalSize,
 }: {
   src: string;
   color?: string;
@@ -171,9 +199,41 @@ export function CanvasImageContent({
   /** Show dimmed overflow so the photo can be framed. */
   cropEditing?: boolean;
   className?: string;
-  onNaturalSize?: (naturalWidth: number, naturalHeight: number) => void;
 }) {
-  const clip = frameClip(frame);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [frameSize, setFrameSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [naturalSize, setNaturalSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+
+  useEffect(() => {
+    setNaturalSize(null);
+  }, [src]);
+
+  useEffect(() => {
+    const node = frameRef.current;
+    if (!node) return;
+    const update = () => {
+      const rect = node.getBoundingClientRect();
+      setFrameSize((current) =>
+        current &&
+        Math.abs(current.width - rect.width) < 0.25 &&
+        Math.abs(current.height - rect.height) < 0.25
+          ? current
+          : { width: rect.width, height: rect.height },
+      );
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [src]);
+
+  const clip = imageFrameClipPath(frame);
   const isPattern = isPatternGraphicSrc(src);
   const scale = normalizeImageScale(imageScale);
   const fit = clampImageFit({
@@ -185,6 +245,26 @@ export function CanvasImageContent({
   const oy = fit.imageOffsetY;
   const effectCss = effectsToCss(effects, color);
   const outerEffect: CSSProperties = { filter: effectCss.filter };
+
+  if (src === EMPTY_IMAGE_FRAME_SRC) {
+    return (
+      <div className={className} style={outerEffect}>
+        <div
+          className="relative flex h-full w-full items-center justify-center overflow-hidden"
+          style={{
+            clipPath: clip,
+            background:
+              "linear-gradient(180deg, #e6f5ff 0%, #e6f5ff 62%, #c7dfa0 62%, #8fba4e 100%)",
+          }}
+        >
+          <div className="absolute left-[24%] top-[22%] h-[13%] w-[52%] rounded-full bg-white/90" />
+          <div className="relative rounded-full bg-white/90 px-3 py-1.5 text-[10px] font-semibold text-black/55 shadow-sm">
+            Add image
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isPattern) {
     const style: CSSProperties = {
@@ -207,28 +287,34 @@ export function CanvasImageContent({
     );
   }
 
-  const onLoad = (event: React.SyntheticEvent<HTMLImageElement>) => {
-    const { naturalWidth, naturalHeight } = event.currentTarget;
-    if (naturalWidth > 0 && naturalHeight > 0) {
-      onNaturalSize?.(naturalWidth, naturalHeight);
-    }
-  };
-
   if (cropEditing) {
+    const exactPhotoStyle = photoLayerStyle(
+      scale,
+      ox,
+      oy,
+      frameSize,
+      naturalSize,
+    );
     return (
       <div
+        ref={frameRef}
         className={`${className} overflow-visible`}
         style={{ zIndex: 5 }}
       >
-        {/* Dimmed full photo outside the frame */}
+        {/* Soft overflow preview makes the crop available outside the frame. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={src}
           alt=""
           draggable={false}
-          className="pointer-events-none select-none opacity-35"
-          style={photoLayerStyle(scale, ox, oy)}
-          onLoad={onLoad}
+          className="pointer-events-none select-none opacity-25 blur-[2px] saturate-75"
+          style={exactPhotoStyle}
+          onLoad={(event) =>
+            setNaturalSize({
+              width: event.currentTarget.naturalWidth,
+              height: event.currentTarget.naturalHeight,
+            })
+          }
         />
         {/* Bright photo inside the frame — effects follow this shape */}
         <div className="absolute inset-0" style={outerEffect}>
@@ -242,7 +328,13 @@ export function CanvasImageContent({
               alt=""
               draggable={false}
               className="pointer-events-none select-none"
-              style={photoLayerStyle(scale, ox, oy)}
+              style={exactPhotoStyle}
+              onLoad={(event) =>
+                setNaturalSize({
+                  width: event.currentTarget.naturalWidth,
+                  height: event.currentTarget.naturalHeight,
+                })
+              }
             />
           </div>
         </div>
@@ -251,7 +343,7 @@ export function CanvasImageContent({
   }
 
   return (
-    <div className={className} style={outerEffect}>
+    <div ref={frameRef} className={className} style={outerEffect}>
       <div
         className="h-full w-full overflow-hidden"
         style={{ clipPath: clip }}
@@ -263,8 +355,19 @@ export function CanvasImageContent({
           alt=""
           draggable={false}
           className="pointer-events-none select-none"
-          style={photoLayerStyle(scale, ox, oy)}
-          onLoad={onLoad}
+          style={photoLayerStyle(
+            scale,
+            ox,
+            oy,
+            frameSize,
+            naturalSize,
+          )}
+          onLoad={(event) =>
+            setNaturalSize({
+              width: event.currentTarget.naturalWidth,
+              height: event.currentTarget.naturalHeight,
+            })
+          }
         />
       </div>
     </div>

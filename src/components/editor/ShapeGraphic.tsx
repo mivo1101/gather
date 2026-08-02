@@ -139,12 +139,43 @@ function SvgFill({
 export function ShapeGraphic({
   kind,
   color,
+  borderColor = "#1F2D22",
+  borderWidth = 0,
   className = "h-full w-full",
 }: {
   kind: ShapeKind | string;
   color: string;
+  borderColor?: string;
+  borderWidth?: number;
   className?: string;
 }) {
+  const outlineWidth = Number.isFinite(borderWidth)
+    ? Math.max(0, Math.min(24, borderWidth))
+    : 0;
+  const isLine =
+    kind === "line" || kind === "line_dashed" || kind === "line_dotted";
+  if (outlineWidth > 0 && !isLine) {
+    return (
+      <div className={`relative ${className}`}>
+        <ShapeGraphic
+          kind={kind}
+          color={borderColor}
+          className="absolute inset-0 h-full w-full"
+        />
+        <div
+          className="absolute"
+          style={{ inset: `${outlineWidth}px` }}
+        >
+          <ShapeGraphic
+            kind={kind}
+            color={color}
+            className="h-full w-full"
+          />
+        </div>
+      </div>
+    );
+  }
+
   const box = fillBoxStyle(color);
 
   if (kind === "circle") {
@@ -350,6 +381,86 @@ export function ShapeGraphic({
             fill={fill}
             d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
           />
+        )}
+      </SvgFill>
+    );
+  }
+
+  if (kind.startsWith("icon_")) {
+    return (
+      <SvgFill color={color} className={className}>
+        {(stroke) => (
+          <g
+            fill="none"
+            stroke={stroke}
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            {kind === "icon_clock" && (
+              <>
+                <circle cx="12" cy="12" r="8.5" />
+                <path d="M12 7.5V12l3.2 2" />
+              </>
+            )}
+            {kind === "icon_calendar" && (
+              <>
+                <rect x="3.5" y="5.5" width="17" height="15" rx="2.5" />
+                <path d="M7.5 3.5v4M16.5 3.5v4M3.5 10h17" />
+                <path d="M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01" />
+              </>
+            )}
+            {kind === "icon_location" && (
+              <>
+                <path d="M19 10c0 5.2-7 11-7 11s-7-5.8-7-11a7 7 0 1 1 14 0Z" />
+                <circle cx="12" cy="10" r="2.5" />
+              </>
+            )}
+            {kind === "icon_bell" && (
+              <>
+                <path d="M5 17h14c-1.4-1.5-2-3.2-2-5.5a5 5 0 0 0-10 0C7 13.8 6.4 15.5 5 17Z" />
+                <path d="M10 20h4" />
+              </>
+            )}
+            {kind === "icon_envelope" && (
+              <>
+                <rect x="3" y="5" width="18" height="14" rx="2.5" />
+                <path d="m4.5 7 7.5 6 7.5-6" />
+              </>
+            )}
+            {kind === "icon_gift" && (
+              <>
+                <path d="M4 10h16v10H4zM3 6.5h18V10H3zM12 6.5V20" />
+                <path d="M12 6.5c-2.8 0-5-.6-5-2.1 0-1.1.8-1.9 2-1.9 1.6 0 3 1.8 3 4ZM12 6.5c2.8 0 5-.6 5-2.1 0-1.1-.8-1.9-2-1.9-1.6 0-3 1.8-3 4Z" />
+              </>
+            )}
+            {kind === "icon_camera" && (
+              <>
+                <path d="M4 7.5h3l1.5-2h7l1.5 2h3a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.5a2 2 0 0 1 2-2Z" />
+                <circle cx="12" cy="13.5" r="4" />
+              </>
+            )}
+            {kind === "icon_music" && (
+              <>
+                <path d="M9 17V6l10-2v11" />
+                <ellipse cx="6.5" cy="18" rx="2.5" ry="2" />
+                <ellipse cx="16.5" cy="16" rx="2.5" ry="2" />
+              </>
+            )}
+            {kind === "icon_cake" && (
+              <>
+                <path d="M5 11h14v9H5zM5 15c2 1.5 3.5 1.5 5 0 1.5 1.5 3 1.5 4.5 0 1.5 1.5 3 1.5 4.5 0M8 11V8M12 11V8M16 11V8" />
+                <path d="M8 6c1-1 1-2 0-3-1 1-1 2 0 3ZM12 6c1-1 1-2 0-3-1 1-1 2 0 3ZM16 6c1-1 1-2 0-3-1 1-1 2 0 3Z" />
+              </>
+            )}
+            {kind === "icon_rings" && (
+              <>
+                <circle cx="9" cy="13" r="5.5" />
+                <circle cx="15" cy="13" r="5.5" />
+                <path d="m6.5 6.5 2.5-3 2.5 3-2.5 2-2.5-2Z" />
+              </>
+            )}
+          </g>
         )}
       </SvgFill>
     );

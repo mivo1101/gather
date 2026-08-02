@@ -51,11 +51,22 @@ export function HomeHub({ user, greeting, active, children }: HomeHubProps) {
     <HubSearchProvider>
       <div className="flex flex-col gap-8">
         <header className="animate-fade-up">
-          <h1 className="text-3xl font-bold tracking-tight text-black md:text-4xl">
-            {greeting}, {user.firstName}{" "}
-            <span aria-hidden="true">👋</span>
-          </h1>
-          <p className="mt-2 text-base text-grey">{subtitle}</p>
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-black md:text-4xl">
+                {greeting}, {user.firstName}{" "}
+                <span aria-hidden="true">👋</span>
+              </h1>
+              <p className="mt-2 text-base text-grey">{subtitle}</p>
+            </div>
+
+            <div className="w-full xl:max-w-[42rem] xl:pt-0.5">
+              <AppTopBar
+                user={user}
+                searchPlaceholder={searchPlaceholder}
+              />
+            </div>
+          </div>
 
           <nav
             className="mt-6 flex items-end gap-1 border-b border-black/8"
@@ -92,10 +103,6 @@ export function HomeHub({ user, greeting, active, children }: HomeHubProps) {
             })}
           </nav>
         </header>
-
-        <div className="animate-fade-up" style={{ animationDelay: "60ms" }}>
-          <AppTopBar user={user} searchPlaceholder={searchPlaceholder} />
-        </div>
 
         <div className="animate-fade-up" style={{ animationDelay: "100ms" }}>
           {children}

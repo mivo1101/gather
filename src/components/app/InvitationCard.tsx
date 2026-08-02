@@ -148,26 +148,26 @@ export function InvitationCard({
   const [renaming, setRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState(invitation.title);
   const [displayTitle, setDisplayTitle] = useState(invitation.title);
+  const [displaySlug, setDisplaySlug] = useState(invitation.slug);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const menuRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const menuId = useId();
   const inTrash = invitation.status === "archived";
-  const editHref = invitationEditPath(invitation);
-  const viewHref = invitationViewPath(invitation);
+  const editHref = invitationEditPath({ slug: displaySlug });
+  const viewHref = invitationViewPath({ slug: displaySlug });
 
   const firstPage = useMemo(() => {
     const pages = invitation.content.pages;
     if (pages?.length) {
-      return {
-        elements: pages[0].elements,
-        backgroundColor: pages[0].backgroundColor || "#fff8f4",
-      };
+      return pages[0];
     }
     return {
       elements: invitation.content.elements ?? [],
       backgroundColor: "#fff8f4",
+      backgroundPattern: "none" as const,
+      border: null,
     };
   }, [invitation.content]);
 
@@ -211,7 +211,8 @@ export function InvitationCard({
   useEffect(() => {
     setDisplayTitle(invitation.title);
     setDraftTitle(invitation.title);
-  }, [invitation.title]);
+    setDisplaySlug(invitation.slug);
+  }, [invitation.slug, invitation.title]);
 
   useEffect(() => {
     if (!renaming) return;
@@ -237,11 +238,13 @@ export function InvitationCard({
       if ("error" in result) {
         setDisplayTitle(invitation.title);
         setDraftTitle(invitation.title);
+        setDisplaySlug(invitation.slug);
         setError(result.error);
         return;
       }
       setDisplayTitle(result.invitation.title);
       setDraftTitle(result.invitation.title);
+      setDisplaySlug(result.invitation.slug);
       router.refresh();
     });
   };

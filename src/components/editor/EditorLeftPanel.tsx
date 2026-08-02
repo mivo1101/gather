@@ -21,7 +21,6 @@ import {
   type InvitationShape,
 } from "./editor-types";
 import type { InvitationTemplate } from "@/lib/data/invitation-templates";
-import type { ImageFrame } from "@/lib/data/canvas-elements";
 
 interface EditorLeftPanelProps {
   activeTool: EditorToolId;
@@ -36,8 +35,7 @@ interface EditorLeftPanelProps {
   onCustomSizeChange: (size: CustomCanvasSize) => void;
   onAddText: (preset?: "heading" | "subheading" | "body") => void;
   onAddLibraryElement: (item: LibraryElement) => void;
-  onAddImageSrc: (src: string, frame?: ImageFrame) => void;
-  onPickImageFrame: (frame: ImageFrame) => void;
+  onAddImageSrc: (src: string) => void;
   onAddWidget: (kind: WidgetKind) => void;
   onApplyTemplate: (template: InvitationTemplate) => void;
   onCollapse: () => void;
@@ -211,6 +209,11 @@ function BackgroundSummaryPanel({ pages }: { pages: InvitationPage[] }) {
       new Set(pages.map((p) => p.backgroundPattern || "none")),
     );
   }, [pages]);
+  const textures = useMemo(() => {
+    return Array.from(
+      new Set(pages.map((p) => p.backgroundTexture || "none")),
+    );
+  }, [pages]);
   const borders = useMemo(() => {
     return pages
       .map((p) => p.border)
@@ -265,6 +268,22 @@ function BackgroundSummaryPanel({ pages }: { pages: InvitationPage[] }) {
       </div>
 
       <div>
+        <p className="mb-2 text-[11px] font-medium tracking-wide text-grey">
+          Paper textures
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {textures.map((texture) => (
+            <span
+              key={texture}
+              className="rounded-full bg-soft-grey px-2.5 py-1 text-[11px] font-semibold capitalize text-grey"
+            >
+              {texture}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-grey">
           Border
         </p>
@@ -298,7 +317,6 @@ export function EditorLeftPanel({
   onAddText,
   onAddLibraryElement,
   onAddImageSrc,
-  onPickImageFrame,
   onAddWidget,
   onApplyTemplate,
   onCollapse,
@@ -338,10 +356,7 @@ export function EditorLeftPanel({
         ) : activeTool === "text" ? (
           <TextPresetsPanel onAddText={onAddText} />
         ) : activeTool === "images" ? (
-          <ToolImagesPanel
-            onAddImageSrc={onAddImageSrc}
-            onPickFrame={onPickImageFrame}
-          />
+          <ToolImagesPanel onAddImageSrc={onAddImageSrc} />
         ) : activeTool === "uploads" ? (
           <ToolUploadsPanel onAddImageSrc={(src) => onAddImageSrc(src)} />
         ) : activeTool === "interactive" ? (

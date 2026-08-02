@@ -8,32 +8,31 @@ import { CanvasWidgetView } from "./CanvasWidgetView";
 import { CloseIcon, DesktopIcon, MobileIcon } from "./editor-icons";
 import { ShapeGraphic } from "./ShapeGraphic";
 import { fillBoxStyle, fillTextStyle } from "@/lib/color-utils";
+import { canvasFontFamilyClass } from "@/lib/canvas-fonts";
 import { invitationSlug } from "@/lib/invitation-paths";
+import { paperTextureLayerStyle } from "@/lib/paper-textures";
 import type {
   CustomCanvasSize,
   InvitationShape,
   PreviewDevice,
 } from "./editor-types";
 
-function fontFamilyClass(family: CanvasElement["style"]["fontFamily"]) {
-  switch (family) {
-    case "caveat":
-      return "font-[family-name:var(--font-cursive)]";
-    case "urbanist":
-      return "font-sans";
-    default:
-      return "font-[family-name:var(--font-playfair)]";
-  }
-}
-
 function PreviewInvitation({
   elements,
   backgroundColor,
+  backgroundTexture,
+  backgroundTextureOpacity,
+  backgroundTextureTint,
+  backgroundTextureBlend,
   shape,
   customSize,
 }: {
   elements: CanvasElement[];
   backgroundColor: string;
+  backgroundTexture?: InvitationPage["backgroundTexture"];
+  backgroundTextureOpacity?: number;
+  backgroundTextureTint?: string;
+  backgroundTextureBlend?: InvitationPage["backgroundTextureBlend"];
   shape: InvitationShape;
   customSize?: CustomCanvasSize;
 }) {
@@ -47,6 +46,18 @@ function PreviewInvitation({
         aspectRatio: String(aspect),
       }}
     >
+      {backgroundTexture && backgroundTexture !== "none" && (
+        <div
+          className="pointer-events-none absolute inset-0"
+          data-paper-texture={backgroundTexture}
+          style={paperTextureLayerStyle({
+            texture: backgroundTexture,
+            opacity: backgroundTextureOpacity ?? 22,
+            tint: backgroundTextureTint || "#ffffff",
+            blend: backgroundTextureBlend || "soft-light",
+          })}
+        />
+      )}
       {elements.map((el) => (
         <div
           key={el.id}
@@ -61,7 +72,7 @@ function PreviewInvitation({
         >
           {el.type === "text" && (
             <div
-              className={`whitespace-pre-wrap break-words ${fontFamilyClass(el.style.fontFamily)}`}
+              className={`whitespace-pre-wrap break-words ${canvasFontFamilyClass(el.style.fontFamily)}`}
               style={{
                 fontSize: `${Math.max(7, el.style.fontSize * 0.72)}px`,
                 fontWeight:
@@ -89,7 +100,12 @@ function PreviewInvitation({
             />
           )}
           {el.type === "shape" && (
-            <ShapeGraphic kind={el.content} color={el.style.color} />
+            <ShapeGraphic
+              kind={el.content}
+              color={el.style.color}
+              borderColor={el.style.shapeBorderColor}
+              borderWidth={el.style.shapeBorderWidth}
+            />
           )}
           {el.type === "divider" && (
             <div
@@ -234,6 +250,10 @@ export function EditorPreviewModal({
     <PreviewInvitation
       elements={activePage.elements}
       backgroundColor={activePage.backgroundColor || "#fff8f4"}
+      backgroundTexture={activePage.backgroundTexture}
+      backgroundTextureOpacity={activePage.backgroundTextureOpacity}
+      backgroundTextureTint={activePage.backgroundTextureTint}
+      backgroundTextureBlend={activePage.backgroundTextureBlend}
       shape={shape}
       customSize={customSize}
     />

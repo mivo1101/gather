@@ -1,5 +1,8 @@
-import type { ReactNode } from "react";
-import { createInvitationAction } from "@/lib/actions/invitations";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useTransition, type ReactNode } from "react";
+import { createInvitationWithShapeAction } from "@/lib/actions/invitations";
 import type { InvitationCanvasShape } from "@/lib/data/invitation-content";
 
 type IconProps = { className?: string };
@@ -55,7 +58,6 @@ function SquareIcon({ className = "h-7 w-7" }: IconProps) {
 function CustomSizeIcon({ className = "h-7 w-7" }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      {/* Bottom-left L */}
       <path
         d="M5 6v13h13"
         stroke="currentColor"
@@ -63,7 +65,6 @@ function CustomSizeIcon({ className = "h-7 w-7" }: IconProps) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* Width ↔ along the top of the L */}
       <path
         d="M5 6h14"
         stroke="currentColor"
@@ -77,7 +78,6 @@ function CustomSizeIcon({ className = "h-7 w-7" }: IconProps) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* Height ↕ up from the right end of the L */}
       <path
         d="M19 19V6"
         stroke="currentColor"
@@ -130,52 +130,65 @@ function LayoutsIcon({ className = "h-6 w-6" }: IconProps) {
 
 /** Create-with-layout shortcuts on the Home dashboard */
 export function QuickActions() {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
   return (
     <section
       aria-labelledby="create-invitation-heading"
+      aria-busy={isPending}
       className="rounded-3xl border border-black/8 bg-white/75 px-5 py-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] backdrop-blur-md sm:px-6"
     >
-        <div>
-          <h2
-            id="create-invitation-heading"
-            className="text-lg font-semibold tracking-tight text-black"
-          >
-            Create a new invitation
-          </h2>
-          <p className="mt-0.5 text-sm text-grey">
-            Choose a layout to start designing.
-          </p>
-        </div>
+      <div>
+        <h2
+          id="create-invitation-heading"
+          className="text-lg font-semibold tracking-tight text-black"
+        >
+          Create a new invitation
+        </h2>
+        <p className="mt-0.5 text-sm text-grey">
+          {isPending
+            ? "Opening the editor…"
+            : "Choose a layout to start designing."}
+        </p>
+      </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
-          <div className="flex items-center gap-4 self-stretch">
-            <div className="flex w-16 flex-col items-center gap-1" aria-hidden="true">
-              <span className="flex h-9 w-9 items-center justify-center text-signature">
-                <LayoutsIcon />
-              </span>
-              <span className="text-xs font-semibold text-black">Layouts</span>
-            </div>
-            <span className="h-10 w-px bg-black/10" aria-hidden="true" />
+      <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
+        <div className="flex items-center gap-4 self-stretch">
+          <div className="flex w-16 flex-col items-center gap-1" aria-hidden="true">
+            <span className="flex h-9 w-9 items-center justify-center text-signature">
+              <LayoutsIcon />
+            </span>
+            <span className="text-xs font-semibold text-black">Layouts</span>
           </div>
-          {actions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <form key={action.shape} action={createInvitationAction}>
-                <input type="hidden" name="shape" value={action.shape} />
-                <button
-                  type="submit"
-                  className="group flex w-16 flex-col items-center gap-1"
-                >
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full text-signature transition-colors duration-200 group-hover:bg-signature/15">
-                    <Icon className="h-6 w-6" />
-                  </span>
-                  <span className="whitespace-nowrap text-xs font-normal text-black group-hover:font-semibold">
-                    {action.title}
-                  </span>
-                </button>
-              </form>
-            );
-          })}
+          <span className="h-10 w-px bg-black/10" aria-hidden="true" />
+        </div>
+        {actions.map((action) => {
+          const Icon = action.icon;
+          return (
+            <button
+              key={action.shape}
+              type="button"
+              disabled={isPending}
+              onClick={() => {
+                startTransition(async () => {
+                  const { path } = await createInvitationWithShapeAction(
+                    action.shape,
+                  );
+                  router.push(path);
+                });
+              }}
+              className="group flex w-16 flex-col items-center gap-1 disabled:cursor-wait disabled:opacity-60"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-full text-signature transition-colors duration-200 group-hover:bg-signature/15 group-disabled:group-hover:bg-transparent">
+                <Icon className="h-6 w-6" />
+              </span>
+              <span className="whitespace-nowrap text-xs font-normal text-black group-hover:font-semibold group-disabled:group-hover:font-normal">
+                {action.title}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </section>
   );
