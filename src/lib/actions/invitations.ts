@@ -9,16 +9,45 @@ import {
   permanentlyDeleteInvitationsForUser,
   updateInvitationForUser,
 } from "@/lib/data/invitations";
-import type { InvitationContent } from "@/lib/data/invitation-content";
+import {
+  createDefaultContent,
+  type InvitationCanvasShape,
+  type InvitationContent,
+} from "@/lib/data/invitation-content";
 import {
   contentFromTemplate,
   getTemplateById,
 } from "@/lib/data/invitation-templates";
 import type { Invitation } from "@/lib/data/types";
 import { upsertUser } from "@/lib/data/users-db";
+import { invitationEditPath } from "@/lib/invitation-paths";
+
+function parseCanvasShape(raw: FormDataEntryValue | null): InvitationCanvasShape {
+  if (
+    raw === "portrait" ||
+    raw === "landscape" ||
+    raw === "square" ||
+    raw === "custom"
+  ) {
+    return raw;
+  }
+  return "portrait";
+}
 
 /** Ensure the user exists in Supabase, create a draft, then open the editor. */
-export async function createInvitationAction() {
+export async function createInvitationAction(formData?: FormData) {
+  const shape = parseCanvasShape(formData?.get("shape") ?? null);
+  redirect(await createInvitationEditPath(shape));
+}
+
+/** Create a draft with a chosen canvas shape and return the editor path. */
+export async function createInvitationWithShapeAction(
+  shape: InvitationCanvasShape,
+): Promise<{ path: string }> {
+  return { path: await createInvitationEditPath(shape) };
+}
+
+async function createInvitationEditPath(shape: InvitationCanvasShape) {
   const session = await auth();
 
   if (!session?.user?.id || !session.user.email) {
@@ -34,9 +63,14 @@ export async function createInvitationAction() {
 
   const invitation = await createInvitation({
     userId: session.user.id,
+    content: createDefaultContent({ shape }),
   });
 
-  redirect(`/invitations/${invitation.id}/edit`);
+  revalidatePath("/home");
+  revalidatePath("/invitations");
+
+  const editPath = invitationEditPath(invitation);
+  return shape === "custom" ? `${editPath}?customizeSize=1` : editPath;
 }
 
 /** Create a draft from a catalog template and open the editor. */
@@ -67,7 +101,7 @@ export async function createInvitationFromTemplateAction(
     content: contentFromTemplate(template),
   });
 
-  redirect(`/invitations/${invitation.id}/edit`);
+  redirect(invitationEditPath(invitation));
 }
 
 export async function saveInvitationAction(input: {
@@ -98,7 +132,6 @@ export async function saveInvitationAction(input: {
     );
 
     revalidatePath("/home");
-    revalidatePath(`/invitations/${input.invitationId}/edit`);
 
     return { invitation };
   } catch (error) {
@@ -130,7 +163,7 @@ export async function renameInvitationAction(
     );
 
     revalidatePath("/home");
-    revalidatePath(`/invitations/${invitationId}/edit`);
+    revalidatePath(invitationEditPath(invitation));
 
     return { invitation };
   } catch (error) {

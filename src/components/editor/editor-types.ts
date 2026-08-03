@@ -1,3 +1,10 @@
+import type {
+  InvitationCanvasShape,
+  InvitationCustomSize,
+  InvitationSizeUnit,
+} from "@/lib/data/invitation-content";
+import { DEFAULT_INVITATION_CUSTOM_SIZE } from "@/lib/data/invitation-content";
+
 export type EditorToolId =
   | "templates"
   | "layout"
@@ -5,21 +12,18 @@ export type EditorToolId =
   | "text"
   | "images"
   | "uploads"
+  | "interactive"
   | "background"
   | "qr"
   | "brand";
 
-export type InvitationShape = "portrait" | "landscape" | "square" | "custom";
+export type InvitationShape = InvitationCanvasShape;
 export type PreviewDevice = "desktop" | "mobile" | "fullscreen";
-export type PropertiesTab = "style" | "position" | "content";
+export type PropertiesTab = "style" | "position";
 
-export type SizeUnit = "px" | "cm" | "mm" | "in";
+export type SizeUnit = InvitationSizeUnit;
 
-export type CustomCanvasSize = {
-  width: number;
-  height: number;
-  unit: SizeUnit;
-};
+export type CustomCanvasSize = InvitationCustomSize;
 
 export const SIZE_UNITS: { id: SizeUnit; label: string }[] = [
   { id: "px", label: "px" },
@@ -29,9 +33,7 @@ export const SIZE_UNITS: { id: SizeUnit; label: string }[] = [
 ];
 
 export const DEFAULT_CUSTOM_SIZE: CustomCanvasSize = {
-  width: 10,
-  height: 15,
-  unit: "cm",
+  ...DEFAULT_INVITATION_CUSTOM_SIZE,
 };
 
 export function formatCustomSize(size: CustomCanvasSize): string {
@@ -57,6 +59,7 @@ export const EDITOR_TOOLS: {
   { id: "text", label: "Text" },
   { id: "images", label: "Images" },
   { id: "uploads", label: "Uploads" },
+  { id: "interactive", label: "Interactive" },
   { id: "background", label: "Background" },
   { id: "qr", label: "QR Code" },
   { id: "brand", label: "Brand Kit" },

@@ -44,13 +44,30 @@ export default async function SignInPage({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      <header className="border-b border-black/5 px-6 py-4">
-        <Logo />
+    <div className="relative min-h-screen overflow-hidden bg-[#211916]">
+      <video
+        className="absolute inset-0 h-full w-full object-cover"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        aria-hidden="true"
+      >
+        <source src="/videos/login-background.mp4" type="video/mp4" />
+      </video>
+
+      <div
+        className="absolute inset-0 bg-[linear-gradient(180deg,rgba(14,10,9,0.28),rgba(14,10,9,0.44))]"
+        aria-hidden="true"
+      />
+
+      <header className="absolute inset-x-0 top-0 z-20 px-5 py-5 sm:px-8 sm:py-7">
+        <Logo className="rounded-full border border-white/55 bg-white/90 px-3.5 py-2 shadow-[0_8px_30px_rgba(0,0,0,0.14)] backdrop-blur-xl" />
       </header>
 
-      <main className="flex flex-1 items-center justify-center px-6 py-16">
-        <div className="w-full max-w-md text-center">
+      <main className="relative z-10 flex min-h-screen items-center justify-center px-5 py-28 sm:px-8">
+        <section className="w-full max-w-lg rounded-[34px] border border-white/75 bg-white/[0.95] px-7 py-10 text-center shadow-[0_36px_110px_rgba(0,0,0,0.4),0_10px_30px_rgba(0,0,0,0.16)] backdrop-blur-2xl sm:px-12 sm:py-12">
           <span
             className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-black text-2xl font-bold text-signature"
             aria-hidden="true"
@@ -60,7 +77,7 @@ export default async function SignInPage({
           <h1 className="mt-6 text-3xl font-bold tracking-tight text-black">
             Welcome to Gather
           </h1>
-          <p className="mt-3 text-base text-grey">
+          <p className="mt-3 text-base text-grey sm:whitespace-nowrap">
             Sign in to create invitations and manage your events.
           </p>
 
@@ -92,7 +109,7 @@ export default async function SignInPage({
           <p className="mt-6 text-xs leading-relaxed text-grey">
             By continuing, you agree to Gather&apos;s Terms and Privacy Policy.
           </p>
-        </div>
+        </section>
       </main>
     </div>
   );

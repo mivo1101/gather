@@ -1,5 +1,17 @@
 import type { Metadata } from "next";
-import { Caveat, Playfair_Display, Urbanist } from "next/font/google";
+import {
+  Bodoni_Moda,
+  Caveat,
+  Cinzel_Decorative,
+  Forum,
+  Great_Vibes,
+  Instrument_Serif,
+  Italiana,
+  Lovers_Quarrel,
+  Playfair_Display,
+  Urbanist,
+  WindSong,
+} from "next/font/google";
 import "./globals.css";
 
 const urbanist = Urbanist({
@@ -18,6 +30,69 @@ const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-playfair",
   display: "swap",
+});
+
+const windsong = WindSong({
+  weight: ["400", "500"],
+  subsets: ["latin"],
+  variable: "--font-windsong",
+  display: "swap",
+  preload: false,
+});
+
+const loversQuarrel = Lovers_Quarrel({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-lovers-quarrel",
+  display: "swap",
+  preload: false,
+});
+
+const greatVibes = Great_Vibes({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-great-vibes",
+  display: "swap",
+  preload: false,
+});
+
+const instrumentSerif = Instrument_Serif({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-instrument-serif",
+  display: "swap",
+  preload: false,
+});
+
+const bodoniModa = Bodoni_Moda({
+  subsets: ["latin"],
+  variable: "--font-bodoni-moda",
+  display: "swap",
+  preload: false,
+});
+
+const italiana = Italiana({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-italiana",
+  display: "swap",
+  preload: false,
+});
+
+const forum = Forum({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-forum",
+  display: "swap",
+  preload: false,
+});
+
+const cinzelDecorative = Cinzel_Decorative({
+  weight: ["400", "700"],
+  subsets: ["latin"],
+  variable: "--font-cinzel-decorative",
+  display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -41,9 +116,13 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${urbanist.variable} ${caveat.variable} ${playfair.variable}`}
+      className={`${urbanist.variable} ${caveat.variable} ${playfair.variable} ${windsong.variable} ${loversQuarrel.variable} ${greatVibes.variable} ${instrumentSerif.variable} ${bodoniModa.variable} ${italiana.variable} ${forum.variable} ${cinzelDecorative.variable}`}
     >
-      <body className="font-sans antialiased">{children}</body>
+      {/* suppressHydrationWarning: browser extensions (e.g. Grammarly) inject
+          attributes on <body> before React hydrates, which is harmless */}
+      <body className="font-sans antialiased" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }

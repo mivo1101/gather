@@ -1,25 +1,17 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
-import type { CanvasElement } from "@/lib/data/canvas-elements";
+import { useMemo, useState } from "react";
+import type { WidgetKind } from "@/lib/data/canvas-elements";
 import type { InvitationPage } from "@/lib/data/invitation-content";
+import type { LibraryElement } from "@/lib/data/element-library";
 import {
-  isPatternGraphicSrc,
-  LIBRARY_ELEMENTS,
-  type LibraryElement,
-} from "@/lib/data/element-library";
-import {
-  ElementTile,
-  loadElementRecents,
-  saveElementRecent,
-} from "./ElementsBrowser";
-import {
-  removeUpload,
-  subscribeUploads,
-  type UploadRecord,
+  ToolElementsPanel,
+  ToolImagesPanel,
+  ToolUploadsPanel,
 } from "./panels/ToolPanels";
-import { ChevronLeftIcon, TrashIcon } from "./editor-icons";
+import { ToolInteractivePanel } from "./panels/ToolInteractivePanel";
+import { ToolTemplatesPanel } from "./panels/ToolTemplatesPanel";
+import { ChevronLeftIcon } from "./editor-icons";
 import { CustomSizeModal } from "./CustomSizeModal";
 import {
   formatCustomSize,
@@ -28,19 +20,24 @@ import {
   type EditorToolId,
   type InvitationShape,
 } from "./editor-types";
-import { EmptyHint } from "./panels/shared";
+import type { InvitationTemplate } from "@/lib/data/invitation-templates";
 
 interface EditorLeftPanelProps {
   activeTool: EditorToolId;
   selectedShape: InvitationShape;
   customSize: CustomCanvasSize;
+  customSizeOpen?: boolean;
+  onCustomSizeOpenChange?: (open: boolean) => void;
   pages: InvitationPage[];
-  allElements: CanvasElement[];
+  defaultElementColor: string;
+  onDefaultElementColorChange: (color: string) => void;
   onShapeChange: (shape: InvitationShape) => void;
   onCustomSizeChange: (size: CustomCanvasSize) => void;
   onAddText: (preset?: "heading" | "subheading" | "body") => void;
   onAddLibraryElement: (item: LibraryElement) => void;
   onAddImageSrc: (src: string) => void;
+  onAddWidget: (kind: WidgetKind) => void;
+  onApplyTemplate: (template: InvitationTemplate) => void;
   onCollapse: () => void;
 }
 
@@ -85,15 +82,21 @@ function ShapePreview({
 function LayoutPanel({
   selectedShape,
   customSize,
+  customSizeOpen,
+  onCustomSizeOpenChange,
   onShapeChange,
   onCustomSizeChange,
 }: {
   selectedShape: InvitationShape;
   customSize: CustomCanvasSize;
+  customSizeOpen?: boolean;
+  onCustomSizeOpenChange?: (open: boolean) => void;
   onShapeChange: (shape: InvitationShape) => void;
   onCustomSizeChange: (size: CustomCanvasSize) => void;
 }) {
-  const [customOpen, setCustomOpen] = useState(false);
+  const [internalCustomOpen, setInternalCustomOpen] = useState(false);
+  const customOpen = customSizeOpen ?? internalCustomOpen;
+  const setCustomOpen = onCustomSizeOpenChange ?? setInternalCustomOpen;
 
   return (
     <div className="space-y-6">
@@ -145,61 +148,9 @@ function LayoutPanel({
         onClose={() => setCustomOpen(false)}
         onApply={(size) => {
           onCustomSizeChange(size);
-          onShapeChange("custom");
           setCustomOpen(false);
         }}
       />
-    </div>
-  );
-}
-
-function ElementsRecentsPanel({
-  onAddLibraryElement,
-}: {
-  onAddLibraryElement: (item: LibraryElement) => void;
-}) {
-  const [recentIds, setRecentIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    setRecentIds(loadElementRecents());
-  }, []);
-
-  const recents = useMemo(
-    () =>
-      recentIds
-        .map((id) => LIBRARY_ELEMENTS.find((item) => item.id === id))
-        .filter((item): item is LibraryElement => Boolean(item)),
-    [recentIds],
-  );
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-base font-semibold text-black">Elements</h2>
-        <p className="mt-1 text-sm text-grey">Recently used</p>
-      </div>
-      {recents.length === 0 ? (
-        <EmptyHint>
-          Browse and add elements from the right panel — they&apos;ll show up
-          here.
-        </EmptyHint>
-      ) : (
-        <div className="grid grid-cols-2 gap-2">
-          {recents.map((item) => (
-            <div key={item.id} className="h-[88px]">
-              <ElementTile
-                item={item}
-                size="sm"
-                onSelect={(next) => {
-                  saveElementRecent(next.id);
-                  setRecentIds(loadElementRecents());
-                  onAddLibraryElement(next);
-                }}
-              />
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -249,131 +200,6 @@ function TextPresetsPanel({
   );
 }
 
-function ImagesRecentsPanel({
-  allElements,
-  onAddImageSrc,
-}: {
-  allElements: CanvasElement[];
-  onAddImageSrc: (src: string) => void;
-}) {
-  const used = useMemo(() => {
-    const seen = new Set<string>();
-    const items: { src: string; name: string }[] = [];
-    for (const el of allElements) {
-      if (el.type !== "image" || !el.content || seen.has(el.content)) continue;
-      // Patterns (flowers etc.) live under Elements — Images is photos/videos
-      if (isPatternGraphicSrc(el.content)) continue;
-      seen.add(el.content);
-      items.push({ src: el.content, name: "Photo" });
-    }
-    return items;
-  }, [allElements]);
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-base font-semibold text-black">Images</h2>
-        <p className="mt-1 text-sm text-grey">Recently used photos &amp; video</p>
-      </div>
-      {used.length === 0 ? (
-        <EmptyHint>
-          Photos and videos you place on any card appear here. Floral artwork is
-          under Elements → Patterns.
-        </EmptyHint>
-      ) : (
-        <div className="grid grid-cols-2 gap-2">
-          {used.map((item) => (
-            <button
-              key={item.src}
-              type="button"
-              onClick={() => onAddImageSrc(item.src)}
-              className="overflow-hidden rounded-xl border border-black/8 hover:border-signature/40"
-            >
-              <div className="relative flex aspect-square items-center justify-center bg-soft-grey/60 p-2">
-                <Image
-                  src={item.src}
-                  alt=""
-                  width={96}
-                  height={96}
-                  className="max-h-full max-w-full object-cover"
-                />
-              </div>
-              <span className="block truncate px-2 py-1.5 text-[10px] font-semibold text-grey">
-                {item.name}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function UploadsRecentsPanel({
-  onAddImageSrc,
-}: {
-  onAddImageSrc: (src: string) => void;
-}) {
-  const [uploads, setUploads] = useState<UploadRecord[]>([]);
-  useEffect(() => subscribeUploads(setUploads), []);
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-base font-semibold text-black">Uploads</h2>
-        <p className="mt-1 text-sm text-grey">Recently uploaded</p>
-      </div>
-      {uploads.length === 0 ? (
-        <EmptyHint>Upload files from the right panel.</EmptyHint>
-      ) : (
-        <div className="grid grid-cols-2 gap-2">
-          {uploads.slice(0, 12).map((item) => (
-            <div
-              key={item.id}
-              className="group relative overflow-hidden rounded-xl border border-black/8 text-left hover:border-signature/40"
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  if (item.kind === "image") onAddImageSrc(item.url);
-                }}
-                className="w-full text-left"
-              >
-                <div className="flex aspect-square items-center justify-center bg-soft-grey/60 p-2 text-[10px] font-semibold text-grey">
-                  {item.kind === "image" ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={item.url}
-                      alt=""
-                      className="max-h-full max-w-full object-contain"
-                    />
-                  ) : (
-                    item.kind
-                  )}
-                </div>
-                <span className="block truncate px-2 py-1.5 text-[10px] font-semibold text-grey">
-                  {item.name}
-                </span>
-              </button>
-              <button
-                type="button"
-                aria-label={`Delete ${item.name}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  removeUpload(item.id);
-                }}
-                className="absolute right-1.5 top-1.5 rounded-full bg-white/95 p-1.5 text-grey opacity-0 shadow-sm ring-1 ring-black/5 transition-opacity hover:text-black group-hover:opacity-100 focus-visible:opacity-100"
-              >
-                <TrashIcon className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function BackgroundSummaryPanel({ pages }: { pages: InvitationPage[] }) {
   const colours = useMemo(() => {
     return Array.from(new Set(pages.map((p) => p.backgroundColor)));
@@ -381,6 +207,11 @@ function BackgroundSummaryPanel({ pages }: { pages: InvitationPage[] }) {
   const patterns = useMemo(() => {
     return Array.from(
       new Set(pages.map((p) => p.backgroundPattern || "none")),
+    );
+  }, [pages]);
+  const textures = useMemo(() => {
+    return Array.from(
+      new Set(pages.map((p) => p.backgroundTexture || "none")),
     );
   }, [pages]);
   const borders = useMemo(() => {
@@ -396,7 +227,7 @@ function BackgroundSummaryPanel({ pages }: { pages: InvitationPage[] }) {
       <div>
         <h2 className="text-base font-semibold text-black">Background</h2>
         <p className="mt-1 text-sm text-grey">
-          Summary across all cards in this invitation
+          Click the card to edit colour, pattern, and border on the right.
         </p>
       </div>
 
@@ -421,8 +252,8 @@ function BackgroundSummaryPanel({ pages }: { pages: InvitationPage[] }) {
       </div>
 
       <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-grey">
-          Bg patterns
+        <p className="mb-2 text-[11px] font-medium tracking-wide text-grey">
+          Background patterns
         </p>
         <div className="flex flex-wrap gap-1.5">
           {patterns.map((pattern) => (
@@ -431,6 +262,22 @@ function BackgroundSummaryPanel({ pages }: { pages: InvitationPage[] }) {
               className="rounded-full bg-soft-grey px-2.5 py-1 text-[11px] font-semibold capitalize text-grey"
             >
               {pattern}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-[11px] font-medium tracking-wide text-grey">
+          Paper textures
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {textures.map((texture) => (
+            <span
+              key={texture}
+              className="rounded-full bg-soft-grey px-2.5 py-1 text-[11px] font-semibold capitalize text-grey"
+            >
+              {texture}
             </span>
           ))}
         </div>
@@ -460,17 +307,22 @@ export function EditorLeftPanel({
   activeTool,
   selectedShape,
   customSize,
+  customSizeOpen,
+  onCustomSizeOpenChange,
   pages,
-  allElements,
+  defaultElementColor,
+  onDefaultElementColorChange,
   onShapeChange,
   onCustomSizeChange,
   onAddText,
   onAddLibraryElement,
   onAddImageSrc,
+  onAddWidget,
+  onApplyTemplate,
   onCollapse,
 }: EditorLeftPanelProps) {
   return (
-    <aside className="relative flex w-72 shrink-0 flex-col border-r border-black/5 bg-white">
+    <aside className="relative z-10 flex w-72 shrink-0 flex-col overflow-hidden rounded-2xl border border-black/[0.04] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)]">
       <div className="flex shrink-0 items-center justify-between border-b border-black/5 px-3 py-2">
         <span className="text-xs font-semibold capitalize text-grey">
           {activeTool}
@@ -490,20 +342,27 @@ export function EditorLeftPanel({
           <LayoutPanel
             selectedShape={selectedShape}
             customSize={customSize}
+            customSizeOpen={customSizeOpen}
+            onCustomSizeOpenChange={onCustomSizeOpenChange}
             onShapeChange={onShapeChange}
             onCustomSizeChange={onCustomSizeChange}
           />
         ) : activeTool === "elements" ? (
-          <ElementsRecentsPanel onAddLibraryElement={onAddLibraryElement} />
+          <ToolElementsPanel
+            defaultColor={defaultElementColor}
+            onDefaultColorChange={onDefaultElementColorChange}
+            onAddLibraryElement={onAddLibraryElement}
+          />
         ) : activeTool === "text" ? (
           <TextPresetsPanel onAddText={onAddText} />
         ) : activeTool === "images" ? (
-          <ImagesRecentsPanel
-            allElements={allElements}
-            onAddImageSrc={onAddImageSrc}
-          />
+          <ToolImagesPanel onAddImageSrc={onAddImageSrc} />
         ) : activeTool === "uploads" ? (
-          <UploadsRecentsPanel onAddImageSrc={onAddImageSrc} />
+          <ToolUploadsPanel onAddImageSrc={(src) => onAddImageSrc(src)} />
+        ) : activeTool === "interactive" ? (
+          <ToolInteractivePanel onAddWidget={onAddWidget} />
+        ) : activeTool === "templates" ? (
+          <ToolTemplatesPanel onApplyTemplate={onApplyTemplate} />
         ) : activeTool === "background" ? (
           <BackgroundSummaryPanel pages={pages} />
         ) : (
@@ -512,7 +371,7 @@ export function EditorLeftPanel({
               {activeTool}
             </h2>
             <p className="mt-2 text-sm text-grey">
-              Use the right panel and canvas controls to continue designing.
+              Use the right panel to style the selected element.
             </p>
           </div>
         )}

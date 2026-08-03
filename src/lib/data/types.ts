@@ -12,6 +12,8 @@ export interface Invitation {
   id: string;
   userId: string;
   title: string;
+  /** Unique URL slug, e.g. `emma-lucas-wedding` */
+  slug: string;
   status: InvitationStatus;
   /** Cover image path under /public, or null for a generated placeholder */
   coverImage: string | null;

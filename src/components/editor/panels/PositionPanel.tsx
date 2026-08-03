@@ -1,7 +1,7 @@
 "use client";
 
 import type { CanvasElement } from "@/lib/data/canvas-elements";
-import { PanelSection } from "./shared";
+import { EditableNumberInput, PanelSection } from "./shared";
 
 interface PositionPanelProps {
   selected: CanvasElement;
@@ -161,11 +161,12 @@ function NumberField({
     <label className="block">
       <span className="mb-1 block text-xs font-medium text-grey">{label}</span>
       <div className="flex items-center rounded-xl border border-black/10 px-2.5 py-2">
-        <input
-          type="number"
+        <EditableNumberInput
           value={Number(value.toFixed(1))}
-          onChange={(e) => onChange(Number(e.target.value) || 0)}
+          precision={1}
+          onChange={onChange}
           className="w-full bg-transparent text-sm outline-none"
+          ariaLabel={label}
         />
         <span className="text-xs text-grey">{suffix}</span>
       </div>

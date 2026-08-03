@@ -53,6 +53,16 @@ export function EditorToolbar({
 }: EditorToolbarProps) {
   const [publishOpen, setPublishOpen] = useState(false);
   const publishRef = useRef<HTMLDivElement>(null);
+  // Defer relative time until after mount so SSR and client HTML match
+  const [savedLabel, setSavedLabel] = useState("just now");
+
+  useEffect(() => {
+    setSavedLabel(formatRelativeTime(savedAt));
+    const id = window.setInterval(() => {
+      setSavedLabel(formatRelativeTime(savedAt));
+    }, 30_000);
+    return () => window.clearInterval(id);
+  }, [savedAt]);
 
   useEffect(() => {
     if (!publishOpen) return;
@@ -93,7 +103,7 @@ export function EditorToolbar({
             </span>
           </div>
           <p className="truncate text-[11px] capitalize text-grey">
-            {status} · Saved {formatRelativeTime(savedAt)}
+            {status} · Saved {savedLabel}
           </p>
         </div>
       </div>

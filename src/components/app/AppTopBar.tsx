@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { Button, PlusIcon } from "@/components/ui/Button";
 import type { User } from "@/lib/data/types";
+import { useHubSearch } from "./HubSearchContext";
 import { BellIcon, SearchIcon } from "./icons";
 
 interface AppTopBarProps {
@@ -13,18 +16,22 @@ export function AppTopBar({
   user,
   searchPlaceholder = "Search invitations...",
 }: AppTopBarProps) {
+  const { query, setQuery } = useHubSearch();
+
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <label className="relative block w-full max-w-md">
         <span className="sr-only">{searchPlaceholder}</span>
-        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-grey">
+        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-signature">
           <SearchIcon className="h-4 w-4" />
         </span>
         <input
           type="search"
           name="q"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
           placeholder={searchPlaceholder}
-          className="w-full rounded-full border border-black/10 bg-white py-2.5 pl-10 pr-4 text-sm text-black shadow-[0_1px_2px_rgba(0,0,0,0.03)] outline-none transition-colors placeholder:text-grey focus:border-signature/40 focus:ring-2 focus:ring-signature/20"
+          className="w-full rounded-full border border-black/8 bg-white/75 py-2.5 pl-10 pr-4 text-sm text-black shadow-[0_1px_2px_rgba(0,0,0,0.03)] outline-none backdrop-blur-md transition-colors placeholder:text-grey focus:border-signature/40 focus:bg-white/90 focus:ring-2 focus:ring-signature/20"
           aria-label={searchPlaceholder}
         />
       </label>

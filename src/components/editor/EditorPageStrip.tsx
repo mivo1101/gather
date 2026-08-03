@@ -2,26 +2,43 @@
 
 import type { CanvasElement } from "@/lib/data/canvas-elements";
 import type { InvitationPage } from "@/lib/data/invitation-content";
-import { CanvasImageContent } from "./CanvasImageContent";
+import { canvasFontFamilyClass } from "@/lib/canvas-fonts";
+import { paperTextureLayerStyle } from "@/lib/paper-textures";
+import { CanvasImageContent, cardAspectRatio } from "./CanvasImageContent";
+import { CanvasWidgetView } from "./CanvasWidgetView";
 import { ChevronLeftIcon, FitIcon, PlusIcon, TrashIcon } from "./editor-icons";
+import type { CustomCanvasSize, InvitationShape } from "./editor-types";
 import { ShapeGraphic } from "./ShapeGraphic";
 
-const THUMB_WIDTH = 44;
-/** Full card width used before CSS scale — matches portrait canvas */
-const CARD_WIDTH = 320;
-const CARD_HEIGHT = CARD_WIDTH * (16 / 9);
-const SCALE = THUMB_WIDTH / CARD_WIDTH;
-const THUMB_HEIGHT = Math.round(CARD_HEIGHT * SCALE);
+const THUMB_MAX_EDGE = 78;
+const CARD_SHORT_EDGE = 320;
 
-function fontFamilyClass(family: CanvasElement["style"]["fontFamily"]) {
-  switch (family) {
-    case "caveat":
-      return "font-[family-name:var(--font-cursive)]";
-    case "urbanist":
-      return "font-sans";
-    default:
-      return "font-[family-name:var(--font-playfair)]";
-  }
+function thumbnailMetrics(
+  shape: InvitationShape,
+  customSize: CustomCanvasSize,
+) {
+  const aspect = cardAspectRatio(shape, customSize);
+  const landscapeOrSquare = aspect >= 1;
+  const width = landscapeOrSquare
+    ? THUMB_MAX_EDGE
+    : Math.round(THUMB_MAX_EDGE * aspect);
+  const height = landscapeOrSquare
+    ? Math.round(THUMB_MAX_EDGE / aspect)
+    : THUMB_MAX_EDGE;
+  const cardWidth = landscapeOrSquare
+    ? CARD_SHORT_EDGE * aspect
+    : CARD_SHORT_EDGE;
+  const cardHeight = landscapeOrSquare
+    ? CARD_SHORT_EDGE
+    : CARD_SHORT_EDGE / aspect;
+
+  return {
+    width,
+    height,
+    cardWidth,
+    cardHeight,
+    scale: width / cardWidth,
+  };
 }
 
 /**
@@ -30,39 +47,13 @@ function fontFamilyClass(family: CanvasElement["style"]["fontFamily"]) {
  */
 function PageThumbnail({
   page,
+  metrics,
 }: {
   page: InvitationPage;
+  metrics: ReturnType<typeof thumbnailMetrics>;
 }) {
   const backgroundColor = page.backgroundColor || "#fff8f4";
-
-  if (page.kind === "rsvp") {
-    return (
-      <div
-        className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-white to-[#fff5f9] px-1"
-        aria-hidden="true"
-      >
-        <span className="text-[7px] font-bold uppercase tracking-wide text-signature">
-          RSVP
-        </span>
-      </div>
-    );
-  }
-
-  if (page.kind === "location") {
-    return (
-      <div
-        className="absolute inset-0 flex flex-col items-center justify-center bg-soft-grey px-1"
-        aria-hidden="true"
-      >
-        <span className="text-[7px] font-bold uppercase tracking-wide text-black">
-          Map
-        </span>
-      </div>
-    );
-  }
-
   const elements = page.elements;
-  const cardHeight = CARD_HEIGHT;
 
   return (
     <div
@@ -70,12 +61,27 @@ function PageThumbnail({
       style={{ backgroundColor }}
       aria-hidden="true"
     >
+      {page.backgroundTexture && page.backgroundTexture !== "none" && (
+        <div
+          className="pointer-events-none absolute inset-0"
+          data-paper-texture={page.backgroundTexture}
+          style={{
+            ...paperTextureLayerStyle({
+              texture: page.backgroundTexture,
+              opacity: page.backgroundTextureOpacity ?? 22,
+              tint: page.backgroundTextureTint || "#ffffff",
+              blend: page.backgroundTextureBlend || "soft-light",
+            }),
+            backgroundSize: "64px",
+          }}
+        />
+      )}
       <div
         className="origin-top-left"
         style={{
-          width: CARD_WIDTH,
-          height: cardHeight,
-          transform: `scale(${SCALE})`,
+          width: metrics.cardWidth,
+          height: metrics.cardHeight,
+          transform: `scale(${metrics.scale})`,
         }}
       >
         {elements.map((el) => (
@@ -92,7 +98,7 @@ function PageThumbnail({
           >
             {el.type === "text" && (
               <div
-                className={`whitespace-pre-wrap break-words ${fontFamilyClass(el.style.fontFamily)}`}
+                className={`whitespace-pre-wrap break-words ${canvasFontFamilyClass(el.style.fontFamily)}`}
                 style={{
                   fontSize: `${el.style.fontSize}px`,
                   fontWeight:
@@ -118,16 +124,32 @@ function PageThumbnail({
                 src={el.content}
                 color={el.style.color}
                 frame={el.style.frame}
+                effects={el.style.effects}
+                imageScale={el.style.imageScale}
+                imageOffsetX={el.style.imageOffsetX}
+                imageOffsetY={el.style.imageOffsetY}
                 className="relative h-full min-h-[40px] w-full"
               />
             )}
             {el.type === "shape" && (
-              <ShapeGraphic kind={el.content} color={el.style.color} />
+              <ShapeGraphic
+                kind={el.content}
+                color={el.style.color}
+                borderColor={el.style.shapeBorderColor}
+                borderWidth={el.style.shapeBorderWidth}
+              />
             )}
             {el.type === "divider" && (
               <div
                 className="h-0.5 w-full rounded-full"
                 style={{ backgroundColor: el.style.color }}
+              />
+            )}
+            {el.type === "widget" && el.widget && (
+              <CanvasWidgetView
+                widget={el.widget}
+                interactive={false}
+                className="h-full w-full"
               />
             )}
           </div>
@@ -145,6 +167,8 @@ interface EditorPageStripProps {
   onFullscreenPreview: () => void;
   pages: InvitationPage[];
   activePageId: string;
+  shape: InvitationShape;
+  customSize: CustomCanvasSize;
   onSelectPage: (pageId: string) => void;
   onAddPage: () => void;
   onDeletePage: (pageId: string) => void;
@@ -158,10 +182,14 @@ export function EditorPageStrip({
   onFullscreenPreview,
   pages,
   activePageId,
+  shape,
+  customSize,
   onSelectPage,
   onAddPage,
   onDeletePage,
 }: EditorPageStripProps) {
+  const metrics = thumbnailMetrics(shape, customSize);
+
   if (collapsed) {
     return (
       <div className="absolute inset-x-0 bottom-0 z-20 flex justify-center border-t border-black/5 bg-white/95 px-4 py-2 backdrop-blur">
@@ -201,11 +229,11 @@ export function EditorPageStrip({
                       ? "border-2 border-signature"
                       : "border border-black/10 hover:border-signature/40"
                   }`}
-                  style={{ width: THUMB_WIDTH, height: THUMB_HEIGHT }}
+                  style={{ width: metrics.width, height: metrics.height }}
                   aria-current={active ? "page" : undefined}
                   aria-label={page.name}
                 >
-                  <PageThumbnail page={page} />
+                  <PageThumbnail page={page} metrics={metrics} />
                   <span className="absolute inset-x-0 bottom-0 z-10 bg-black/45 py-0.5 text-center text-[9px] font-semibold text-white">
                     {index + 1}
                   </span>
@@ -228,7 +256,7 @@ export function EditorPageStrip({
             type="button"
             onClick={onAddPage}
             className="flex shrink-0 items-center justify-center rounded-lg border border-dashed border-black/20 text-grey transition-colors hover:border-signature/40 hover:text-signature"
-            style={{ width: THUMB_WIDTH, height: THUMB_HEIGHT }}
+            style={{ width: metrics.width, height: metrics.height }}
             aria-label="Add page"
           >
             <PlusIcon />

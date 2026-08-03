@@ -13,9 +13,13 @@ import { saveInvitationAction } from "@/lib/actions/invitations";
 import {
   createImageElement,
   createTextElement,
+  createWidgetElement,
   type CanvasElement,
   type ElementStyle,
   type ImageFrame,
+  type ShapeKind,
+  type WidgetConfig,
+  type WidgetKind,
 } from "@/lib/data/canvas-elements";
 import {
   createElementFromLibrary,
@@ -27,13 +31,21 @@ import {
   type InvitationContent,
   type InvitationPage,
 } from "@/lib/data/invitation-content";
+import {
+  contentFromTemplate,
+  type InvitationTemplate,
+} from "@/lib/data/invitation-templates";
 import type { Invitation } from "@/lib/data/types";
-import { InteractiveRsvpPanel } from "@/components/invitation/InteractiveRsvpPanel";
-import { LocationMapPanel } from "@/components/invitation/LocationMapPanel";
+import { collectDocumentColors } from "@/lib/color-utils";
+import { invitationEditPath } from "@/lib/invitation-paths";
+import { shortcutLabel } from "@/lib/shortcut-label";
 import {
   cardAspectRatio,
   photoElementSize,
+  isSquareFrame,
+  squareElementSize,
 } from "./CanvasImageContent";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { EditorCanvas } from "./EditorCanvas";
 import { EditorLeftPanel } from "./EditorLeftPanel";
 import { EditorPageStrip } from "./EditorPageStrip";
@@ -41,6 +53,7 @@ import { EditorPreviewModal } from "./EditorPreviewModal";
 import { EditorPropertiesPanel } from "./EditorPropertiesPanel";
 import { EditorToolbar } from "./EditorToolbar";
 import { EditorToolNav } from "./EditorToolNav";
+import { DocumentColorsProvider } from "./panels/shared";
 import { ChevronRightIcon } from "./editor-icons";
 import type {
   EditorToolId,
@@ -51,9 +64,12 @@ import type {
 import { CANVAS_SELECTION_ID, DEFAULT_CUSTOM_SIZE } from "./editor-types";
 import { useHistory } from "./useHistory";
 import { saveElementRecent } from "./ElementsBrowser";
+import { EMPTY_IMAGE_FRAME_SRC } from "./image-frames";
 
 interface InvitationEditorProps {
   invitation: Invitation;
+  /** Open the custom size modal once on mount (e.g. from Home → Custom). */
+  openCustomSize?: boolean;
 }
 
 type EditorSnapshot = {
@@ -64,11 +80,20 @@ type EditorSnapshot = {
   customSize: CustomCanvasSize;
 };
 
+type ElementClipboard = {
+  elements: CanvasElement[];
+  sourcePageId: string;
+};
+
 function clonePages(pages: InvitationPage[]): InvitationPage[] {
   return pages.map((page) => ({
     ...page,
     kind: page.kind || "design",
     backgroundPattern: page.backgroundPattern || "none",
+    backgroundTexture: page.backgroundTexture || "none",
+    backgroundTextureOpacity: page.backgroundTextureOpacity ?? 22,
+    backgroundTextureTint: page.backgroundTextureTint || "#ffffff",
+    backgroundTextureBlend: page.backgroundTextureBlend || "soft-light",
     border: page.border ? { ...page.border } : null,
     location: page.location ? { ...page.location } : null,
     rsvpConfig: page.rsvpConfig
@@ -83,7 +108,18 @@ function clonePages(pages: InvitationPage[]): InvitationPage[] {
       : null,
     elements: page.elements.map((el) => ({
       ...el,
+      href: el.href ?? null,
       style: { ...el.style, effects: { ...el.style.effects } },
+      widget: el.widget
+        ? {
+            ...el.widget,
+            ...("options" in el.widget && el.widget.options
+              ? {
+                  options: el.widget.options.map((o) => ({ ...o })),
+                }
+              : {}),
+          }
+        : null,
     })),
   }));
 }
@@ -106,6 +142,8 @@ function buildContent(
   base: InvitationContent,
   pages: InvitationPage[],
   activePageId: string,
+  shape: InvitationShape,
+  customSize: CustomCanvasSize,
 ): InvitationContent {
   const elements = activeElements(pages, activePageId);
   return {
@@ -113,6 +151,8 @@ function buildContent(
     pages: clonePages(pages),
     activePageId,
     elements,
+    shape,
+    customSize,
   };
 }
 
@@ -120,16 +160,60 @@ function serializeSavePayload(
   title: string,
   pages: InvitationPage[],
   activePageId: string,
+  shape: InvitationShape,
+  customSize: CustomCanvasSize,
 ) {
   return JSON.stringify({
     title: title.trim() || "Untitled Invitation",
     activePageId,
     pages: clonePages(pages),
+    shape,
+    customSize,
   });
 }
 
+const WIDE_SHAPE_KINDS = new Set<ShapeKind>([
+  "rectangle",
+  "oval",
+  "parallelogram",
+  "trapezoid",
+  "semicircle",
+]);
+
+function sizeNewShapeForCard(
+  element: CanvasElement,
+  cardAspect: number,
+): CanvasElement {
+  if (element.type !== "shape") return element;
+  const kind = element.content as ShapeKind;
+  if (
+    kind === "line" ||
+    kind === "line_dashed" ||
+    kind === "line_dotted" ||
+    kind === "arrow" ||
+    kind === "arrow_thin"
+  ) {
+    return element;
+  }
+
+  const visualRatio = WIDE_SHAPE_KINDS.has(kind) ? 1.6 : 1;
+  const height = Math.min(
+    82,
+    Math.max(6, Math.round(((element.width * cardAspect) / visualRatio) * 10) / 10),
+  );
+  return {
+    ...element,
+    x: Math.round(((100 - element.width) / 2) * 10) / 10,
+    y: Math.round(((100 - height) / 2) * 10) / 10,
+    height,
+  };
+}
+
 /** Fully interactive Gather invitation editor */
-export function InvitationEditor({ invitation }: InvitationEditorProps) {
+export function InvitationEditor({
+  invitation,
+  openCustomSize = false,
+}: InvitationEditorProps) {
   const router = useRouter();
   const initialSnapshot = useMemo<EditorSnapshot>(
     () => ({
@@ -139,8 +223,8 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
           : invitation.title,
       pages: clonePages(invitation.content.pages),
       activePageId: invitation.content.activePageId,
-      shape: "portrait",
-      customSize: DEFAULT_CUSTOM_SIZE,
+      shape: invitation.content.shape ?? "portrait",
+      customSize: invitation.content.customSize ?? DEFAULT_CUSTOM_SIZE,
     }),
     [invitation],
   );
@@ -149,6 +233,7 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
   const { title, pages, activePageId, shape, customSize } = history.present;
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [contentMeta, setContentMeta] = useState(invitation.content);
   const [status, setStatus] = useState(invitation.status);
@@ -164,8 +249,10 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
   const [toast, setToast] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [defaultElementColor, setDefaultElementColor] = useState("#1F2D22");
-  const [pendingImageFrame, setPendingImageFrame] =
-    useState<ImageFrame>("none");
+  const [pendingTemplate, setPendingTemplate] =
+    useState<InvitationTemplate | null>(null);
+  const [customSizeModalOpen, setCustomSizeModalOpen] =
+    useState(openCustomSize);
 
   const savingRef = useRef(false);
   const pendingAutosaveRef = useRef(false);
@@ -174,9 +261,16 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
       initialSnapshot.title,
       initialSnapshot.pages,
       initialSnapshot.activePageId,
+      initialSnapshot.shape,
+      initialSnapshot.customSize,
     ),
   );
   const autosaveTimerRef = useRef<number | null>(null);
+  const latestSnapshotRef = useRef(history.present);
+  const contentMetaRef = useRef(contentMeta);
+  const elementClipboardRef = useRef<ElementClipboard | null>(null);
+  latestSnapshotRef.current = history.present;
+  contentMetaRef.current = contentMeta;
 
   const elements = activeElements(pages, activePageId);
   const activePage = pages.find((page) => page.id === activePageId) ?? {
@@ -186,14 +280,46 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
     elements,
     backgroundColor: "#fff8f4",
     backgroundPattern: "none" as const,
+    backgroundTexture: "none" as const,
+    backgroundTextureOpacity: 22,
+    backgroundTextureTint: "#ffffff",
+    backgroundTextureBlend: "soft-light" as const,
     border: null,
     location: null,
   };
   const backgroundColor = activePage.backgroundColor ?? "#fff8f4";
+  const documentColors = useMemo(
+    () => collectDocumentColors(pages),
+    [pages],
+  );
   const canvasSelected = selectedId === CANVAS_SELECTION_ID;
   const selected = canvasSelected
     ? null
     : (elements.find((el) => el.id === selectedId) ?? null);
+
+  useEffect(() => {
+    if (!selectedId || selectedId === CANVAS_SELECTION_ID) {
+      setSelectedIds([]);
+      return;
+    }
+    setSelectedIds((current) =>
+      current.includes(selectedId) ? current : [selectedId],
+    );
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (!selected || selectedIds.length > 1) return;
+    const matchingTool: EditorToolId =
+      selected.type === "text"
+        ? "text"
+        : selected.type === "image"
+          ? "images"
+          : selected.type === "widget"
+            ? "interactive"
+            : "elements";
+    setActiveTool(matchingTool);
+    setLeftPanelCollapsed(false);
+  }, [selected, selectedIds.length]);
 
   useEffect(() => {
     history.reset({
@@ -203,8 +329,8 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
           : invitation.title,
       pages: clonePages(invitation.content.pages),
       activePageId: invitation.content.activePageId,
-      shape: "portrait",
-      customSize: DEFAULT_CUSTOM_SIZE,
+      shape: invitation.content.shape ?? "portrait",
+      customSize: invitation.content.customSize ?? DEFAULT_CUSTOM_SIZE,
     });
     setContentMeta(invitation.content);
     setStatus(invitation.status);
@@ -215,9 +341,19 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
         : invitation.title,
       invitation.content.pages,
       invitation.content.activePageId,
+      invitation.content.shape ?? "portrait",
+      invitation.content.customSize ?? DEFAULT_CUSTOM_SIZE,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invitation.id, invitation.updatedAt]);
+  }, [invitation.id]);
+
+  useEffect(() => {
+    if (!openCustomSize) return;
+    setCustomSizeModalOpen(true);
+    setActiveTool("layout");
+    setLeftPanelCollapsed(false);
+    router.replace(invitationEditPath(invitation), { scroll: false });
+  }, [openCustomSize, invitation, router]);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -303,6 +439,73 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
     [setElementsOnActivePage],
   );
 
+  const deleteElements = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return;
+      const removing = new Set(ids);
+      setElementsOnActivePage((prev) =>
+        prev.filter((el) => !removing.has(el.id)),
+      );
+      setSelectedId(null);
+      setSelectedIds([]);
+      setEditingId(null);
+    },
+    [setElementsOnActivePage],
+  );
+
+  const selectedElementsForClipboard = useCallback(() => {
+    const ids =
+      selectedIds.length > 1
+        ? new Set(selectedIds)
+        : selectedId && selectedId !== CANVAS_SELECTION_ID
+          ? new Set([selectedId])
+          : new Set<string>();
+    return elements.filter((element) => ids.has(element.id));
+  }, [elements, selectedId, selectedIds]);
+
+  const copySelectedElements = useCallback(() => {
+    const selectedElements = selectedElementsForClipboard();
+    if (selectedElements.length === 0) return false;
+    elementClipboardRef.current = {
+      elements: structuredClone(selectedElements),
+      sourcePageId: activePageId,
+    };
+    return true;
+  }, [activePageId, selectedElementsForClipboard]);
+
+  const cutSelectedElements = useCallback(() => {
+    const selectedElements = selectedElementsForClipboard();
+    if (selectedElements.length === 0) return false;
+    elementClipboardRef.current = {
+      elements: structuredClone(selectedElements),
+      sourcePageId: activePageId,
+    };
+    deleteElements(selectedElements.map((element) => element.id));
+    return true;
+  }, [activePageId, deleteElements, selectedElementsForClipboard]);
+
+  const pasteElements = useCallback(() => {
+    const clipboard = elementClipboardRef.current;
+    if (!clipboard || clipboard.elements.length === 0) return false;
+    const offset = clipboard.sourcePageId === activePageId ? 3 : 0;
+    const pasted = clipboard.elements.map((source) => ({
+      ...structuredClone(source),
+      id: `${source.type}_${Math.random().toString(36).slice(2, 9)}`,
+      x: Math.min(95, source.x + offset),
+      y: Math.min(95, source.y + offset),
+    }));
+    elementClipboardRef.current = {
+      elements: structuredClone(pasted),
+      sourcePageId: activePageId,
+    };
+    setElementsOnActivePage((current) => [...current, ...pasted]);
+    const ids = pasted.map((element) => element.id);
+    setSelectedIds(ids);
+    setSelectedId(ids[0] ?? null);
+    setEditingId(null);
+    return true;
+  }, [activePageId, setElementsOnActivePage]);
+
   const addElement = useCallback(
     (el: CanvasElement, edit = false) => {
       setElementsOnActivePage((prev) => [...prev, el]);
@@ -354,10 +557,36 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
         event.preventDefault();
         document.getElementById("editor-save-trigger")?.click();
       }
+      if (typing || !mod) return;
+      const key = event.key.toLowerCase();
+      if (key === "c" && copySelectedElements()) {
+        event.preventDefault();
+      }
+      if (key === "x" && cutSelectedElements()) {
+        event.preventDefault();
+      }
+      if (key === "v" && pasteElements()) {
+        event.preventDefault();
+      }
+      if (key === "a" && elements.length > 0) {
+        event.preventDefault();
+        const ids = elements.map((element) => element.id);
+        setSelectedIds(ids);
+        setSelectedId(ids[0] ?? null);
+        setEditingId(null);
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [editingId, handleRedo, handleUndo]);
+  }, [
+    copySelectedElements,
+    cutSelectedElements,
+    editingId,
+    elements,
+    handleRedo,
+    handleUndo,
+    pasteElements,
+  ]);
 
   const persist = useCallback(
     (options?: {
@@ -367,7 +596,14 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
     }) => {
       const nextStatus = options?.nextStatus;
       const quiet = options?.quiet ?? false;
-      const payload = serializeSavePayload(title, pages, activePageId);
+      const current = latestSnapshotRef.current;
+      const payload = serializeSavePayload(
+        current.title,
+        current.pages,
+        current.activePageId,
+        current.shape,
+        current.customSize,
+      );
 
       if (
         !options?.force &&
@@ -386,73 +622,98 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
       setSaveLabel("Saving…");
 
       startTransition(async () => {
-        const content = buildContent(contentMeta, pages, activePageId);
-        const result = await saveInvitationAction({
-          invitationId: invitation.id,
-          title: title.trim() || "Untitled Invitation",
-          eventDate: invitation.eventDate,
-          location: invitation.location,
-          content,
-          status: nextStatus,
-        });
-
-        savingRef.current = false;
-
-        if ("error" in result) {
-          setSaveLabel("Retry");
-          if (!quiet) showToast(result.error);
-          else showToast("Autosave failed — click Save to retry");
-          return;
-        }
-
-        lastSavedPayloadRef.current = serializeSavePayload(
-          result.invitation.title,
-          result.invitation.content.pages,
-          result.invitation.content.activePageId,
-        );
-        setContentMeta(result.invitation.content);
-        setStatus(result.invitation.status);
-        setSavedAt(result.invitation.updatedAt);
-        setSaveLabel("Saved");
-
-        if (!quiet) {
-          showToast(
-            nextStatus === "published"
-              ? "Invitation published"
-              : nextStatus === "draft"
-                ? "Reverted to draft"
-                : "Changes saved",
+        let savedSuccessfully = false;
+        try {
+          const content = buildContent(
+            contentMetaRef.current,
+            current.pages,
+            current.activePageId,
+            current.shape,
+            current.customSize,
           );
-        }
+          const result = await saveInvitationAction({
+            invitationId: invitation.id,
+            title: current.title.trim() || "Untitled Invitation",
+            eventDate: invitation.eventDate,
+            location: invitation.location,
+            content,
+            status: nextStatus,
+          });
 
-        router.refresh();
-        window.setTimeout(() => setSaveLabel("Save"), 1800);
+          if ("error" in result) {
+            setSaveLabel("Retry");
+            if (!quiet) showToast(result.error);
+            else showToast("Autosave failed — click Save to retry");
+            return;
+          }
 
-        if (pendingAutosaveRef.current) {
-          pendingAutosaveRef.current = false;
-          window.setTimeout(() => {
-            persist({ quiet: true });
-          }, 400);
+          lastSavedPayloadRef.current = serializeSavePayload(
+            result.invitation.title,
+            result.invitation.content.pages,
+            result.invitation.content.activePageId,
+            result.invitation.content.shape ?? "portrait",
+            result.invitation.content.customSize ?? DEFAULT_CUSTOM_SIZE,
+          );
+          setContentMeta(result.invitation.content);
+          setStatus(result.invitation.status);
+          setSavedAt(result.invitation.updatedAt);
+          setSaveLabel("Saved");
+          savedSuccessfully = true;
+
+          if (!quiet) {
+            showToast(
+              nextStatus === "published"
+                ? "Invitation published"
+                : nextStatus === "draft"
+                  ? "Reverted to draft"
+                  : "Changes saved",
+            );
+          }
+
+          const nextPath = invitationEditPath(result.invitation);
+          if (window.location.pathname !== nextPath) {
+            router.replace(nextPath, { scroll: false });
+          }
+          window.setTimeout(() => setSaveLabel("Save"), 1800);
+        } catch (error) {
+          setSaveLabel("Retry");
+          showToast(
+            error instanceof Error
+              ? error.message
+              : "Autosave failed — click Save to retry",
+          );
+        } finally {
+          savingRef.current = false;
+          if (savedSuccessfully && pendingAutosaveRef.current) {
+            pendingAutosaveRef.current = false;
+            window.setTimeout(() => {
+              persist({ quiet: true });
+            }, 400);
+          } else if (!savedSuccessfully) {
+            pendingAutosaveRef.current = false;
+          }
         }
       });
     },
-    // showToast is stable enough via closure; include deps that affect save body
+    // Editor state is read from refs so queued saves always use the latest snapshot.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
-      activePageId,
-      contentMeta,
       invitation.eventDate,
       invitation.id,
       invitation.location,
-      pages,
       router,
-      title,
     ],
   );
 
   // Debounced autosave after edits settle
   useEffect(() => {
-    const payload = serializeSavePayload(title, pages, activePageId);
+    const payload = serializeSavePayload(
+      title,
+      pages,
+      activePageId,
+      shape,
+      customSize,
+    );
     if (payload === lastSavedPayloadRef.current) return;
 
     if (autosaveTimerRef.current) {
@@ -467,23 +728,41 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
         window.clearTimeout(autosaveTimerRef.current);
       }
     };
-  }, [activePageId, pages, persist, title]);
+  }, [activePageId, customSize, pages, persist, shape, title]);
 
   const onChangeStyle = (patch: Partial<ElementStyle>) => {
     if (!selectedId || canvasSelected || !selected) return;
-    snapshotBeforeChange();
-    updateElement(
-      selectedId,
-      {
-        style: {
-          ...selected.style,
-          ...patch,
-          effects: patch.effects
-            ? { ...selected.style.effects, ...patch.effects }
-            : selected.style.effects,
-        },
-      },
-      false,
+    const targetIds = new Set(
+      selectedIds.length > 1 ? selectedIds : [selectedId],
+    );
+    setElementsOnActivePage(
+      (current) =>
+        current.map((element) => {
+          if (!targetIds.has(element.id)) return element;
+          const nextStyle = {
+            ...element.style,
+            ...patch,
+            effects: patch.effects
+              ? { ...element.style.effects, ...patch.effects }
+              : element.style.effects,
+          };
+          const sizePatch =
+            element.type === "image" &&
+            patch.frame !== undefined &&
+            isSquareFrame(patch.frame)
+              ? squareElementSize(
+                  element.width,
+                  element.height || element.width,
+                  cardAspectRatio(shape, customSize),
+                )
+              : null;
+          return {
+            ...element,
+            style: nextStyle,
+            ...(sizePatch ?? {}),
+          };
+        }),
+      { record: true },
     );
   };
 
@@ -508,6 +787,28 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
       pages: history.present.pages.map((page) =>
         page.id === history.present.activePageId
           ? { ...page, backgroundPattern: pattern }
+          : page,
+      ),
+    });
+  };
+
+  const onChangeTexture = (
+    patch: Partial<
+      Pick<
+        InvitationPage,
+        | "backgroundTexture"
+        | "backgroundTextureOpacity"
+        | "backgroundTextureTint"
+        | "backgroundTextureBlend"
+      >
+    >,
+  ) => {
+    snapshotBeforeChange();
+    history.setPresentSilent({
+      ...history.present,
+      pages: history.present.pages.map((page) =>
+        page.id === history.present.activePageId
+          ? { ...page, ...patch }
           : page,
       ),
     });
@@ -613,7 +914,12 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
   };
 
   const addImageWithOptions = (src: string, frame?: ImageFrame) => {
-    const nextFrame = frame ?? pendingImageFrame;
+    const emptyFrame =
+      selected?.type === "image" &&
+      selected.content === EMPTY_IMAGE_FRAME_SRC
+        ? selected
+        : null;
+    const nextFrame = frame ?? emptyFrame?.style.frame ?? "none";
     const base = createImageElement(
       src,
       isPatternGraphicSrc(src) ? defaultElementColor : "#000000",
@@ -626,22 +932,60 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
       },
     };
 
+    const placeImage = (size?: { width: number; height: number }) => {
+      if (emptyFrame) {
+        snapshotBeforeChange();
+        updateElement(
+          emptyFrame.id,
+          {
+            content: src,
+            ...(size ?? {}),
+            style: {
+              ...emptyFrame.style,
+              frame: nextFrame,
+              imageScale: 1,
+              imageOffsetX: 0,
+              imageOffsetY: 0,
+            },
+          },
+          false,
+        );
+        setSelectedId(emptyFrame.id);
+        return;
+      }
+      addElement(size ? { ...withFrame, ...size } : withFrame);
+    };
+
     if (isPatternGraphicSrc(src)) {
-      addElement(withFrame);
+      placeImage();
       return;
     }
 
     const probe = new window.Image();
     probe.onload = () => {
-      const size = photoElementSize(
+      const aspect = cardAspectRatio(shape, customSize);
+      let size = photoElementSize(
         probe.naturalWidth,
         probe.naturalHeight,
-        cardAspectRatio(shape, customSize),
+        aspect,
       );
-      addElement({ ...withFrame, ...size });
+      if (isSquareFrame(nextFrame)) {
+        size = squareElementSize(size.width, size.height, aspect);
+      }
+      placeImage(size);
     };
     probe.onerror = () => {
-      addElement({ ...withFrame, width: 52, height: 28 });
+      const aspect = cardAspectRatio(shape, customSize);
+      placeImage(
+        emptyFrame
+          ? undefined
+          : isSquareFrame(nextFrame)
+            ? squareElementSize(46, 46, aspect)
+            : {
+                width: 52,
+                height: 28,
+              },
+      );
     };
     probe.src = src;
   };
@@ -692,21 +1036,111 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
       return next;
     });
 
+  useEffect(() => {
+    const onLayerShortcut = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (
+        !(event.metaKey || event.ctrlKey) ||
+        !selectedId ||
+        canvasSelected
+      ) {
+        return;
+      }
+      if (event.code === "BracketLeft") {
+        event.preventDefault();
+        if (event.altKey) onSendToBack();
+        else onSendBackward();
+      }
+      if (event.code === "BracketRight") {
+        event.preventDefault();
+        if (event.altKey) onBringToFront();
+        else onBringForward();
+      }
+    };
+    window.addEventListener("keydown", onLayerShortcut);
+    return () => window.removeEventListener("keydown", onLayerShortcut);
+  });
+
   const onAlignToPage = (
     edge: "top" | "middle" | "bottom" | "left" | "center" | "right",
   ) => {
     if (!selected) return;
-    snapshotBeforeChange();
-    const height = selected.height ?? 12;
-    const width = selected.width;
-    const patch: Partial<CanvasElement> = {};
-    if (edge === "left") patch.x = 0;
-    if (edge === "center") patch.x = Math.max(0, (100 - width) / 2);
-    if (edge === "right") patch.x = Math.max(0, 100 - width);
-    if (edge === "top") patch.y = 0;
-    if (edge === "middle") patch.y = Math.max(0, (100 - height) / 2);
-    if (edge === "bottom") patch.y = Math.max(0, 100 - height);
-    updateElement(selected.id, patch, false);
+    const targetIds = new Set(
+      selectedIds.length > 1 ? selectedIds : [selected.id],
+    );
+    const targets = elements.filter((element) => targetIds.has(element.id));
+    if (targets.length === 0) return;
+
+    const bounds = targets.map((element) => {
+      const node = document.querySelector<HTMLElement>(
+        `[data-canvas-element-id="${CSS.escape(element.id)}"]`,
+      );
+      const canvas = node?.parentElement;
+      if (node && canvas) {
+        const nodeRect = node.getBoundingClientRect();
+        const canvasRect = canvas.getBoundingClientRect();
+        if (canvasRect.width > 0 && canvasRect.height > 0) {
+          return {
+            left: ((nodeRect.left - canvasRect.left) / canvasRect.width) * 100,
+            right:
+              ((nodeRect.right - canvasRect.left) / canvasRect.width) * 100,
+            top: ((nodeRect.top - canvasRect.top) / canvasRect.height) * 100,
+            bottom:
+              ((nodeRect.bottom - canvasRect.top) / canvasRect.height) * 100,
+          };
+        }
+      }
+      const height =
+        element.height ??
+        (element.type === "text"
+          ? Math.max(2, element.content.split("\n").length * 4)
+          : 12);
+      return {
+        left: element.x,
+        right: element.x + element.width,
+        top: element.y,
+        bottom: element.y + height,
+      };
+    });
+    const group = {
+      left: Math.min(...bounds.map((item) => item.left)),
+      right: Math.max(...bounds.map((item) => item.right)),
+      top: Math.min(...bounds.map((item) => item.top)),
+      bottom: Math.max(...bounds.map((item) => item.bottom)),
+    };
+    const delta = { x: 0, y: 0 };
+    if (edge === "left") delta.x = -group.left;
+    if (edge === "center") {
+      delta.x = 50 - (group.left + group.right) / 2;
+    }
+    if (edge === "right") delta.x = 100 - group.right;
+    if (edge === "top") delta.y = -group.top;
+    if (edge === "middle") {
+      delta.y = 50 - (group.top + group.bottom) / 2;
+    }
+    if (edge === "bottom") delta.y = 100 - group.bottom;
+
+    setElementsOnActivePage(
+      (current) =>
+        current.map((element) =>
+          targetIds.has(element.id)
+            ? {
+                ...element,
+                x: element.x + delta.x,
+                y: element.y + delta.y,
+              }
+            : element,
+        ),
+      { record: true },
+    );
   };
 
   const onChangeTransform = (patch: {
@@ -721,7 +1155,85 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
     updateElement(selected.id, patch, false);
   };
 
+  const onAddPage = () => {
+    commit((current) => {
+      const source = current.pages.find(
+        (page) => page.id === current.activePageId,
+      );
+      const blank = createBlankPage(current.pages.length + 1);
+      const page: InvitationPage = source
+        ? {
+            ...blank,
+            backgroundColor: source.backgroundColor,
+            backgroundPattern: source.backgroundPattern || "none",
+            backgroundTexture: source.backgroundTexture || "none",
+            backgroundTextureOpacity:
+              source.backgroundTextureOpacity ?? 22,
+            backgroundTextureTint:
+              source.backgroundTextureTint || "#ffffff",
+            backgroundTextureBlend:
+              source.backgroundTextureBlend || "soft-light",
+            border: source.border ? { ...source.border } : null,
+          }
+        : blank;
+      return {
+        ...current,
+        pages: [...current.pages, page],
+        activePageId: page.id,
+      };
+    });
+    setSelectedId(null);
+    setSelectedIds([]);
+    setEditingId(null);
+    showToast("Page added with the same background");
+  };
+
+  const applyTemplate = (template: InvitationTemplate) => {
+    const content = contentFromTemplate(template);
+    commit((current) => ({
+      ...current,
+      pages: clonePages(content.pages),
+      activePageId: content.activePageId,
+    }));
+    setSelectedId(null);
+    setEditingId(null);
+    setPendingTemplate(null);
+    showToast(`Applied “${template.title}”`);
+  };
+
+  const onApplyTemplate = (template: InvitationTemplate) => {
+    const hasContent = pages.some((page) => page.elements.length > 0);
+    if (hasContent) {
+      setPendingTemplate(template);
+      return;
+    }
+    applyTemplate(template);
+  };
+
+  const onAddWidget = (kind: WidgetKind) => {
+    const el = createWidgetElement(kind, undefined, backgroundColor);
+    if (kind !== "map") {
+      el.style = { ...el.style, color: defaultElementColor };
+    }
+    addElement(el);
+    setActiveTool("interactive");
+    showToast(
+      kind === "map"
+        ? "Map added — drag to place"
+        : "Interactive block added — drag to place",
+    );
+  };
+
+  const onChangeWidget = (widget: WidgetConfig) => {
+    if (!selectedId || canvasSelected || !selected || selected.type !== "widget") {
+      return;
+    }
+    snapshotBeforeChange();
+    updateElement(selectedId, { widget, content: widget.kind }, false);
+  };
+
   return (
+    <DocumentColorsProvider colors={documentColors} resetKey={invitation.id}>
     <div className="flex h-dvh flex-col overflow-hidden bg-white">
       <EditorToolbar
         title={title}
@@ -755,7 +1267,7 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
         Save
       </button>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 gap-3 bg-soft-grey p-3">
         <EditorToolNav
           activeTool={activeTool}
           onHelp={() =>
@@ -765,11 +1277,11 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
             setActiveTool(tool);
             setEditingId(null);
             setLeftPanelCollapsed(false);
-            // Tool nav owns the right panel — clear element selection so Style
-            // shows that tool instead of the previously selected element's props.
+            // Left = add features; right = style selection.
+            // Background selects the card; other tools keep the current selection.
             if (tool === "background") {
               setSelectedId(CANVAS_SELECTION_ID);
-            } else {
+            } else if (selectedId === CANVAS_SELECTION_ID) {
               setSelectedId(null);
             }
           }}
@@ -778,7 +1290,7 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
           <button
             type="button"
             onClick={() => setLeftPanelCollapsed(false)}
-            className="flex w-8 shrink-0 flex-col items-center justify-center border-r border-black/5 bg-white text-grey hover:bg-soft-grey hover:text-black"
+            className="flex w-10 shrink-0 flex-col items-center justify-center rounded-2xl border border-black/[0.04] bg-white text-grey shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)] hover:text-black"
             aria-label="Show sidebar"
             title="Show sidebar"
           >
@@ -791,72 +1303,86 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
             activeTool={activeTool}
             selectedShape={shape}
             customSize={customSize}
+            customSizeOpen={customSizeModalOpen}
+            onCustomSizeOpenChange={setCustomSizeModalOpen}
             pages={pages}
-            allElements={pages.flatMap((page) => page.elements)}
+            defaultElementColor={defaultElementColor}
+            onDefaultElementColorChange={setDefaultElementColor}
             onShapeChange={(next) =>
               commit((current) => ({ ...current, shape: next }))
             }
             onCustomSizeChange={(next) =>
-              commit((current) => ({ ...current, customSize: next }))
+              commit((current) => ({
+                ...current,
+                shape: "custom",
+                customSize: next,
+              }))
             }
             onAddText={addTextPreset}
             onAddLibraryElement={(item: LibraryElement) => {
               saveElementRecent(item.id);
-              const el = createElementFromLibrary(item);
-              if (el.type === "image" || el.type === "shape" || el.type === "divider") {
-                addElement({
-                  ...el,
-                  style: { ...el.style, color: defaultElementColor },
-                });
-              } else {
-                addElement({
-                  ...el,
-                  style: { ...el.style, color: defaultElementColor },
-                });
-              }
+              const el = sizeNewShapeForCard(
+                createElementFromLibrary(item),
+                cardAspectRatio(shape, customSize),
+              );
+              addElement({
+                ...el,
+                style: { ...el.style, color: defaultElementColor },
+              });
             }}
             onAddImageSrc={(src) => addImageWithOptions(src)}
+            onAddWidget={onAddWidget}
+            onApplyTemplate={onApplyTemplate}
             onCollapse={() => setLeftPanelCollapsed(true)}
           />
         )}
 
         <div className="relative flex min-w-0 flex-1 flex-col">
-          {activePage.kind === "rsvp" ? (
-            <div className="flex flex-1 items-center justify-center bg-[#ebe8e4] p-6">
-              <div className="aspect-[9/16] h-[min(72vh,640px)] overflow-hidden rounded-sm bg-white shadow-[0_16px_48px_rgba(0,0,0,0.12)]">
-                <InteractiveRsvpPanel
-                  config={activePage.rsvpConfig}
-                  prompt={contentMeta.rsvp.prompt}
-                  note={contentMeta.rsvp.note}
-                  interactive={false}
-                  className="h-full w-full"
-                />
-              </div>
-            </div>
-          ) : activePage.kind === "location" && activePage.location ? (
-            <div className="flex flex-1 items-center justify-center bg-[#ebe8e4] p-6">
-              <div className="aspect-[9/16] h-[min(72vh,640px)] overflow-hidden rounded-sm bg-white shadow-[0_16px_48px_rgba(0,0,0,0.12)]">
-                <LocationMapPanel
-                  location={activePage.location}
-                  className="h-full w-full"
-                />
-              </div>
-            </div>
-          ) : (
           <EditorCanvas
             shape={shape}
             customSize={customSize}
             elements={elements}
             selectedId={canvasSelected ? null : selectedId}
+            selectedIds={canvasSelected ? [] : selectedIds}
             editingId={editingId}
             showGrid={showGrid}
             zoom={zoom}
             backgroundColor={backgroundColor}
             backgroundPattern={activePage.backgroundPattern || "none"}
+            backgroundTexture={activePage.backgroundTexture || "none"}
+            backgroundTextureOpacity={
+              activePage.backgroundTextureOpacity ?? 22
+            }
+            backgroundTextureTint={
+              activePage.backgroundTextureTint || "#ffffff"
+            }
+            backgroundTextureBlend={
+              activePage.backgroundTextureBlend || "soft-light"
+            }
             border={activePage.border ?? null}
             canvasSelected={canvasSelected}
             onToggleGrid={() => setShowGrid((v) => !v)}
             onSelect={setSelectedId}
+            onToggleSelect={(id) => {
+              setSelectedIds((current) => {
+                const base =
+                  current.length > 0
+                    ? current
+                    : selectedId && selectedId !== CANVAS_SELECTION_ID
+                      ? [selectedId]
+                      : [];
+                const next = base.includes(id)
+                  ? base.filter((selected) => selected !== id)
+                  : [...base, id];
+                setSelectedId(next[0] ?? null);
+                return next;
+              });
+              setEditingId(null);
+            }}
+            onSelectMany={(ids) => {
+              setSelectedIds(ids);
+              setSelectedId(ids[0] ?? null);
+            }}
             onSelectCanvas={() => setSelectedId(CANVAS_SELECTION_ID)}
             onClearSelection={() => setSelectedId(null)}
             onStartEdit={(id) => {
@@ -865,8 +1391,22 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
             }}
             onStopEdit={() => setEditingId(null)}
             onChangeElement={(id, patch) => updateElement(id, patch, false)}
+            onChangeElements={(updates) => {
+              const patches = new Map(
+                updates.map((update) => [update.id, update.patch]),
+              );
+              setElementsOnActivePage(
+                (current) =>
+                  current.map((element) => {
+                    const patch = patches.get(element.id);
+                    return patch ? { ...element, ...patch } : element;
+                  }),
+                { record: false },
+              );
+            }}
             onDuplicate={duplicateElement}
             onDelete={deleteElement}
+            onDeleteMany={deleteElements}
             onToggleLock={(id) => {
               const el = elements.find((item) => item.id === id);
               if (!el) return;
@@ -881,7 +1421,6 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
             }}
             onBeforeChange={snapshotBeforeChange}
           />
-          )}
           <EditorPageStrip
             collapsed={pagesCollapsed}
             onToggleCollapse={() => setPagesCollapsed((v) => !v)}
@@ -893,23 +1432,15 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
             }}
             pages={pages}
             activePageId={activePageId}
+            shape={shape}
+            customSize={customSize}
             onSelectPage={(pageId) => {
               commit((current) => ({ ...current, activePageId: pageId }));
               setSelectedId(null);
+              setSelectedIds([]);
               setEditingId(null);
             }}
-            onAddPage={() => {
-              commit((current) => {
-                const page = createBlankPage(current.pages.length + 1);
-                return {
-                  ...current,
-                  pages: [...current.pages, page],
-                  activePageId: page.id,
-                };
-              });
-              setSelectedId(null);
-              showToast("Page added");
-            }}
+            onAddPage={onAddPage}
             onDeletePage={(pageId) => {
               if (pages.length <= 1) {
                 showToast("Keep at least one page");
@@ -930,6 +1461,7 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
                 };
               });
               setSelectedId(null);
+              setSelectedIds([]);
               showToast("Page deleted");
             }}
           />
@@ -940,24 +1472,13 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
           selected={selected}
           canvasSelected={canvasSelected}
           elements={elements}
-          pages={pages}
           activePage={activePage}
-          defaultElementColor={defaultElementColor}
-          onDefaultElementColorChange={setDefaultElementColor}
           onChangeStyle={onChangeStyle}
           onChangeBackground={onChangeBackground}
           onChangePattern={onChangePattern}
+          onChangeTexture={onChangeTexture}
           onChangeBorder={onChangeBorder}
-          onAddLibraryElement={(item: LibraryElement) => {
-            saveElementRecent(item.id);
-            const el = createElementFromLibrary(item);
-            addElement({
-              ...el,
-              style: { ...el.style, color: defaultElementColor },
-            });
-          }}
-          onAddImageSrc={(src, frame) => addImageWithOptions(src, frame)}
-          onPickImageFrame={setPendingImageFrame}
+          onChangeWidget={onChangeWidget}
           onBringForward={onBringForward}
           onSendBackward={onSendBackward}
           onBringToFront={onBringToFront}
@@ -967,6 +1488,11 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
           onChangeContent={(value) => {
             if (!selectedId || canvasSelected) return;
             updateElement(selectedId, { content: value }, false);
+          }}
+          onChangeHref={(href) => {
+            if (!selectedId || canvasSelected) return;
+            snapshotBeforeChange();
+            updateElement(selectedId, { href }, false);
           }}
         />
       </div>
@@ -984,11 +1510,27 @@ export function InvitationEditor({ invitation }: InvitationEditorProps) {
         onClose={() => setPreviewOpen(false)}
       />
 
+      <ConfirmDialog
+        open={pendingTemplate !== null}
+        title="Replace design?"
+        description={
+          pendingTemplate
+            ? `Replace your current design with “${pendingTemplate.title}”? You can undo with ${shortcutLabel("Z")}.`
+            : ""
+        }
+        confirmLabel="Replace"
+        onConfirm={() => {
+          if (pendingTemplate) applyTemplate(pendingTemplate);
+        }}
+        onCancel={() => setPendingTemplate(null)}
+      />
+
       {toast && (
         <div className="pointer-events-none fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-full bg-black px-4 py-2 text-sm font-medium text-white shadow-lg">
           {toast}
         </div>
       )}
     </div>
+    </DocumentColorsProvider>
   );
 }

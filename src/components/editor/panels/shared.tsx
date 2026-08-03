@@ -1,36 +1,88 @@
 "use client";
 
-export function ColourField({
-  label,
+import { useEffect, useState } from "react";
+
+export { ColourField, DocumentColorsProvider } from "./ColourField";
+
+export function EditableNumberInput({
   value,
   onChange,
+  min,
+  max,
+  step = 1,
+  precision = 0,
+  className = "",
+  ariaLabel,
 }: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  precision?: number;
+  className?: string;
+  ariaLabel?: string;
 }) {
-  const swatch = value.slice(0, 7) || "#1F2D22";
+  const format = (number: number) =>
+    precision > 0
+      ? String(Number(number.toFixed(precision)))
+      : String(Math.round(number));
+  const [draft, setDraft] = useState(() => format(value));
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setDraft(format(value));
+    // `format` intentionally follows the current precision.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focused, precision, value]);
+
+  const normalize = (number: number) => {
+    const bounded = Math.min(max ?? Infinity, Math.max(min ?? -Infinity, number));
+    const stepped =
+      step > 0 ? Math.round(bounded / step) * step : bounded;
+    return precision > 0
+      ? Number(stepped.toFixed(precision))
+      : Math.round(stepped);
+  };
+
+  const commit = () => {
+    const parsed = Number(draft);
+    const next = Number.isFinite(parsed) ? normalize(parsed) : normalize(value);
+    setDraft(format(next));
+    setFocused(false);
+    if (next !== value) onChange(next);
+  };
+
   return (
-    <div>
-      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-grey">
-        {label}
-      </span>
-      <div className="flex items-center gap-2">
-        <input
-          type="color"
-          value={swatch}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-10 w-10 cursor-pointer rounded-lg border border-black/10 bg-white p-1"
-          aria-label={`${label} swatch`}
-        />
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="flex-1 rounded-xl border border-black/10 px-3 py-2.5 text-sm uppercase outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/20"
-        />
-      </div>
-    </div>
+    <input
+      type="number"
+      inputMode="decimal"
+      aria-label={ariaLabel}
+      min={min}
+      max={max}
+      step={step}
+      value={draft}
+      onFocus={(event) => {
+        setFocused(true);
+        event.currentTarget.select();
+      }}
+      onChange={(event) => {
+        const nextDraft = event.target.value;
+        setDraft(nextDraft);
+        if (nextDraft.trim() === "") return;
+        const parsed = Number(nextDraft);
+        if (Number.isFinite(parsed)) onChange(normalize(parsed));
+      }}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") event.currentTarget.blur();
+        if (event.key === "Escape") {
+          setDraft(format(value));
+          event.currentTarget.blur();
+        }
+      }}
+      className={className}
+    />
   );
 }
 
@@ -78,11 +130,11 @@ export function PanelSection({
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+    <div className="rounded-xl bg-soft-grey/50">
+      <p className="rounded-t-xl bg-soft-grey px-3 py-2 text-sm font-semibold text-black">
         {title}
       </p>
-      {children}
+      <div className="space-y-3 px-3 py-3">{children}</div>
     </div>
   );
 }
