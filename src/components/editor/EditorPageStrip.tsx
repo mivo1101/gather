@@ -9,9 +9,9 @@ import { CanvasWidgetView } from "./CanvasWidgetView";
 import { ChevronLeftIcon, FitIcon, PlusIcon, TrashIcon } from "./editor-icons";
 import type { CustomCanvasSize, InvitationShape } from "./editor-types";
 import { ShapeGraphic } from "./ShapeGraphic";
+import { designCanvasSize } from "./canvas-metrics";
 
 const THUMB_MAX_EDGE = 78;
-const CARD_SHORT_EDGE = 320;
 
 function thumbnailMetrics(
   shape: InvitationShape,
@@ -25,12 +25,9 @@ function thumbnailMetrics(
   const height = landscapeOrSquare
     ? Math.round(THUMB_MAX_EDGE / aspect)
     : THUMB_MAX_EDGE;
-  const cardWidth = landscapeOrSquare
-    ? CARD_SHORT_EDGE * aspect
-    : CARD_SHORT_EDGE;
-  const cardHeight = landscapeOrSquare
-    ? CARD_SHORT_EDGE
-    : CARD_SHORT_EDGE / aspect;
+  const designSize = designCanvasSize(aspect);
+  const cardWidth = designSize.width;
+  const cardHeight = designSize.height;
 
   return {
     width,

@@ -45,6 +45,7 @@ import {
 import { canvasFontFamilyClass } from "@/lib/canvas-fonts";
 import { effectsToCss } from "@/lib/element-effects";
 import { paperTextureLayerStyle } from "@/lib/paper-textures";
+import { designCanvasSize } from "./canvas-metrics";
 
 function effectStyle(el: CanvasElement): CSSProperties {
   return effectsToCss(el.style.effects, el.style.color);
@@ -579,7 +580,10 @@ export function EditorCanvas({
 
   const aspect = cardAspectRatio(shape, customSize);
   const zoomScale = zoom / 100;
-  const uiScale = zoom > 0 ? 100 / zoom : 1;
+  const designSize = useMemo(
+    () => designCanvasSize(aspect),
+    [aspect],
+  );
   const elementBoundsOnCanvas = useCallback((el: CanvasElement) => {
     const canvas = canvasRef.current;
     const node = canvasRef.current?.querySelector<HTMLElement>(
@@ -618,8 +622,7 @@ export function EditorCanvas({
     };
   }, [elementBoundsOnCanvas, elements, selectedIds]);
 
-  // 100% = card fits the workspace with breathing room for chrome
-  const fitSize = useMemo(() => {
+  const fitScale = useMemo(() => {
     const isTall = aspect < 0.95; // portrait / tall custom
     const isSquarish = aspect >= 0.95 && aspect <= 1.05; // square-ish cards are height-limited too
     const padX = isTall ? 112 : 120;
@@ -629,17 +632,19 @@ export function EditorCanvas({
     const availH = Math.max(160, viewportSize.height - padY);
     // Portrait / square shouldn't fill the full column; keep ~same visual gaps as landscape
     const maxH = isTall || isSquarish ? availH * 0.9 : availH;
-    let width = availW;
-    let height = width / aspect;
-    if (height > maxH) {
-      height = maxH;
-      width = height * aspect;
-    }
-    return {
-      width: Math.round(width),
-      height: Math.round(height),
-    };
-  }, [aspect, viewportSize.height, viewportSize.width]);
+    return Math.min(
+      availW / designSize.width,
+      maxH / designSize.height,
+    );
+  }, [
+    aspect,
+    designSize.height,
+    designSize.width,
+    viewportSize.height,
+    viewportSize.width,
+  ]);
+  const displayScale = Math.max(0.01, fitScale * zoomScale);
+  const uiScale = 1 / displayScale;
 
   const clientToPercent = useCallback((clientX: number, clientY: number) => {
     const rect = canvasRef.current?.getBoundingClientRect();
@@ -865,12 +870,10 @@ export function EditorCanvas({
     },
     [
       clientToPercent,
-      customSize,
       elementBoundsOnCanvas,
       elements,
       onChangeElement,
       onChangeElements,
-      shape,
     ],
   );
 
@@ -1188,16 +1191,16 @@ export function EditorCanvas({
         <div
           className="relative shrink-0"
           style={{
-            width: fitSize.width * zoomScale,
-            height: fitSize.height * zoomScale,
+            width: designSize.width * displayScale,
+            height: designSize.height * displayScale,
           }}
           onPointerDown={(event) => event.stopPropagation()}
         >
           <div
             style={{
-              width: fitSize.width,
-              height: fitSize.height,
-              transform: `scale(${zoomScale})`,
+              width: designSize.width,
+              height: designSize.height,
+              transform: `scale(${displayScale})`,
               transformOrigin: "top left",
             }}
           >

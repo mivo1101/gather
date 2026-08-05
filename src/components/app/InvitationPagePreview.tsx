@@ -19,22 +19,7 @@ import {
 import { canvasFontFamilyClass } from "@/lib/canvas-fonts";
 import { effectsToCss } from "@/lib/element-effects";
 import { paperTextureLayerStyle } from "@/lib/paper-textures";
-
-function previewDesignSize(aspect: number) {
-  if (aspect < 0.95) {
-    const height = 540;
-    return { width: height * aspect, height };
-  }
-  if (aspect > 1.05) {
-    // Match the landscape editor's working canvas. Using a narrower virtual
-    // canvas makes fixed-pixel typography and widgets proportionally too large,
-    // which causes text to wrap and controls to overlap only in previews.
-    const width = 760;
-    return { width, height: width / aspect };
-  }
-  const width = 540;
-  return { width, height: width / aspect };
-}
+import { designCanvasSize } from "@/components/editor/canvas-metrics";
 
 function patternOverlay(
   pattern: InvitationPage["backgroundPattern"],
@@ -150,7 +135,7 @@ export function InvitationPagePreview({
   const elements = page.elements ?? [];
   const aspect = cardAspectRatio(shape, customSize);
   const designSize = useMemo(
-    () => previewDesignSize(Math.max(aspect, 0.001)),
+    () => designCanvasSize(aspect),
     [aspect],
   );
 
