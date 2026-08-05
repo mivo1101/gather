@@ -10,10 +10,7 @@ import {
 } from "@/lib/actions/invitations";
 import type { Invitation } from "@/lib/data/types";
 import { formatEventDate, formatRelativeTime } from "@/lib/format";
-import {
-  invitationEditPath,
-  invitationViewPath,
-} from "@/lib/invitation-paths";
+import { invitationEditPath } from "@/lib/invitation-paths";
 import { cardAspectRatio } from "@/components/editor/CanvasImageContent";
 import { BrandCheckbox } from "./BrandCheckbox";
 import { MoreIcon, PencilIcon } from "./icons";
@@ -156,7 +153,6 @@ export function InvitationCard({
   const menuId = useId();
   const inTrash = invitation.status === "archived";
   const editHref = invitationEditPath({ slug: displaySlug });
-  const viewHref = invitationViewPath({ slug: displaySlug });
 
   const firstPage = useMemo(() => {
     const pages = invitation.content.pages;
@@ -472,17 +468,6 @@ export function InvitationCard({
                 <OpenIcon className="h-4 w-4 text-grey" />
                 Open in editor
               </Link>
-              <a
-                href={viewHref}
-                target="_blank"
-                rel="noreferrer"
-                role="menuitem"
-                className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-black hover:bg-soft-grey"
-                onClick={() => setMenuOpen(false)}
-              >
-                <ExternalLinkIcon className="h-4 w-4 text-grey" />
-                View invitation
-              </a>
               <a
                 href={editHref}
                 target="_blank"

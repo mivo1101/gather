@@ -10,17 +10,16 @@ export default function NewInvitationPage() {
         New invitation
       </p>
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-black">
-        Start a draft
+        Create an invitation
       </h1>
       <p className="mt-3 max-w-lg text-base text-grey">
-        We&apos;ll create a draft invitation in your account. You can edit the
-        full design in the next step.
+        Start with a blank design and make it your own.
       </p>
 
       <form action={createInvitationAction} className="mt-8">
         <Button type="submit" size="lg">
           <PlusIcon />
-          Create draft
+          Start designing
         </Button>
       </form>
     </div>
