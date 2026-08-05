@@ -278,6 +278,7 @@ export function collectDocumentColors(
     elements?: Array<{
       style?: { color?: string | null };
       widget?: {
+        kind?: string;
         chrome?: { background?: string; textColor?: string; borderColor?: string };
         buttonStyle?: { background?: string; textColor?: string; borderColor?: string };
         fieldStyle?: { background?: string; textColor?: string; borderColor?: string };

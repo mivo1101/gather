@@ -66,6 +66,7 @@ import { CANVAS_SELECTION_ID, DEFAULT_CUSTOM_SIZE } from "./editor-types";
 import { useHistory } from "./useHistory";
 import { saveElementRecent } from "./ElementsBrowser";
 import { EMPTY_IMAGE_FRAME_SRC } from "./image-frames";
+import { designCanvasSize } from "./canvas-metrics";
 
 interface InvitationEditorProps {
   invitation: Invitation;
@@ -1220,13 +1221,27 @@ export function InvitationEditor({
 
   const onAddWidget = (kind: WidgetKind) => {
     const el = createWidgetElement(kind, undefined, backgroundColor);
+    if (kind === "guest_name") {
+      const designSize = designCanvasSize(cardAspectRatio(shape, customSize));
+      const naturalWidth =
+        ((el.style.fontSize * 5.6 + 12) / designSize.width) * 100;
+      const naturalHeight =
+        ((el.style.fontSize * el.style.lineHeight + 4) / designSize.height) *
+        100;
+      el.width = Math.min(80, Math.max(18, naturalWidth));
+      el.height = Math.min(24, Math.max(6, naturalHeight));
+      el.x = (100 - el.width) / 2;
+      el.y = (100 - el.height) / 2;
+    }
     if (kind !== "map") {
       el.style = { ...el.style, color: defaultElementColor };
     }
     addElement(el);
     setActiveTool("interactive");
     showToast(
-      kind === "map"
+      kind === "guest_name"
+        ? "Guest name added — place and style it"
+        : kind === "map"
         ? "Map added — drag to place"
         : "Interactive block added — drag to place",
     );

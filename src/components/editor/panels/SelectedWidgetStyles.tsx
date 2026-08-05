@@ -103,6 +103,7 @@ function optionId() {
 }
 
 const KIND_LABEL: Record<WidgetKind, string> = {
+  guest_name: widgetKindLabel("guest_name"),
   map: widgetKindLabel("map"),
   attend: widgetKindLabel("attend"),
   short_text: widgetKindLabel("short_text"),

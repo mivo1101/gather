@@ -303,7 +303,14 @@ function inferPageRole(
   if (elements.some((element) => element.widget?.kind === "map")) {
     return "location";
   }
-  if (elements.some((element) => element.widget && element.widget.kind !== "map")) {
+  if (
+    elements.some(
+      (element) =>
+        element.widget &&
+        element.widget.kind !== "map" &&
+        element.widget.kind !== "guest_name",
+    )
+  ) {
     return "rsvp";
   }
 

@@ -116,6 +116,7 @@ function PreviewInvitation({
           {el.type === "widget" && el.widget && (
             <CanvasWidgetView
               widget={el.widget}
+              elementStyle={el.style}
               interactive
               className="h-full w-full"
             />

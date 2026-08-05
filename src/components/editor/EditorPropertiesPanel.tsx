@@ -11,6 +11,7 @@ import type { EditorToolId, PropertiesTab } from "./editor-types";
 import {
   SelectedCardStyles,
   SelectedDividerStyles,
+  SelectedGuestNameStyles,
   SelectedImageStyles,
   SelectedShapeStyles,
   SelectedTextStyles,
@@ -132,6 +133,20 @@ function SelectedStyleBody(props: EditorPropertiesPanelProps) {
   const { selected } = props;
   if (!selected) return null;
   if (selected.type === "widget" && selected.widget) {
+    if (selected.widget.kind === "guest_name") {
+      return (
+        <div className="space-y-5">
+          <div className="rounded-xl bg-signature/5 px-3 py-3 text-xs leading-relaxed text-grey">
+            Guest names are added automatically when invitations are sent. The
+            placeholder copy cannot be edited.
+          </div>
+          <SelectedGuestNameStyles
+            selected={selected}
+            onChangeStyle={props.onChangeStyle}
+          />
+        </div>
+      );
+    }
     return (
       <SelectedWidgetStyles
         widget={selected.widget}

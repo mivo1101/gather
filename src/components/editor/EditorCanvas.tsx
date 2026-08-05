@@ -1086,7 +1086,9 @@ export function EditorCanvas({
     event.stopPropagation();
     const el = elements.find((item) => item.id === id);
     const canvas = canvasRef.current;
-    if (!el || el.type !== "text" || !canvas) return;
+    const isGuestName =
+      el?.type === "widget" && el.widget?.kind === "guest_name";
+    if (!el || (el.type !== "text" && !isGuestName) || !canvas) return;
 
     const renderedText = canvas.querySelector<HTMLElement>(
       `[data-canvas-element-id="${CSS.escape(id)}"] [data-canvas-text]`,
@@ -1114,15 +1116,16 @@ export function EditorCanvas({
       letterSpacing: computed.letterSpacing,
       lineHeight: computed.lineHeight,
     });
+    const text = isGuestName ? "Guest name" : el.content;
     ruler.textContent =
-      el.content
+      text
         .split("\n")
         .sort((a, b) => b.length - a.length)[0] || " ";
     document.body.appendChild(ruler);
     const measuredWidth = ruler.getBoundingClientRect().width;
     ruler.remove();
 
-    const canvasWidth = Math.max(1, canvas.getBoundingClientRect().width);
+    const canvasWidth = Math.max(1, canvas.clientWidth);
     const naturalWidth = Math.max(
       3,
       ((Math.ceil(measuredWidth) + 10) / canvasWidth) * 100,
@@ -1137,7 +1140,7 @@ export function EditorCanvas({
     onChangeElement(id, {
       x: nextX,
       width: nextWidth,
-      height: undefined,
+      height: el.type === "text" ? undefined : el.height,
     });
   };
 
@@ -1319,6 +1322,8 @@ export function EditorCanvas({
               const isOnlySelection =
                 isSelected && selectedIds.length === 1;
               const isEditing = el.id === editingId;
+              const isGuestNameWidget =
+                el.type === "widget" && el.widget?.kind === "guest_name";
 
               return (
                 <div
@@ -1362,7 +1367,7 @@ export function EditorCanvas({
                     if (el.locked) return;
                     if (
                       el.type === "text" ||
-                      el.type === "widget" ||
+                      (el.type === "widget" && !isGuestNameWidget) ||
                       (el.type === "image" && !isPatternGraphicSrc(el.content))
                     ) {
                       onSelect(el.id);
@@ -1426,7 +1431,7 @@ export function EditorCanvas({
                           : el.type}
                       </span>
                       {(el.type === "text" ||
-                        el.type === "widget" ||
+                        (el.type === "widget" && !isGuestNameWidget) ||
                         (el.type === "image" &&
                           !isPatternGraphicSrc(el.content))) &&
                         !el.locked && (
@@ -1650,6 +1655,7 @@ export function EditorCanvas({
                     {el.type === "widget" && el.widget && (
                       <CanvasWidgetView
                         widget={el.widget}
+                        elementStyle={el.style}
                         interactive={false}
                         editing={isEditing}
                         onChange={(widget) =>
@@ -1819,7 +1825,7 @@ export function EditorCanvas({
                               startDrag(event, el.id, "resize", handle.id)
                             }
                             onDoubleClick={
-                              el.type === "text" &&
+                              (el.type === "text" || isGuestNameWidget) &&
                               (handle.id === "e" || handle.id === "w")
                                 ? (event) =>
                                     fitTextWidth(event, el.id, handle.id)

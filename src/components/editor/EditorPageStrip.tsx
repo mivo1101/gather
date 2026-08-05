@@ -148,6 +148,7 @@ function PageThumbnail({
             {el.type === "widget" && el.widget && (
               <CanvasWidgetView
                 widget={el.widget}
+                elementStyle={el.style}
                 interactive={false}
                 className="h-full w-full"
               />
