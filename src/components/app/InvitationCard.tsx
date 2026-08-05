@@ -333,7 +333,7 @@ export function InvitationCard({
         </div>
       </Link>
 
-      <div className="flex shrink-0 flex-col items-end justify-center gap-1.5 border-l border-black/[0.06] px-4 py-3 pr-11 sm:min-w-[9.5rem]">
+      <div className="flex w-[14.5rem] shrink-0 flex-col items-end justify-center gap-1.5 border-l border-black/[0.06] px-4 py-3 pr-11">
         <span
           className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusStyles[invitation.status]}`}
         >
