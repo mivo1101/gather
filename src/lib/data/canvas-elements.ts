@@ -70,6 +70,7 @@ export interface ElementStyle {
 }
 
 export type WidgetKind =
+  | "guest_name"
   | "map"
   | "attend"
   | "short_text"
@@ -79,6 +80,8 @@ export type WidgetKind =
 /** Human-facing name for a widget kind (badges, tool panels). */
 export function widgetKindLabel(kind: WidgetKind): string {
   switch (kind) {
+    case "guest_name":
+      return "Guest name";
     case "map":
       return "Map";
     case "attend":
@@ -111,6 +114,10 @@ export interface WidgetChromeStyle {
 
 export interface WidgetLabelStyle {
   color: string;
+}
+
+export interface GuestNameWidgetConfig {
+  kind: "guest_name";
 }
 
 export interface MapWidgetConfig {
@@ -154,6 +161,7 @@ export interface ChoiceWidgetConfig {
 }
 
 export type WidgetConfig =
+  | GuestNameWidgetConfig
   | MapWidgetConfig
   | AttendWidgetConfig
   | ShortTextWidgetConfig
@@ -495,6 +503,7 @@ function normalizeWidgetConfig(
   contentHint?: string,
 ): WidgetConfig {
   const fallbackKind: WidgetKind =
+    contentHint === "guest_name" ||
     contentHint === "attend" ||
     contentHint === "short_text" ||
     contentHint === "single_choice" ||
@@ -508,6 +517,10 @@ function normalizeWidgetConfig(
 
   const value = raw as Record<string, unknown> & { kind?: string };
   const kind = (value.kind as WidgetKind) || fallbackKind;
+
+  if (kind === "guest_name") {
+    return { kind: "guest_name" };
+  }
 
   if (kind === "map") {
     const base = defaults as MapWidgetConfig;
@@ -631,6 +644,8 @@ export function createDefaultWidgetConfig(
   const { ink, muted, fill } = contrastingInk(options?.surfaceColor);
 
   switch (kind) {
+    case "guest_name":
+      return { kind: "guest_name" };
     case "map":
       return {
         kind: "map",
@@ -728,7 +743,9 @@ export function createWidgetElement(
   surfaceColor?: string | null,
 ): CanvasElement {
   const defaults =
-    kind === "map"
+    kind === "guest_name"
+      ? { x: 32, y: 45.5, width: 36, height: 9 }
+      : kind === "map"
       ? { x: 10, y: 28, width: 80, height: 42 }
       : kind === "attend"
         ? { x: 12, y: 36, width: 76, height: 22 }
@@ -745,9 +762,10 @@ export function createWidgetElement(
     ...defaults,
     ...partial,
     style: createDefaultTextStyle({
-      fontFamily: "urbanist",
-      fontSize: 14,
+      fontFamily: kind === "guest_name" ? "playfair" : "urbanist",
+      fontSize: kind === "guest_name" ? 34 : 14,
       color: "#1F2D22",
+      textAlign: kind === "guest_name" ? "center" : "left",
       ...partial?.style,
     }),
     widget: partial?.widget

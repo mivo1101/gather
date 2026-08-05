@@ -49,6 +49,73 @@ interface StyleHandlers {
   onChangeContent: (content: string) => void;
 }
 
+export function SelectedGuestNameStyles({
+  selected,
+  onChangeStyle,
+}: {
+  selected: CanvasElement;
+  onChangeStyle: (patch: Partial<ElementStyle>) => void;
+}) {
+  const style = selected.style;
+
+  return (
+    <div className="space-y-5">
+      <label className="block">
+        <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
+          Font
+        </span>
+        <select
+          value={style.fontFamily}
+          onChange={(e) =>
+            onChangeStyle({
+              fontFamily: e.target.value as ElementStyle["fontFamily"],
+            })
+          }
+          className="w-full appearance-none rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/20"
+          style={{ fontFamily: canvasFontCssFamily(style.fontFamily) }}
+        >
+          {CANVAS_FONT_GROUPS.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.fonts.map((font) => (
+                <option
+                  key={font.id}
+                  value={font.id}
+                  style={{ fontFamily: font.cssFamily }}
+                >
+                  {font.label}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </label>
+
+      <label className="block">
+        <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
+          Size
+        </span>
+        <div className="flex items-center rounded-xl border border-black/10 px-3 py-2">
+          <EditableNumberInput
+            value={style.fontSize}
+            min={8}
+            max={400}
+            onChange={(fontSize) => onChangeStyle({ fontSize })}
+            className="w-full bg-transparent text-sm outline-none"
+            ariaLabel="Guest name font size"
+          />
+          <span className="text-xs text-grey">px</span>
+        </div>
+      </label>
+
+      <ColourField
+        label="Colour"
+        value={style.color}
+        onChange={(color) => onChangeStyle({ color })}
+      />
+    </div>
+  );
+}
+
 export function SelectedTextStyles({
   selected,
   onChangeStyle,

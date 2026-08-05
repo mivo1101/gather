@@ -1,7 +1,10 @@
 "use client";
 
 import type { CanvasElement } from "@/lib/data/canvas-elements";
-import type { InvitationPage } from "@/lib/data/invitation-content";
+import {
+  invitationPageRoleLabel,
+  type InvitationPage,
+} from "@/lib/data/invitation-content";
 import { canvasFontFamilyClass } from "@/lib/canvas-fonts";
 import { paperTextureLayerStyle } from "@/lib/paper-textures";
 import { CanvasImageContent, cardAspectRatio } from "./CanvasImageContent";
@@ -9,9 +12,9 @@ import { CanvasWidgetView } from "./CanvasWidgetView";
 import { ChevronLeftIcon, FitIcon, PlusIcon, TrashIcon } from "./editor-icons";
 import type { CustomCanvasSize, InvitationShape } from "./editor-types";
 import { ShapeGraphic } from "./ShapeGraphic";
+import { designCanvasSize } from "./canvas-metrics";
 
 const THUMB_MAX_EDGE = 78;
-const CARD_SHORT_EDGE = 320;
 
 function thumbnailMetrics(
   shape: InvitationShape,
@@ -25,12 +28,9 @@ function thumbnailMetrics(
   const height = landscapeOrSquare
     ? Math.round(THUMB_MAX_EDGE / aspect)
     : THUMB_MAX_EDGE;
-  const cardWidth = landscapeOrSquare
-    ? CARD_SHORT_EDGE * aspect
-    : CARD_SHORT_EDGE;
-  const cardHeight = landscapeOrSquare
-    ? CARD_SHORT_EDGE
-    : CARD_SHORT_EDGE / aspect;
+  const designSize = designCanvasSize(aspect);
+  const cardWidth = designSize.width;
+  const cardHeight = designSize.height;
 
   return {
     width,
@@ -148,6 +148,7 @@ function PageThumbnail({
             {el.type === "widget" && el.widget && (
               <CanvasWidgetView
                 widget={el.widget}
+                elementStyle={el.style}
                 interactive={false}
                 className="h-full w-full"
               />
@@ -217,10 +218,14 @@ export function EditorPageStrip({
         </button>
 
         <div className="flex flex-1 items-center gap-2 overflow-x-auto">
-          {pages.map((page, index) => {
+          {pages.map((page) => {
             const active = page.id === activePageId;
+            const roleLabel = invitationPageRoleLabel(page.role);
             return (
-              <div key={page.id} className="group relative shrink-0">
+              <div
+                key={page.id}
+                className="group relative flex shrink-0 flex-col items-center gap-1"
+              >
                 <button
                   type="button"
                   onClick={() => onSelectPage(page.id)}
@@ -231,13 +236,17 @@ export function EditorPageStrip({
                   }`}
                   style={{ width: metrics.width, height: metrics.height }}
                   aria-current={active ? "page" : undefined}
-                  aria-label={page.name}
+                  aria-label={`${roleLabel}: ${page.name}`}
                 >
                   <PageThumbnail page={page} metrics={metrics} />
-                  <span className="absolute inset-x-0 bottom-0 z-10 bg-black/45 py-0.5 text-center text-[9px] font-semibold text-white">
-                    {index + 1}
-                  </span>
                 </button>
+                <span
+                  className={`max-w-[78px] truncate text-[10px] font-semibold leading-none ${
+                    active ? "text-signature" : "text-grey"
+                  }`}
+                >
+                  {roleLabel}
+                </span>
                 {pages.length > 1 && (
                   <button
                     type="button"
@@ -252,15 +261,20 @@ export function EditorPageStrip({
             );
           })}
 
-          <button
-            type="button"
-            onClick={onAddPage}
-            className="flex shrink-0 items-center justify-center rounded-lg border border-dashed border-black/20 text-grey transition-colors hover:border-signature/40 hover:text-signature"
-            style={{ width: metrics.width, height: metrics.height }}
-            aria-label="Add page"
-          >
-            <PlusIcon />
-          </button>
+          <div className="flex shrink-0 flex-col items-center gap-1">
+            <button
+              type="button"
+              onClick={onAddPage}
+              className="flex shrink-0 items-center justify-center rounded-lg border border-dashed border-black/20 text-grey transition-colors hover:border-signature/40 hover:text-signature"
+              style={{ width: metrics.width, height: metrics.height }}
+              aria-label="Add details page"
+            >
+              <PlusIcon />
+            </button>
+            <span className="text-[10px] font-semibold leading-none text-grey">
+              Add page
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center gap-1">

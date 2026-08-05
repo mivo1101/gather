@@ -7,6 +7,11 @@ const WIDGETS: {
   label: string;
   hint: string;
 }[] = [
+  {
+    kind: "guest_name",
+    label: "Guest name",
+    hint: "Personalised automatically for each guest",
+  },
   { kind: "map", label: "Map", hint: "Venue map + open link" },
   { kind: "attend", label: "Yes / No", hint: "Attend reply buttons" },
   { kind: "short_text", label: "Open answer", hint: "Free-text guest answer" },
@@ -34,7 +39,11 @@ export function ToolInteractivePanel({ onAddWidget }: ToolInteractivePanelProps)
             key={item.kind}
             type="button"
             onClick={() => onAddWidget(item.kind)}
-            className="flex w-full flex-col items-start rounded-xl border border-black/10 bg-white px-3 py-3 text-left transition-colors hover:border-signature/40 hover:bg-soft-grey/60"
+            className={`flex w-full flex-col items-start rounded-xl border px-3 py-3 text-left transition-colors hover:border-signature/40 ${
+              item.kind === "guest_name"
+                ? "border-signature/25 bg-signature/5 hover:bg-signature/10"
+                : "border-black/10 bg-white hover:bg-soft-grey/60"
+            }`}
           >
             <span className="text-sm font-semibold text-black">{item.label}</span>
             <span className="mt-0.5 text-[11px] text-grey">{item.hint}</span>

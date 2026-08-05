@@ -6,13 +6,24 @@ import {
 } from "@/lib/data/invitation-content";
 import { normalizeRadius } from "@/lib/data/canvas-elements";
 import type {
+  ElementStyle,
   WidgetChromeStyle,
   WidgetConfig,
 } from "@/lib/data/canvas-elements";
-import { fillBoxStyle, contrastingInk, isGradient, isLightColor, isTransparent } from "@/lib/color-utils";
+import {
+  fillBoxStyle,
+  fillTextStyle,
+  contrastingInk,
+  isGradient,
+  isLightColor,
+  isTransparent,
+} from "@/lib/color-utils";
+import { canvasFontFamilyClass } from "@/lib/canvas-fonts";
 
 interface CanvasWidgetViewProps {
   widget: WidgetConfig;
+  elementStyle?: ElementStyle;
+  personalizedName?: string;
   /** Editor: no navigation / no answering. Preview/guest: interactive. */
   interactive?: boolean;
   /** Editor: inline-edit labels / placeholders / options. */
@@ -88,6 +99,8 @@ function EditableLine({
 /** Renders a placeable interactive widget on the invitation canvas. */
 export function CanvasWidgetView({
   widget,
+  elementStyle,
+  personalizedName = "Guest name",
   interactive = false,
   editing = false,
   onChange,
@@ -98,6 +111,55 @@ export function CanvasWidgetView({
     if (!onChange) return;
     onChange({ ...widget, ...partial } as WidgetConfig);
   };
+
+  if (widget.kind === "guest_name") {
+    const style = elementStyle;
+    const verticalAlign = style?.verticalAlign ?? "middle";
+    return (
+      <div
+        className={`flex h-full w-full ${
+          verticalAlign === "bottom"
+            ? "items-end"
+            : verticalAlign === "top"
+              ? "items-start"
+              : "items-center"
+        } ${className}`}
+      >
+        <span
+          data-canvas-text
+          className={`w-full whitespace-pre-wrap break-words ${
+            style ? canvasFontFamilyClass(style.fontFamily) : ""
+          }`}
+          style={
+            style
+              ? {
+                  fontSize: `${style.fontSize}px`,
+                  fontWeight:
+                    style.bold || style.fontWeight === "bold"
+                      ? 700
+                      : style.fontWeight === "medium"
+                        ? 500
+                        : 400,
+                  ...fillTextStyle(style.color),
+                  textAlign: style.textAlign,
+                  lineHeight: style.lineHeight,
+                  letterSpacing: `${style.letterSpacing}px`,
+                  fontStyle: style.italic ? "italic" : "normal",
+                  textDecoration: [
+                    style.underline ? "underline" : "",
+                    style.strike ? "line-through" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" "),
+                }
+              : undefined
+          }
+        >
+          {personalizedName}
+        </span>
+      </div>
+    );
+  }
 
   if (widget.kind === "map") {
     const query = widget.mapsQuery.trim() || "Melbourne, Australia";
