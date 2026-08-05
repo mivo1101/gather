@@ -28,6 +28,7 @@ import {
 } from "@/lib/data/element-library";
 import {
   createBlankPage,
+  enforceInvitationPageRoles,
   type InvitationContent,
   type InvitationPage,
 } from "@/lib/data/invitation-content";
@@ -86,8 +87,14 @@ type ElementClipboard = {
 };
 
 function clonePages(pages: InvitationPage[]): InvitationPage[] {
-  return pages.map((page) => ({
+  return pages.map((page, index) => ({
     ...page,
+    role:
+      index === 0
+        ? "cover"
+        : page.role === "cover"
+          ? "details"
+          : page.role || "details",
     kind: page.kind || "design",
     backgroundPattern: page.backgroundPattern || "none",
     backgroundTexture: page.backgroundTexture || "none",
@@ -276,6 +283,7 @@ export function InvitationEditor({
   const activePage = pages.find((page) => page.id === activePageId) ?? {
     id: activePageId,
     name: "Page",
+    role: "cover" as const,
     kind: "design" as const,
     elements,
     backgroundColor: "#fff8f4",
@@ -1447,8 +1455,8 @@ export function InvitationEditor({
                 return;
               }
               commit((current) => {
-                const nextPages = current.pages.filter(
-                  (page) => page.id !== pageId,
+                const nextPages = enforceInvitationPageRoles(
+                  current.pages.filter((page) => page.id !== pageId),
                 );
                 const nextActive =
                   current.activePageId === pageId

@@ -2693,6 +2693,14 @@ export function contentFromTemplate(
     return {
       id: pageId,
       name: templatePage.name || `Page ${index + 1}`,
+      role:
+        index === 0
+          ? "cover"
+          : templatePage.kind === "location"
+            ? "location"
+            : templatePage.kind === "rsvp"
+              ? "rsvp"
+              : "details",
       kind: "design" as const,
       elements,
       backgroundColor: templatePage.backgroundColor,

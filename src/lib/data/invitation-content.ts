@@ -8,6 +8,7 @@ import {
 } from "./canvas-elements";
 
 export type InvitationPageKind = "design" | "rsvp" | "location";
+export type InvitationPageRole = "cover" | "details" | "location" | "rsvp";
 
 export interface InvitationLocation {
   venue: string;
@@ -79,6 +80,8 @@ export type PaperTextureBlend = "soft-light" | "multiply" | "overlay";
 export interface InvitationPage {
   id: string;
   name: string;
+  /** Guest-facing purpose used to organise the invitation flow. */
+  role: InvitationPageRole;
   /** design = canvas; rsvp / location = interactive guest pages */
   kind: InvitationPageKind;
   elements: CanvasElement[];
@@ -166,10 +169,12 @@ function createPage(
   name: string,
   elements: CanvasElement[],
   backgroundColor = "#ffffff",
+  role: InvitationPageRole = "details",
 ): InvitationPage {
   return {
     id: pageId(),
     name,
+    role,
     kind: "design",
     elements,
     backgroundColor,
@@ -229,7 +234,7 @@ export function createDefaultContent(input?: {
   const location = input?.location?.trim() || "The Grand Pavilion";
   // New invitations start blank — templates apply premade layouts later
   const elements: CanvasElement[] = [];
-  const page = createPage("Page 1", elements);
+  const page = createPage("Cover", elements, "#ffffff", "cover");
 
   return {
     invite: {
@@ -267,6 +272,69 @@ export function createDefaultContent(input?: {
 function normalizePageKind(raw: unknown): InvitationPageKind {
   if (raw === "rsvp" || raw === "location" || raw === "design") return raw;
   return "design";
+}
+
+function isInvitationPageRole(raw: unknown): raw is InvitationPageRole {
+  return (
+    raw === "cover" ||
+    raw === "details" ||
+    raw === "location" ||
+    raw === "rsvp"
+  );
+}
+
+function inferPageRole(
+  page: Partial<InvitationPage>,
+  index: number,
+  legacyKind: InvitationPageKind,
+): InvitationPageRole {
+  if (index === 0) return "cover";
+  if (isInvitationPageRole(page.role) && page.role !== "cover") {
+    return page.role;
+  }
+  if (legacyKind === "location") return "location";
+  if (legacyKind === "rsvp") return "rsvp";
+
+  const name = page.name?.toLowerCase() ?? "";
+  if (/rsvp|response|respond/.test(name)) return "rsvp";
+  if (/location|venue|map/.test(name)) return "location";
+
+  const elements = Array.isArray(page.elements) ? page.elements : [];
+  if (elements.some((element) => element.widget?.kind === "map")) {
+    return "location";
+  }
+  if (elements.some((element) => element.widget && element.widget.kind !== "map")) {
+    return "rsvp";
+  }
+
+  return "details";
+}
+
+export function invitationPageRoleLabel(role: InvitationPageRole) {
+  switch (role) {
+    case "cover":
+      return "Cover";
+    case "location":
+      return "Location";
+    case "rsvp":
+      return "RSVP";
+    case "details":
+      return "Details";
+  }
+}
+
+export function enforceInvitationPageRoles(
+  pages: InvitationPage[],
+): InvitationPage[] {
+  return pages.map((page, index) => ({
+    ...page,
+    role:
+      index === 0
+        ? "cover"
+        : page.role === "cover"
+          ? "details"
+          : page.role,
+  }));
 }
 
 function normalizeLocation(raw: unknown): InvitationLocation | null {
@@ -588,6 +656,7 @@ function normalizePages(
     const pages = raw.map((item, index) => {
       const page = item as Partial<InvitationPage>;
       const kind = normalizePageKind(page.kind);
+      const role = inferPageRole(page, index, kind);
 
       // Legacy fixed RSVP / Location pages → freeform design pages with widgets
       if (kind === "location") {
@@ -595,6 +664,7 @@ function normalizePages(
         return {
           id: page.id ?? pageId(),
           name: page.name ?? `Page ${index + 1}`,
+          role,
           kind: "design" as const,
           elements: elementsFromLocationPage(
             location,
@@ -619,6 +689,7 @@ function normalizePages(
         return {
           id: page.id ?? pageId(),
           name: page.name ?? `Page ${index + 1}`,
+          role,
           kind: "design" as const,
           elements: elementsFromRsvpPage(rsvpConfig, shape),
           backgroundColor:
@@ -640,6 +711,7 @@ function normalizePages(
       return {
         id: page.id ?? pageId(),
         name: page.name ?? `Page ${index + 1}`,
+        role,
         kind: "design" as const,
         elements: normalizeElements(page.elements),
         backgroundColor: page.backgroundColor || "#ffffff",
@@ -661,7 +733,7 @@ function normalizePages(
     };
   }
 
-  const page = createPage("Page 1", fallbackElements);
+  const page = createPage("Cover", fallbackElements, "#ffffff", "cover");
   return {
     pages: [page],
     activePageId: page.id,
@@ -704,7 +776,12 @@ export function normalizeContent(
 }
 
 export function createBlankPage(pageNumber: number): InvitationPage {
-  return createPage(`Page ${pageNumber}`, createBlankPageElements());
+  return createPage(
+    pageNumber === 1 ? "Cover" : `Details ${pageNumber - 1}`,
+    createBlankPageElements(),
+    "#ffffff",
+    pageNumber === 1 ? "cover" : "details",
+  );
 }
 
 function questionId() {
@@ -806,6 +883,7 @@ export function createRsvpPage(_pageNumber?: number): InvitationPage {
   return {
     id: pageId(),
     name: "RSVP",
+    role: "rsvp",
     kind: "rsvp",
     elements: [],
     backgroundColor: config.theme.background,
@@ -830,6 +908,7 @@ export function createLocationPage(
   return {
     id: pageId(),
     name: "Location",
+    role: "location",
     kind: "location",
     elements: [],
     backgroundColor: "#ffffff",
