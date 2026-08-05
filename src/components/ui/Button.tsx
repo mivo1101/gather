@@ -11,6 +11,7 @@ interface ButtonProps {
   className?: string;
   onClick?: () => void;
   type?: "button" | "submit";
+  disabled?: boolean;
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
@@ -35,9 +36,10 @@ export function Button({
   className = "",
   onClick,
   type = "button",
+  disabled = false,
 }: ButtonProps) {
   const baseStyles =
-    "inline-flex items-center justify-center gap-2 rounded-full font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
+    "inline-flex items-center justify-center gap-2 rounded-full font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-55";
 
   const combined = `${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className}`;
 
@@ -50,7 +52,12 @@ export function Button({
   }
 
   return (
-    <button type={type} className={combined} onClick={onClick}>
+    <button
+      type={type}
+      className={combined}
+      onClick={onClick}
+      disabled={disabled}
+    >
       {children}
     </button>
   );

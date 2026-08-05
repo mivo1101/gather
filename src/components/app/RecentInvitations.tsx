@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
@@ -19,6 +18,7 @@ import type {
   InvitationStatusFilter,
 } from "@/lib/data/types";
 import { BrandCheckbox } from "./BrandCheckbox";
+import { Button, PlusIcon } from "@/components/ui/Button";
 import { useHubSearch } from "./HubSearchContext";
 import { ChevronDownIcon } from "./icons";
 import { InvitationCard } from "./InvitationCard";
@@ -344,12 +344,14 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
                 : "Create your first invitation to see it here."}
           </p>
           {!inTrashView && (
-            <Link
+            <Button
               href="/invitations/new"
-              className="mt-6 inline-flex rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-black/90"
+              size="md"
+              className="mt-6"
             >
-              + Create Invitation
-            </Link>
+              <PlusIcon />
+              Create Invitation
+            </Button>
           )}
         </div>
       ) : (
