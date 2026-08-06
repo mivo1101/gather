@@ -6,6 +6,7 @@ import type {
   InvitationCustomSize,
   InvitationPage,
 } from "@/lib/data/invitation-content";
+import type { RsvpAnswerValue } from "@/lib/data/rsvp-responses";
 import { CanvasImageContent, cardAspectRatio } from "@/components/editor/CanvasImageContent";
 import { CanvasWidgetView } from "@/components/editor/CanvasWidgetView";
 import type { InvitationShape } from "@/components/editor/editor-types";
@@ -107,12 +108,16 @@ function PreviewDivider({
   return <div className="h-0.5 w-full rounded-full" style={box} />;
 }
 
-/** Scaled preview of an invitation page — matches editor layout & canvas shape. */
+/** Scaled preview of an invitation page - matches editor layout & canvas shape. */
 export function InvitationPagePreview({
   page,
   shape = "portrait",
   customSize,
   className = "",
+  personalizedName,
+  interactive = false,
+  answers = {},
+  onAnswerChange,
 }: {
   page: Pick<
     InvitationPage,
@@ -128,6 +133,12 @@ export function InvitationPagePreview({
   shape?: InvitationShape;
   customSize?: InvitationCustomSize;
   className?: string;
+  /** Seeds Guest name widgets in this preview. */
+  personalizedName?: string;
+  /** When true, RSVP widgets accept answers (guest invite view). */
+  interactive?: boolean;
+  answers?: Record<string, RsvpAnswerValue>;
+  onAnswerChange?: (questionId: string, value: RsvpAnswerValue) => void;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.35);
@@ -159,8 +170,7 @@ export function InvitationPagePreview({
     <div
       ref={frameRef}
       className={`relative overflow-hidden ${className}`}
-      style={fillBoxStyle(backgroundColor)}
-      aria-hidden="true"
+      aria-hidden={interactive ? undefined : true}
     >
       {elements.length === 0 ? (
         <div className="absolute inset-0 bg-gradient-to-br from-soft-grey to-sugar-milk" />
@@ -292,7 +302,11 @@ export function InvitationPagePreview({
                 <CanvasWidgetView
                   widget={el.widget}
                   elementStyle={el.style}
-                  interactive={false}
+                  interactive={interactive}
+                  questionId={el.id}
+                  answer={answers[el.id]}
+                  onAnswerChange={onAnswerChange}
+                  personalizedName={personalizedName}
                   className="h-full w-full"
                 />
               )}

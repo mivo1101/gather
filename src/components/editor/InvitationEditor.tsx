@@ -38,7 +38,10 @@ import {
 } from "@/lib/data/invitation-templates";
 import type { Invitation } from "@/lib/data/types";
 import { collectDocumentColors } from "@/lib/color-utils";
-import { invitationEditPath } from "@/lib/invitation-paths";
+import {
+  invitationContinuePath,
+  invitationEditPath,
+} from "@/lib/invitation-paths";
 import { shortcutLabel } from "@/lib/shortcut-label";
 import {
   cardAspectRatio,
@@ -256,6 +259,7 @@ export function InvitationEditor({
   const [saveLabel, setSaveLabel] = useState("Save");
   const [toast, setToast] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isContinuing, setIsContinuing] = useState(false);
   const [defaultElementColor, setDefaultElementColor] = useState("#1F2D22");
   const [pendingTemplate, setPendingTemplate] =
     useState<InvitationTemplate | null>(null);
@@ -602,7 +606,7 @@ export function InvitationEditor({
       nextStatus?: Invitation["status"];
       quiet?: boolean;
       force?: boolean;
-    }) => {
+    }): Promise<Invitation | null> => {
       const nextStatus = options?.nextStatus;
       const quiet = options?.quiet ?? false;
       const current = latestSnapshotRef.current;
@@ -619,100 +623,118 @@ export function InvitationEditor({
         !nextStatus &&
         payload === lastSavedPayloadRef.current
       ) {
-        return;
+        return Promise.resolve(invitation);
       }
 
       if (savingRef.current) {
         if (quiet) pendingAutosaveRef.current = true;
-        return;
+        return Promise.resolve(null);
       }
 
       savingRef.current = true;
       setSaveLabel("Saving…");
 
-      startTransition(async () => {
-        let savedSuccessfully = false;
-        try {
-          const content = buildContent(
-            contentMetaRef.current,
-            current.pages,
-            current.activePageId,
-            current.shape,
-            current.customSize,
-          );
-          const result = await saveInvitationAction({
-            invitationId: invitation.id,
-            title: current.title.trim() || "Untitled Invitation",
-            eventDate: invitation.eventDate,
-            location: invitation.location,
-            content,
-            status: nextStatus,
-          });
-
-          if ("error" in result) {
-            setSaveLabel("Retry");
-            if (!quiet) showToast(result.error);
-            else showToast("Autosave failed — click Save to retry");
-            return;
-          }
-
-          lastSavedPayloadRef.current = serializeSavePayload(
-            result.invitation.title,
-            result.invitation.content.pages,
-            result.invitation.content.activePageId,
-            result.invitation.content.shape ?? "portrait",
-            result.invitation.content.customSize ?? DEFAULT_CUSTOM_SIZE,
-          );
-          setContentMeta(result.invitation.content);
-          setStatus(result.invitation.status);
-          setSavedAt(result.invitation.updatedAt);
-          setSaveLabel("Saved");
-          savedSuccessfully = true;
-
-          if (!quiet) {
-            showToast(
-              nextStatus === "published"
-                ? "Invitation published"
-                : nextStatus === "draft"
-                  ? "Reverted to draft"
-                  : "Changes saved",
+      return new Promise((resolve) => {
+        startTransition(async () => {
+          let savedSuccessfully = false;
+          try {
+            const content = buildContent(
+              contentMetaRef.current,
+              current.pages,
+              current.activePageId,
+              current.shape,
+              current.customSize,
             );
-          }
+            const result = await saveInvitationAction({
+              invitationId: invitation.id,
+              title: current.title.trim() || "Untitled Invitation",
+              eventDate: invitation.eventDate,
+              location: invitation.location,
+              content,
+              status: nextStatus,
+            });
 
-          const nextPath = invitationEditPath(result.invitation);
-          if (window.location.pathname !== nextPath) {
-            router.replace(nextPath, { scroll: false });
+            if ("error" in result) {
+              setSaveLabel("Retry");
+              if (!quiet) showToast(result.error);
+              else showToast("Autosave failed — click Save to retry");
+              resolve(null);
+              return;
+            }
+
+            lastSavedPayloadRef.current = serializeSavePayload(
+              result.invitation.title,
+              result.invitation.content.pages,
+              result.invitation.content.activePageId,
+              result.invitation.content.shape ?? "portrait",
+              result.invitation.content.customSize ?? DEFAULT_CUSTOM_SIZE,
+            );
+            setContentMeta(result.invitation.content);
+            setStatus(result.invitation.status);
+            setSavedAt(result.invitation.updatedAt);
+            setSaveLabel("Saved");
+            savedSuccessfully = true;
+
+            if (!quiet) {
+              showToast(
+                nextStatus === "published"
+                  ? "Invitation published"
+                  : nextStatus === "draft"
+                    ? "Reverted to draft"
+                    : "Changes saved",
+              );
+            }
+
+            const nextPath = invitationEditPath(result.invitation);
+            if (window.location.pathname !== nextPath) {
+              router.replace(nextPath, { scroll: false });
+            }
+            window.setTimeout(() => setSaveLabel("Save"), 1800);
+            resolve(result.invitation);
+          } catch (error) {
+            setSaveLabel("Retry");
+            showToast(
+              error instanceof Error
+                ? error.message
+                : "Autosave failed — click Save to retry",
+            );
+            resolve(null);
+          } finally {
+            savingRef.current = false;
+            if (savedSuccessfully && pendingAutosaveRef.current) {
+              pendingAutosaveRef.current = false;
+              window.setTimeout(() => {
+                void persist({ quiet: true });
+              }, 400);
+            } else if (!savedSuccessfully) {
+              pendingAutosaveRef.current = false;
+            }
           }
-          window.setTimeout(() => setSaveLabel("Save"), 1800);
-        } catch (error) {
-          setSaveLabel("Retry");
-          showToast(
-            error instanceof Error
-              ? error.message
-              : "Autosave failed — click Save to retry",
-          );
-        } finally {
-          savingRef.current = false;
-          if (savedSuccessfully && pendingAutosaveRef.current) {
-            pendingAutosaveRef.current = false;
-            window.setTimeout(() => {
-              persist({ quiet: true });
-            }, 400);
-          } else if (!savedSuccessfully) {
-            pendingAutosaveRef.current = false;
-          }
-        }
+        });
       });
     },
     // Editor state is read from refs so queued saves always use the latest snapshot.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
-      invitation.eventDate,
-      invitation.id,
-      invitation.location,
+      invitation,
       router,
     ],
   );
+
+  const handleContinue = useCallback(async () => {
+    if (isContinuing) return;
+    setIsContinuing(true);
+    try {
+      const saved = await persist({ force: true, quiet: true });
+      if (!saved) {
+        showToast("Save your design before continuing");
+        return;
+      }
+      router.push(invitationContinuePath(saved));
+    } finally {
+      setIsContinuing(false);
+    }
+  }, [isContinuing, persist, router]);
 
   // Debounced autosave after edits settle
   useEffect(() => {
@@ -1275,9 +1297,17 @@ export function InvitationEditor({
         canRedo={history.canRedo}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        onSave={() => persist({ force: true })}
-        onPublish={(mode) => persist({ nextStatus: mode, force: true })}
+        onSave={() => {
+          void persist({ force: true });
+        }}
+        onPublish={(mode) => {
+          void persist({ nextStatus: mode, force: true });
+        }}
+        onContinue={() => {
+          void handleContinue();
+        }}
         isSaving={isPending}
+        isContinuing={isContinuing}
         saveLabel={saveLabel}
       />
       {/* Hidden save trigger for ⌘S */}

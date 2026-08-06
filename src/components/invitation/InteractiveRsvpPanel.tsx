@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import type { RsvpConfig, RsvpQuestion } from "@/lib/data/invitation-content";
+import type { RsvpAnswerValue } from "@/lib/data/rsvp-responses";
 
 const DEFAULT_CONFIG: RsvpConfig = {
   eyebrow: "RSVP",
@@ -59,6 +60,13 @@ interface InteractiveRsvpPanelProps {
   note?: string;
   interactive?: boolean;
   className?: string;
+  /** Prefill from a saved response */
+  initialAnswers?: Record<string, RsvpAnswerValue>;
+  /** When set, show a real submit control instead of preview-only copy */
+  onSubmit?: (
+    answers: Record<string, RsvpAnswerValue>,
+  ) => Promise<{ ok: true } | { error: string }>;
+  alreadySubmitted?: boolean;
 }
 
 /** Themed, multi-question RSVP card — style follows each template. */
@@ -68,6 +76,9 @@ export function InteractiveRsvpPanel({
   note,
   interactive = true,
   className = "",
+  initialAnswers = {},
+  onSubmit,
+  alreadySubmitted = false,
 }: InteractiveRsvpPanelProps) {
   const resolved: RsvpConfig = config
     ? config
@@ -78,18 +89,24 @@ export function InteractiveRsvpPanel({
       };
 
   const { theme, questions } = resolved;
-  const [answers, setAnswers] = useState<Record<string, string | string[]>>(
-    {},
-  );
+  const [answers, setAnswers] =
+    useState<Record<string, RsvpAnswerValue>>(initialAnswers);
+  const [submitted, setSubmitted] = useState(alreadySubmitted);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const canEdit = interactive && (!submitted || Boolean(onSubmit));
 
   const setAttend = (questionId: string, value: "yes" | "no") => {
-    if (!interactive) return;
+    if (!canEdit) return;
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
+    setError(null);
   };
 
   const setText = (questionId: string, value: string) => {
-    if (!interactive) return;
+    if (!canEdit) return;
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
+    setError(null);
   };
 
   const toggleChoice = (
@@ -97,7 +114,7 @@ export function InteractiveRsvpPanel({
     optionId: string,
     multi: boolean,
   ) => {
-    if (!interactive) return;
+    if (!canEdit) return;
     setAnswers((prev) => {
       if (!multi) return { ...prev, [question.id]: optionId };
       const current = Array.isArray(prev[question.id])
@@ -107,6 +124,20 @@ export function InteractiveRsvpPanel({
         ? current.filter((id) => id !== optionId)
         : [...current, optionId];
       return { ...prev, [question.id]: next };
+    });
+    setError(null);
+  };
+
+  const handleSubmit = () => {
+    if (!onSubmit) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await onSubmit(answers);
+      if ("error" in result) {
+        setError(result.error);
+        return;
+      }
+      setSubmitted(true);
     });
   };
 
@@ -175,7 +206,7 @@ export function InteractiveRsvpPanel({
                         <button
                           key={value}
                           type="button"
-                          disabled={!interactive}
+                          disabled={!canEdit || pending}
                           onClick={() => setAttend(question.id, value)}
                           className={`${radius} px-4 py-2.5 text-sm font-medium transition-colors disabled:cursor-default ${bodyFont}`}
                           style={
@@ -186,7 +217,8 @@ export function InteractiveRsvpPanel({
                                   border: `1px solid ${theme.accent}`,
                                 }
                               : {
-                                  backgroundColor: theme.surface || "transparent",
+                                  backgroundColor:
+                                    theme.surface || "transparent",
                                   color: theme.accent,
                                   border: `1px solid ${theme.accent}`,
                                 }
@@ -215,7 +247,7 @@ export function InteractiveRsvpPanel({
                       {question.hint}
                     </p>
                   ) : null}
-                  {interactive ? (
+                  {canEdit ? (
                     <input
                       type="text"
                       value={typeof answer === "string" ? answer : ""}
@@ -223,6 +255,7 @@ export function InteractiveRsvpPanel({
                         setText(question.id, event.target.value)
                       }
                       placeholder={question.placeholder || "Type here..."}
+                      disabled={pending}
                       className={`mt-2 w-full border bg-transparent px-3 py-2.5 text-sm outline-none ${radius} ${bodyFont}`}
                       style={{
                         borderColor: `${theme.accent}55`,
@@ -234,11 +267,13 @@ export function InteractiveRsvpPanel({
                       className={`mt-2 border px-3 py-2.5 text-sm ${radius} ${bodyFont}`}
                       style={{
                         borderColor: `${theme.accent}40`,
-                        color: theme.muted,
+                        color: theme.text,
                         backgroundColor: theme.surface || "transparent",
                       }}
                     >
-                      {question.placeholder || "Type here..."}
+                      {typeof answer === "string" && answer
+                        ? answer
+                        : question.placeholder || "Type here..."}
                     </div>
                   )}
                 </div>
@@ -274,7 +309,7 @@ export function InteractiveRsvpPanel({
                       <button
                         key={option.id}
                         type="button"
-                        disabled={!interactive}
+                        disabled={!canEdit || pending}
                         onClick={() =>
                           toggleChoice(question, option.id, multi)
                         }
@@ -304,12 +339,44 @@ export function InteractiveRsvpPanel({
           })}
         </div>
 
-        {interactive && Object.keys(answers).length > 0 ? (
+        {onSubmit ? (
+          <div className="mt-6 space-y-3">
+            {error ? (
+              <p
+                className={`text-center text-xs ${bodyFont}`}
+                style={{ color: "#9a2a2a" }}
+              >
+                {error}
+              </p>
+            ) : null}
+            {submitted ? (
+              <p
+                className={`text-center text-xs font-medium ${bodyFont}`}
+                style={{ color: theme.accent }}
+              >
+                Thanks - your RSVP is saved. You can update it anytime.
+              </p>
+            ) : null}
+            <button
+              type="button"
+              disabled={pending || Object.keys(answers).length === 0}
+              onClick={handleSubmit}
+              className={`${radius} w-full px-4 py-3 text-sm font-semibold text-white transition-opacity disabled:opacity-40 ${bodyFont}`}
+              style={{ backgroundColor: theme.accent }}
+            >
+              {pending
+                ? "Saving..."
+                : submitted
+                  ? "Update RSVP"
+                  : "Submit RSVP"}
+            </button>
+          </div>
+        ) : interactive && Object.keys(answers).length > 0 ? (
           <p
             className={`mt-5 text-center text-xs font-medium ${bodyFont}`}
             style={{ color: theme.accent }}
           >
-            Preview only — responses aren&apos;t saved yet
+            Preview only - responses aren&apos;t saved yet
           </p>
         ) : null}
       </div>

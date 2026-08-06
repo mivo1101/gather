@@ -48,3 +48,26 @@ export function invitationViewPath(
 ): string {
   return `/invitations/${invitation.slug}`;
 }
+
+/** Post-design setup: connect event → confirm details → guests. */
+export function invitationContinuePath(
+  invitation: Pick<Invitation, "slug">,
+): string {
+  return `/invitations/${invitation.slug}/continue`;
+}
+
+/** Guest-facing personalised invite. Token identifies the recipient. */
+export function guestInvitePath(
+  eventSlug: string,
+  token: string,
+): string {
+  const params = new URLSearchParams({ t: token });
+  return `/invite/${eventSlug}?${params.toString()}`;
+}
+
+export function guestDisplayLabel(guest: {
+  prefix?: string | null;
+  displayName: string;
+}): string {
+  return [guest.prefix, guest.displayName].filter(Boolean).join(" ");
+}

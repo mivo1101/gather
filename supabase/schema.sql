@@ -52,9 +52,26 @@ create unique index events_invitation_uidx on public.events (invitation_id)
 create index events_user_id_idx on public.events (user_id);
 create index events_updated_at_idx on public.events (updated_at desc);
 
+create table public.event_guests (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events (id) on delete cascade,
+  prefix text not null default '',
+  display_name text not null,
+  email text not null,
+  token text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index event_guests_token_uidx on public.event_guests (token);
+create unique index event_guests_event_email_uidx
+  on public.event_guests (event_id, lower(email));
+create index event_guests_event_id_idx on public.event_guests (event_id);
+
 alter table public.users enable row level security;
 alter table public.invitations enable row level security;
 alter table public.events enable row level security;
+alter table public.event_guests enable row level security;
 
 -- App reads/writes via the server service role key (bypasses RLS).
 -- No anon policies yet — keep tables locked to the browser.

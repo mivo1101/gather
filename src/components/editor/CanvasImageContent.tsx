@@ -12,7 +12,6 @@ import type {
   ImageFrame,
 } from "@/lib/data/canvas-elements";
 import { effectsToCss } from "@/lib/element-effects";
-import type { InvitationShape } from "./editor-types";
 import {
   EMPTY_IMAGE_FRAME_SRC,
   imageFrameClipPath,
@@ -42,25 +41,7 @@ export function squareElementSize(
   };
 }
 
-/** Card width/height ratio for percent-based element sizing. */
-export function cardAspectRatio(
-  shape: InvitationShape,
-  customSize?: { width: number; height: number },
-): number {
-  switch (shape) {
-    case "landscape":
-      return 16 / 9;
-    case "square":
-      return 1;
-    case "custom":
-      return (
-        (customSize?.width ?? 4) / Math.max(customSize?.height ?? 5, 0.001)
-      );
-    case "portrait":
-    default:
-      return 9 / 16;
-  }
-}
+export { cardAspectRatio } from "./canvas-metrics";
 
 /** Size a photo element (%) so the selection box matches image aspect. */
 export function photoElementSize(
