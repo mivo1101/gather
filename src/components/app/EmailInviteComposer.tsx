@@ -12,6 +12,7 @@ import type { EventGuest } from "@/lib/data/guests";
 import type { Invitation } from "@/lib/data/types";
 import { guestDisplayLabel, guestInvitePath } from "@/lib/invitation-paths";
 import { Button, PlusIcon } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/editor/ConfirmDialog";
 
 interface EmailInviteComposerProps {
   eventId: string;
@@ -54,6 +55,7 @@ export function EmailInviteComposer({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [confirmSendOpen, setConfirmSendOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const previewGuest =
@@ -397,21 +399,25 @@ export function EmailInviteComposer({
               type="button"
               size="md"
               disabled={pending || !sendingConfigured}
-              onClick={() => {
-                if (
-                  !window.confirm(
-                    `Send personalised invites to ${guests.length} recipient${guests.length === 1 ? "" : "s"}? Already-sent guests will be skipped.`,
-                  )
-                ) {
-                  return;
-                }
-                runAction(sendInviteEmailsAction);
-              }}
+              onClick={() => setConfirmSendOpen(true)}
             >
               Send to guests
               <PlusIcon />
             </Button>
           </div>
+
+          <ConfirmDialog
+            open={confirmSendOpen}
+            title="Send invites?"
+            description={`Send personalised invites to ${guests.length} recipient${guests.length === 1 ? "" : "s"}? Already-sent guests will be skipped.`}
+            confirmLabel="Send to guests"
+            cancelLabel="Cancel"
+            onCancel={() => setConfirmSendOpen(false)}
+            onConfirm={() => {
+              setConfirmSendOpen(false);
+              runAction(sendInviteEmailsAction);
+            }}
+          />
 
           {message ? (
             <p className="rounded-2xl border border-signature/20 bg-signature/10 px-4 py-3 text-sm text-black">
