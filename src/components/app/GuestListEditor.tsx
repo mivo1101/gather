@@ -265,7 +265,7 @@ export function GuestListEditor({
 
       <div className="mt-5 overflow-x-auto rounded-[22px] border border-black/[0.07]">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-soft-grey/80 text-[11px] font-semibold uppercase tracking-[0.12em] text-grey">
+          <thead className="bg-soft-grey/80 text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
             <tr>
               <th className="px-3 py-3 sm:px-4">Prefix</th>
               <th className="px-3 py-3 sm:px-4">Display name</th>

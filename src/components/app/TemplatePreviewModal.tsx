@@ -267,7 +267,7 @@ export function TemplatePreviewModal({
           </button>
 
           <div className="mt-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-signature">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-signature">
               {shapeLabel} template
             </p>
             <h2
@@ -304,7 +304,7 @@ export function TemplatePreviewModal({
           </button>
 
           <div className="mt-7 border-t border-black/5 pt-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
               Previewing
             </p>
             <div className="mt-3 flex items-center justify-between gap-3">
@@ -324,7 +324,7 @@ export function TemplatePreviewModal({
           </div>
 
           <div className="mt-7 border-t border-black/5 pt-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
               Included
             </p>
             <ul className="mt-3 space-y-2.5 text-sm text-black/75">

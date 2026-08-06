@@ -292,6 +292,7 @@ export function CanvasWidgetView({
           <>
             {(["yes", "no"] as const).map((value) => {
               const selected = answer === value;
+              const hasAnswer = answer === "yes" || answer === "no";
               const label =
                 value === "yes" ? widget.yesLabel : widget.noLabel;
               return (
@@ -299,16 +300,14 @@ export function CanvasWidgetView({
                   key={value}
                   type="button"
                   onClick={() => onAnswerChange?.(qid, value)}
-                  className={btnClass}
-                  style={{
+                  className={`${btnClass} transition-opacity`}
+                      style={{
                     ...buttonStyle,
-                    ...(selected
+                    ...(hasAnswer && !selected
                       ? {
-                          outline: "2px solid currentColor",
-                          outlineOffset: 2,
-                          opacity: 1,
+                          opacity: 0.38,
                         }
-                      : { opacity: answer ? 0.7 : 1 }),
+                      : null),
                   }}
                 >
                   {label}
@@ -415,65 +414,89 @@ export function CanvasWidgetView({
         </p>
       ) : null}
       <div className="flex flex-col gap-1">
-        {options.map((option) =>
-          editing ? (
-            <div
-              key={option.id}
-              className="flex items-center gap-2 px-2.5 py-1.5 text-[11px]"
-              style={optionStyle}
-            >
-              <span
-                className={`inline-block h-3 w-3 shrink-0 border border-current ${
-                  widget.kind === "multi_choice" ? "rounded-[2px]" : "rounded-full"
-                }`}
-                aria-hidden="true"
-              />
-              <EditableLine
-                value={option.label}
-                onChange={(label) => {
-                  const nextOptions = options.map((o) =>
-                    o.id === option.id ? { ...o, label } : o,
-                  );
-                  patch({ options: nextOptions });
+        {options.map((option) => {
+          const selected =
+            widget.kind === "multi_choice"
+              ? Array.isArray(answer) && answer.includes(option.id)
+              : answer === option.id;
+          const hasChoiceAnswer =
+            widget.kind === "multi_choice"
+              ? Array.isArray(answer) && answer.length > 0
+              : typeof answer === "string" && answer.length > 0;
+
+          if (editing) {
+            return (
+              <div
+                key={option.id}
+                className="flex items-center gap-2 px-2.5 py-1.5 text-[11px]"
+                style={optionStyle}
+              >
+                <span
+                  className={`inline-block h-3 w-3 shrink-0 border border-current ${
+                    widget.kind === "multi_choice"
+                      ? "rounded-[2px]"
+                      : "rounded-full"
+                  }`}
+                  aria-hidden="true"
+                />
+                <EditableLine
+                  value={option.label}
+                  onChange={(label) => {
+                    const nextOptions = options.map((o) =>
+                      o.id === option.id ? { ...o, label } : o,
+                    );
+                    patch({ options: nextOptions });
+                  }}
+                  onStopEdit={onStopEdit}
+                  placeholder="Option"
+                  className="flex-1 text-[11px]"
+                  style={{ color: "inherit" }}
+                />
+              </div>
+            );
+          }
+
+          if (interactive) {
+            return (
+              <label
+                key={option.id}
+                className="flex items-center gap-2 px-2.5 py-1.5 text-[11px] transition-opacity"
+                style={{
+                  ...optionStyle,
+                  ...(hasChoiceAnswer && !selected
+                    ? {
+                        opacity: 0.38,
+                      }
+                    : null),
                 }}
-                onStopEdit={onStopEdit}
-                placeholder="Option"
-                className="flex-1 text-[11px]"
-                style={{ color: "inherit" }}
-              />
-            </div>
-          ) : interactive ? (
-            <label
-              key={option.id}
-              className="flex items-center gap-2 px-2.5 py-1.5 text-[11px]"
-              style={optionStyle}
-            >
-              <input
-                type={widget.kind === "multi_choice" ? "checkbox" : "radio"}
-                name={
-                  widget.kind === "single_choice" ? `choice-${qid}` : undefined
-                }
-                className="accent-current"
-                checked={
-                  widget.kind === "multi_choice"
-                    ? Array.isArray(answer) && answer.includes(option.id)
-                    : answer === option.id
-                }
-                onChange={() => {
-                  if (widget.kind === "multi_choice") {
-                    const current = Array.isArray(answer) ? answer : [];
-                    const next = current.includes(option.id)
-                      ? current.filter((id) => id !== option.id)
-                      : [...current, option.id];
-                    onAnswerChange?.(qid, next);
-                  } else {
-                    onAnswerChange?.(qid, option.id);
+              >
+                <input
+                  type={widget.kind === "multi_choice" ? "checkbox" : "radio"}
+                  name={
+                    widget.kind === "single_choice"
+                      ? `choice-${qid}`
+                      : undefined
                   }
-                }}
-              />
-              <span>{option.label}</span>
-            </label>
-          ) : (
+                  className="accent-current"
+                  checked={selected}
+                  onChange={() => {
+                    if (widget.kind === "multi_choice") {
+                      const current = Array.isArray(answer) ? answer : [];
+                      const next = current.includes(option.id)
+                        ? current.filter((id) => id !== option.id)
+                        : [...current, option.id];
+                      onAnswerChange?.(qid, next);
+                    } else {
+                      onAnswerChange?.(qid, option.id);
+                    }
+                  }}
+                />
+                <span>{option.label}</span>
+              </label>
+            );
+          }
+
+          return (
             <div
               key={option.id}
               className="flex items-center gap-2 px-2.5 py-1.5 text-[11px]"
@@ -481,14 +504,16 @@ export function CanvasWidgetView({
             >
               <span
                 className={`inline-block h-3 w-3 shrink-0 border border-current ${
-                  widget.kind === "multi_choice" ? "rounded-[2px]" : "rounded-full"
+                  widget.kind === "multi_choice"
+                    ? "rounded-[2px]"
+                    : "rounded-full"
                 }`}
                 aria-hidden="true"
               />
               <span>{option.label}</span>
             </div>
-          ),
-        )}
+          );
+        })}
       </div>
     </div>
   );

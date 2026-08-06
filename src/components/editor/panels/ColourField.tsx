@@ -307,7 +307,7 @@ function GradientPane({
       </label>
       <div className="grid grid-cols-2 gap-2">
         <label className="block">
-          <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-grey">
+          <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
             Start
           </span>
           <div className="flex items-center gap-1.5">
@@ -335,7 +335,7 @@ function GradientPane({
           </div>
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-grey">
+          <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
             End
           </span>
           <div className="flex items-center gap-1.5">
@@ -459,7 +459,7 @@ export function ColourField({
           >
             {documentColors.length > 0 ? (
               <div className="mb-3">
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-grey">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
                   Document colours
                 </p>
                 <div className="flex flex-wrap gap-2">

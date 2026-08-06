@@ -153,12 +153,12 @@ export async function sendTestInviteEmailAction(
       return { error: "Add at least one guest before sending a test." };
     }
 
-    const testTo = String(formData.get("testTo") ?? "")
-      .trim()
-      .toLowerCase();
-    const recipient = testTo || userEmail;
+    // Test sends always go to the signed-in account - avoids using others' inboxes.
+    const recipient = userEmail.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
-      return { error: "Enter a valid email for the test send." };
+      return {
+        error: "Your account needs a valid email address to send a test.",
+      };
     }
 
     const campaign = await upsertEmailCampaignForEvent({

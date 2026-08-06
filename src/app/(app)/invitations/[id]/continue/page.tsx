@@ -2,10 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import { EventSetupFlow } from "@/components/app/EventSetupFlow";
 import {
   defaultEmailCampaignDraft,
-  getDeliveriesForEvent,
   getEmailCampaignForEvent,
   type EmailCampaignDraft,
-  type EmailDelivery,
 } from "@/lib/data/email-campaigns";
 import {
   getEventByInvitationId,
@@ -126,7 +124,6 @@ export default async function InvitationContinuePage({
   }
 
   let emailDraft: EmailCampaignDraft | null = null;
-  let emailDeliveries: EmailDelivery[] = [];
   let missingEmailTable = false;
   const designImageUrls = listInvitationImageCandidates(invitation);
   const defaultHero =
@@ -155,7 +152,6 @@ export default async function InvitationContinuePage({
           // null means the host cleared the photo on purpose
           heroImageUrl: campaign.heroImageUrl ?? "",
         };
-        emailDeliveries = await getDeliveriesForEvent(linkedEvent.id);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
@@ -191,7 +187,6 @@ export default async function InvitationContinuePage({
       missingGuestsTable={missingGuestsTable}
       missingEmailTable={missingEmailTable}
       emailDraft={emailDraft}
-      emailDeliveries={emailDeliveries}
       designImageUrls={designImageUrls}
       sendingConfigured={isEmailSendingConfigured()}
       defaultTestEmail={user.email}

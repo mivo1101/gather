@@ -103,7 +103,7 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
         </div>
         <dl className="mt-4 space-y-4 text-sm">
           <div>
-            <dt className="text-xs font-medium uppercase tracking-[0.12em] text-grey">
+            <dt className="text-xs font-medium uppercase tracking-[0.08em] text-grey">
               Date
             </dt>
             <dd className="mt-1 font-medium text-black">
@@ -116,7 +116,7 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
             </dd>
           </div>
           <div>
-            <dt className="text-xs font-medium uppercase tracking-[0.12em] text-grey">
+            <dt className="text-xs font-medium uppercase tracking-[0.08em] text-grey">
               Time zone
             </dt>
             <dd className="mt-1 font-medium text-black">
@@ -124,7 +124,7 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
             </dd>
           </div>
           <div>
-            <dt className="text-xs font-medium uppercase tracking-[0.12em] text-grey">
+            <dt className="text-xs font-medium uppercase tracking-[0.08em] text-grey">
               Location
             </dt>
             <dd className="mt-1 font-medium text-black">
@@ -142,7 +142,7 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
       <h2 className="text-base font-semibold text-black">Event details</h2>
       <form action={saveAction} className="mt-4 space-y-3">
         <label className="block">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-grey">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
             Name
           </span>
           <input
@@ -155,7 +155,7 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
         </label>
         <div className="grid grid-cols-2 gap-2">
           <label className="block">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-grey">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
               Date
             </span>
             <input
@@ -168,7 +168,7 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
             />
           </label>
           <label className="block">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-grey">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
               Time
             </span>
             <input
@@ -181,7 +181,7 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
           </label>
         </div>
         <label className="block">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-grey">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
             Time zone
           </span>
           <select
@@ -198,7 +198,7 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
           </select>
         </label>
         <label className="block">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-grey">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
             Venue
           </span>
           <input
@@ -210,7 +210,7 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
           />
         </label>
         <label className="block">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-grey">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
             Address
           </span>
           <input

@@ -19,6 +19,8 @@ export interface PersonalisedInvite {
   };
   guest: EventGuest;
   invitation: Invitation;
+  /** Host display name for the opening greeting. */
+  hostName: string;
 }
 
 interface GuestRow {
@@ -119,6 +121,17 @@ export async function getPersonalisedInvite(
   }
   if (!invitationRow) return null;
 
+  let hostName = "your host";
+  const { data: hostRow } = await supabase
+    .from("users")
+    .select("name")
+    .eq("id", event.user_id)
+    .maybeSingle();
+  const rawHost = (hostRow as { name?: string | null } | null)?.name?.trim();
+  if (rawHost) {
+    hostName = rawHost.split(/\s+/)[0] || rawHost;
+  }
+
   const row = invitationRow as InvitationRow;
   const invitation: Invitation = {
     id: row.id,
@@ -158,5 +171,6 @@ export async function getPersonalisedInvite(
       updatedAt: guest.updated_at,
     },
     invitation,
+    hostName,
   };
 }

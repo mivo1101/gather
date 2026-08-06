@@ -207,14 +207,31 @@ export function renderInviteEmail(
     ? `<a href="${escapeHtml(calendarUrl)}" style="display:inline-block;margin:0 8px 8px 0;padding:12px 22px;border-radius:999px;border:1px solid #d8d8dc;background:#ffffff;color:#000000;font-size:14px;font-weight:600;text-decoration:none;">Add to calendar</a>`
     : "";
 
+  const marketingUrl = base;
+  const fontStack =
+    "'Urbanist',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif";
+  const brandMark = `<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 14px;">
+              <tr>
+                <td style="vertical-align:middle;padding:0 8px 0 0;">
+                  <span style="display:inline-block;width:28px;height:28px;line-height:28px;text-align:center;border-radius:999px;background:#000000;color:#ff60aa;font-size:16px;font-weight:700;font-family:${fontStack};">+</span>
+                </td>
+                <td style="vertical-align:middle;padding:0;">
+                  <span style="font-family:${fontStack};font-size:20px;font-weight:600;letter-spacing:-0.02em;color:#000000;">Gather</span>
+                </td>
+              </tr>
+            </table>`;
+
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(subject)}</title>
+  <!--[if !mso]><!-->
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@600;700&display=swap" rel="stylesheet" />
+  <!--<![endif]-->
 </head>
-<body style="margin:0;padding:0;background:#f6f6f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#f6f6f6;font-family:${fontStack};">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
     ${escapeHtml(input.draft.previewText || `You're invited to ${input.event.name}.`)}
   </div>
@@ -224,29 +241,33 @@ export function renderInviteEmail(
         <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #ececec;">
           ${hero}
           <tr>
-            <td style="padding:28px 32px 8px;">
-              <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#ff60aa;">Gather</p>
-              <h1 style="margin:0;font-size:28px;line-height:1.25;color:#000000;font-weight:700;">${escapeHtml(input.event.name)}</h1>
+            <td style="padding:28px 32px 8px;font-family:${fontStack};">
+              ${brandMark}
+              <h1 style="margin:0;font-size:28px;line-height:1.25;color:#000000;font-weight:700;font-family:${fontStack};">${escapeHtml(input.event.name)}</h1>
             </td>
           </tr>
           ${summaryHtml}
           <tr>
-            <td style="padding:8px 32px 0;">
+            <td style="padding:8px 32px 0;font-family:${fontStack};">
               <p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#000000;font-weight:600;">${escapeHtml(greetingLine)}</p>
               ${bodyToHtml(input.draft.body)}
             </td>
           </tr>
           <tr>
-            <td style="padding:8px 32px 28px;">
-              <a href="${escapeHtml(inviteUrl)}" style="display:inline-block;margin:0 8px 8px 0;padding:12px 22px;border-radius:999px;background:#000000;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">${escapeHtml(input.draft.ctaLabel)}</a>
+            <td style="padding:8px 32px 28px;font-family:${fontStack};">
+              <a href="${escapeHtml(inviteUrl)}" style="display:inline-block;margin:0 8px 8px 0;padding:12px 22px;border-radius:999px;background:#000000;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;font-family:${fontStack};"><span style="color:#ff60aa;font-weight:700;">+</span>&nbsp;${escapeHtml(input.draft.ctaLabel)}</a>
               ${calendarButton}
             </td>
           </tr>
           <tr>
-            <td style="padding:0 32px 28px;border-top:1px solid #f0f0f0;">
+            <td style="padding:0 32px 28px;border-top:1px solid #f0f0f0;font-family:${fontStack};">
               <p style="margin:20px 0 0;font-size:13px;line-height:1.5;color:#8e8e93;">
-                Sent by ${escapeHtml(input.draft.senderName)} via Gather.
+                Sent by ${escapeHtml(input.draft.senderName)}.
                 Replies go to ${escapeHtml(input.draft.replyTo)}.
+              </p>
+              <p style="margin:12px 0 0;font-size:12px;line-height:1.5;color:#8e8e93;">
+                <a href="${escapeHtml(marketingUrl)}" style="color:#000000;font-weight:600;text-decoration:none;">Gather</a>
+                - Every guest is your +1.
               </p>
             </td>
           </tr>
@@ -265,8 +286,10 @@ export function renderInviteEmail(
     `${input.draft.ctaLabel}: ${inviteUrl}`,
     calendarUrl ? `Add to calendar: ${calendarUrl}` : "",
     "",
-    `Sent by ${input.draft.senderName} via Gather.`,
+    `Sent by ${input.draft.senderName}.`,
     `Replies go to ${input.draft.replyTo}.`,
+    "",
+    `Gather - Every guest is your +1: ${marketingUrl}`,
   ]
     .filter((line) => line !== "")
     .join("\n");

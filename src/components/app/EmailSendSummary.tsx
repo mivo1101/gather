@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import type { EmailDelivery } from "@/lib/data/email-campaigns";
 import type { EventGuest } from "@/lib/data/guests";
 import {
   guestDisplayLabel,
-  guestInvitePath,
   invitationContinuePath,
 } from "@/lib/invitation-paths";
 import type { Invitation } from "@/lib/data/types";
@@ -20,7 +18,6 @@ interface EmailSendSummaryProps {
 
 export function EmailSendSummary({
   invitation,
-  eventSlug,
   guests,
   deliveries,
   campaignSubject,
@@ -99,13 +96,6 @@ export function EmailSendSummary({
                     >
                       {status}
                     </span>
-                    <Link
-                      href={guestInvitePath(eventSlug, guest.token)}
-                      target="_blank"
-                      className="rounded-full px-3 py-1.5 text-xs font-semibold text-black hover:bg-soft-grey"
-                    >
-                      Open
-                    </Link>
                   </div>
                 </li>
               );

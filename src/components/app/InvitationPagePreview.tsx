@@ -170,6 +170,7 @@ export function InvitationPagePreview({
     <div
       ref={frameRef}
       className={`relative overflow-hidden ${className}`}
+      style={{ backgroundColor }}
       aria-hidden={interactive ? undefined : true}
     >
       {elements.length === 0 ? (
