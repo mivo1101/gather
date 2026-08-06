@@ -5,6 +5,7 @@ interface BrandCheckboxProps {
   onChange: () => void;
   label: string;
   className?: string;
+  children?: React.ReactNode;
 }
 
 /** Custom checkbox using brand black + signature pink. */
@@ -13,10 +14,11 @@ export function BrandCheckbox({
   onChange,
   label,
   className = "",
+  children,
 }: BrandCheckboxProps) {
   return (
     <label
-      className={`inline-flex cursor-pointer items-center ${className}`}
+      className={`inline-flex cursor-pointer items-start gap-3 ${className}`}
       onClick={(event) => event.stopPropagation()}
     >
       <span className="sr-only">{label}</span>
@@ -28,7 +30,7 @@ export function BrandCheckbox({
       />
       <span
         aria-hidden="true"
-        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors ${
+        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors ${
           checked
             ? "border-black bg-signature"
             : "border-black/25 bg-white"
@@ -51,6 +53,9 @@ export function BrandCheckbox({
           </svg>
         )}
       </span>
+      {children ? (
+        <span className="text-sm leading-6 text-black/80">{children}</span>
+      ) : null}
     </label>
   );
 }

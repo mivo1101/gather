@@ -7,6 +7,7 @@ import { formatRelativeTime } from "@/lib/format";
 import {
   BackIcon,
   ChevronDownIcon,
+  ChevronRightIcon,
   CloseIcon,
   DesktopIcon,
   MobileIcon,
@@ -30,7 +31,9 @@ interface EditorToolbarProps {
   onRedo: () => void;
   onSave: () => void;
   onPublish: (mode: "published" | "draft") => void;
+  onContinue: () => void;
   isSaving: boolean;
+  isContinuing?: boolean;
   saveLabel: string;
 }
 
@@ -48,7 +51,9 @@ export function EditorToolbar({
   onRedo,
   onSave,
   onPublish,
+  onContinue,
   isSaving,
+  isContinuing = false,
   saveLabel,
 }: EditorToolbarProps) {
   const [publishOpen, setPublishOpen] = useState(false);
@@ -166,7 +171,7 @@ export function EditorToolbar({
         <button
           type="button"
           onClick={onSave}
-          disabled={isSaving}
+          disabled={isSaving || isContinuing}
           className="rounded-full border border-black/10 px-3.5 py-2 text-sm font-semibold text-black transition-colors hover:border-black/20 disabled:opacity-60"
         >
           {isSaving ? "Saving…" : saveLabel}
@@ -176,14 +181,15 @@ export function EditorToolbar({
           <button
             type="button"
             onClick={() => setPublishOpen((open) => !open)}
-            className="inline-flex items-center gap-1 rounded-full bg-black px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-black/90"
+            className="inline-flex items-center gap-1 rounded-full border border-black/10 px-3.5 py-2 text-sm font-semibold text-black transition-colors hover:border-black/20"
             aria-expanded={publishOpen}
+            aria-label="Publish options"
           >
             Publish
-            <ChevronDownIcon className="text-signature" />
+            <ChevronDownIcon className="text-grey" />
           </button>
           {publishOpen && (
-            <div className="absolute right-0 top-full z-40 mt-2 min-w-[11rem] overflow-hidden rounded-xl border border-black/5 bg-white py-1 shadow-[0_12px_28px_rgba(0,0,0,0.12)]">
+            <div className="absolute right-0 top-full z-40 mt-2 min-w-[12rem] overflow-hidden rounded-xl border border-black/5 bg-white py-1 shadow-[0_12px_28px_rgba(0,0,0,0.12)]">
               <button
                 type="button"
                 className="block w-full px-3 py-2 text-left text-sm text-black hover:bg-soft-grey"
@@ -192,7 +198,7 @@ export function EditorToolbar({
                   setPublishOpen(false);
                 }}
               >
-                Publish now
+                Publish design
               </button>
               <button
                 type="button"
@@ -204,9 +210,25 @@ export function EditorToolbar({
               >
                 Revert to draft
               </button>
+              <p className="border-t border-black/5 px-3 py-2 text-[11px] leading-4 text-grey">
+                Publishing marks the design ready. Use Continue to connect an
+                event and invite guests.
+              </p>
             </div>
           )}
         </div>
+
+        <button
+          type="button"
+          onClick={onContinue}
+          disabled={isSaving || isContinuing}
+          className="inline-flex items-center gap-1 rounded-full bg-black px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-black/90 disabled:opacity-60"
+        >
+          {isContinuing ? "Continuing…" : "Continue"}
+          {!isContinuing ? (
+            <ChevronRightIcon className="h-3.5 w-3.5 text-signature" />
+          ) : null}
+        </button>
 
         <Link
           href="/home"

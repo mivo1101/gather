@@ -20,12 +20,18 @@ import {
 } from "@/lib/color-utils";
 import { canvasFontFamilyClass } from "@/lib/canvas-fonts";
 
+import type { RsvpAnswerValue } from "@/lib/data/rsvp-responses";
+
 interface CanvasWidgetViewProps {
   widget: WidgetConfig;
   elementStyle?: ElementStyle;
   personalizedName?: string;
   /** Editor: no navigation / no answering. Preview/guest: interactive. */
   interactive?: boolean;
+  /** Stable question id used when saving RSVP answers (usually the element id). */
+  questionId?: string;
+  answer?: RsvpAnswerValue;
+  onAnswerChange?: (questionId: string, value: RsvpAnswerValue) => void;
   /** Editor: inline-edit labels / placeholders / options. */
   editing?: boolean;
   onChange?: (widget: WidgetConfig) => void;
@@ -102,6 +108,9 @@ export function CanvasWidgetView({
   elementStyle,
   personalizedName = "Guest name",
   interactive = false,
+  questionId,
+  answer,
+  onAnswerChange,
   editing = false,
   onChange,
   onStopEdit,
@@ -111,6 +120,7 @@ export function CanvasWidgetView({
     if (!onChange) return;
     onChange({ ...widget, ...partial } as WidgetConfig);
   };
+  const qid = questionId || widget.kind;
 
   if (widget.kind === "guest_name") {
     const style = elementStyle;
@@ -280,12 +290,31 @@ export function CanvasWidgetView({
           </>
         ) : interactive ? (
           <>
-            <button type="button" className={btnClass} style={buttonStyle}>
-              {widget.yesLabel}
-            </button>
-            <button type="button" className={btnClass} style={buttonStyle}>
-              {widget.noLabel}
-            </button>
+            {(["yes", "no"] as const).map((value) => {
+              const selected = answer === value;
+              const label =
+                value === "yes" ? widget.yesLabel : widget.noLabel;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => onAnswerChange?.(qid, value)}
+                  className={btnClass}
+                  style={{
+                    ...buttonStyle,
+                    ...(selected
+                      ? {
+                          outline: "2px solid currentColor",
+                          outlineOffset: 2,
+                          opacity: 1,
+                        }
+                      : { opacity: answer ? 0.7 : 1 }),
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </>
         ) : (
           <>
@@ -337,6 +366,8 @@ export function CanvasWidgetView({
         ) : interactive ? (
           <input
             type="text"
+            value={typeof answer === "string" ? answer : ""}
+            onChange={(e) => onAnswerChange?.(qid, e.target.value)}
             placeholder={widget.placeholder || "Type here…"}
             className="w-full px-3 py-2 text-[11px] outline-none placeholder:opacity-55"
             style={fieldStyle}
@@ -419,9 +450,26 @@ export function CanvasWidgetView({
             >
               <input
                 type={widget.kind === "multi_choice" ? "checkbox" : "radio"}
-                name={widget.kind === "single_choice" ? "choice" : undefined}
+                name={
+                  widget.kind === "single_choice" ? `choice-${qid}` : undefined
+                }
                 className="accent-current"
-                onChange={() => undefined}
+                checked={
+                  widget.kind === "multi_choice"
+                    ? Array.isArray(answer) && answer.includes(option.id)
+                    : answer === option.id
+                }
+                onChange={() => {
+                  if (widget.kind === "multi_choice") {
+                    const current = Array.isArray(answer) ? answer : [];
+                    const next = current.includes(option.id)
+                      ? current.filter((id) => id !== option.id)
+                      : [...current, option.id];
+                    onAnswerChange?.(qid, next);
+                  } else {
+                    onAnswerChange?.(qid, option.id);
+                  }
+                }}
               />
               <span>{option.label}</span>
             </label>
