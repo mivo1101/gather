@@ -2,24 +2,16 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   saveEmailCampaignAction,
   sendInviteEmailsAction,
   sendTestInviteEmailAction,
 } from "@/lib/actions/email";
-import type {
-  EmailCampaignDraft,
-  EmailDelivery,
-} from "@/lib/data/email-campaigns";
+import type { EmailCampaignDraft } from "@/lib/data/email-campaigns";
 import type { EventGuest } from "@/lib/data/guests";
 import type { Invitation } from "@/lib/data/types";
-import { eventPath } from "@/lib/data/event-workspaces";
-import {
-  guestDisplayLabel,
-  guestInvitePath,
-} from "@/lib/invitation-paths";
-import { Button } from "@/components/ui/Button";
+import { guestDisplayLabel, guestInvitePath } from "@/lib/invitation-paths";
+import { Button, PlusIcon } from "@/components/ui/Button";
 
 interface EmailInviteComposerProps {
   eventId: string;
@@ -34,13 +26,10 @@ interface EmailInviteComposerProps {
   invitation: Invitation | null;
   guests: EventGuest[];
   initialDraft: EmailCampaignDraft;
-  deliveries: EmailDelivery[];
   sendingConfigured: boolean;
   designImageUrls: string[];
-  /** Prefills the Send test to field (usually the signed-in user). */
+  /** Account email used for test sends (locked to signed-in user). */
   defaultTestEmail?: string;
-  /** When true, show a link back to the event hub after actions. */
-  setupMode?: boolean;
 }
 
 function fieldClassName(extra = "") {
@@ -53,16 +42,13 @@ export function EmailInviteComposer({
   invitation,
   guests,
   initialDraft,
-  deliveries,
   sendingConfigured,
   designImageUrls,
   defaultTestEmail = "",
-  setupMode = false,
 }: EmailInviteComposerProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState(initialDraft);
-  const [testTo, setTestTo] = useState(defaultTestEmail);
   const [extraImages, setExtraImages] = useState<string[]>([]);
   const [previewGuestId, setPreviewGuestId] = useState(guests[0]?.id ?? "");
   const [message, setMessage] = useState<string | null>(null);
@@ -72,14 +58,6 @@ export function EmailInviteComposer({
 
   const previewGuest =
     guests.find((guest) => guest.id === previewGuestId) ?? guests[0] ?? null;
-
-  const deliveryByGuest = useMemo(() => {
-    const map = new Map<string, EmailDelivery>();
-    for (const delivery of deliveries) {
-      map.set(delivery.guestId, delivery);
-    }
-    return map;
-  }, [deliveries]);
 
   const imageOptions = useMemo(() => {
     const urls: string[] = [];
@@ -126,7 +104,6 @@ export function EmailInviteComposer({
     formData.set("body", draft.body);
     formData.set("ctaLabel", draft.ctaLabel);
     formData.set("heroImageUrl", draft.heroImageUrl);
-    formData.set("testTo", testTo);
     if (draft.includeCalendar) formData.set("includeCalendar", "on");
 
     setMessage(null);
@@ -196,21 +173,10 @@ export function EmailInviteComposer({
         </p>
       ) : null}
 
-      {message ? (
-        <p className="rounded-2xl border border-signature/20 bg-signature/10 px-4 py-3 text-sm text-black">
-          {message}
-        </p>
-      ) : null}
-      {error ? (
-        <p className="rounded-2xl bg-[#fff1f1] px-4 py-3 text-sm text-[#9a2a2a]">
-          {error}
-        </p>
-      ) : null}
-
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <div>
-            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
               Email photo
             </span>
             <p className="mt-1 text-sm text-grey">
@@ -271,7 +237,7 @@ export function EmailInviteComposer({
           </div>
 
           <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
               Subject
             </span>
             <input
@@ -284,7 +250,7 @@ export function EmailInviteComposer({
           </label>
 
           <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
               Preview text
             </span>
             <input
@@ -301,7 +267,7 @@ export function EmailInviteComposer({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
                 Sender name
               </span>
               <input
@@ -316,7 +282,7 @@ export function EmailInviteComposer({
               />
             </label>
             <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
                 Reply-to
               </span>
               <input
@@ -335,7 +301,7 @@ export function EmailInviteComposer({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
                 Greeting
               </span>
               <input
@@ -350,7 +316,7 @@ export function EmailInviteComposer({
               />
             </label>
             <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
                 Button label
               </span>
               <input
@@ -367,7 +333,7 @@ export function EmailInviteComposer({
           </div>
 
           <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
               Body
             </span>
             <textarea
@@ -395,22 +361,18 @@ export function EmailInviteComposer({
             Include Add to calendar button
           </label>
 
-          <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+          <div className="rounded-2xl border border-black/[0.06] bg-soft-grey/50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
               Send test to
-            </span>
-            <input
-              type="email"
-              value={testTo}
-              onChange={(e) => setTestTo(e.target.value)}
-              placeholder="you@example.com"
-              className={fieldClassName()}
-            />
-            <p className="mt-1.5 text-xs text-grey">
-              With Resend’s free test sender, this must be your Resend account
-              email until a domain is verified.
             </p>
-          </label>
+            <p className="mt-1.5 text-sm font-medium text-black">
+              {defaultTestEmail || "Your account email"}
+            </p>
+            <p className="mt-1 text-xs text-grey">
+              Test emails always go to your signed-in account so guest inboxes
+              stay untouched.
+            </p>
+          </div>
 
           <div className="flex flex-wrap gap-2 pt-1">
             <Button
@@ -426,7 +388,7 @@ export function EmailInviteComposer({
               type="button"
               variant="secondary"
               size="md"
-              disabled={pending || !sendingConfigured}
+              disabled={pending || !sendingConfigured || !defaultTestEmail}
               onClick={() => runAction(sendTestInviteEmailAction)}
             >
               Send test
@@ -447,24 +409,25 @@ export function EmailInviteComposer({
               }}
             >
               Send to guests
+              <PlusIcon />
             </Button>
           </div>
 
-          {setupMode ? (
-            <div className="pt-2">
-              <Link
-                href={eventPath({ slug: event.slug })}
-                className="text-sm font-semibold text-grey transition-colors hover:text-black"
-              >
-                Done - back to event hub
-              </Link>
-            </div>
+          {message ? (
+            <p className="rounded-2xl border border-signature/20 bg-signature/10 px-4 py-3 text-sm text-black">
+              {message}
+            </p>
+          ) : null}
+          {error ? (
+            <p className="rounded-2xl bg-[#fff1f1] px-4 py-3 text-sm text-[#9a2a2a]">
+              {error}
+            </p>
           ) : null}
         </div>
 
         <div>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
               Email preview
             </p>
             <label className="flex items-center gap-2 text-sm text-black">
@@ -490,7 +453,7 @@ export function EmailInviteComposer({
                 {draft.subject || "Untitled"}
               </p>
               <p className="mt-1 truncate">
-                From {draft.senderName || "Host"} via Gather · Reply-to{" "}
+                From {draft.senderName || "Host"} · Reply-to{" "}
                 {draft.replyTo || "-"}
               </p>
             </div>
@@ -507,10 +470,18 @@ export function EmailInviteComposer({
                   />
                 ) : null}
                 <div className="px-5 py-5">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-signature">
-                    Gather
-                  </p>
-                  <h3 className="mt-1 text-xl font-bold tracking-tight text-black">
+                  <div className="mb-3.5 flex items-center gap-2">
+                    <span
+                      className="flex h-7 w-7 items-center justify-center rounded-full bg-black text-base font-bold text-signature"
+                      aria-hidden="true"
+                    >
+                      +
+                    </span>
+                    <span className="text-lg font-semibold tracking-tight text-black">
+                      Gather
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-bold tracking-tight text-black">
                     {event.name}
                   </h3>
                   {(event.eventDate || location) && (
@@ -558,12 +529,18 @@ export function EmailInviteComposer({
                         href={inviteHref}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex rounded-full bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/90"
+                        className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/90"
                       >
+                        <span className="text-signature" aria-hidden="true">
+                          +
+                        </span>
                         {draft.ctaLabel || "View invitation"}
                       </a>
                     ) : (
-                      <span className="inline-flex rounded-full bg-black px-4 py-2 text-sm font-semibold text-white">
+                      <span className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white">
+                        <span className="text-signature" aria-hidden="true">
+                          +
+                        </span>
                         {draft.ctaLabel || "View invitation"}
                       </span>
                     )}
@@ -574,80 +551,18 @@ export function EmailInviteComposer({
                     ) : null}
                   </div>
                   <p className="mt-5 border-t border-black/[0.06] pt-4 text-xs leading-5 text-grey">
-                    Sent by {draft.senderName || "Host"} via Gather. Replies go
-                    to {draft.replyTo || "your reply-to address"}.
+                    Sent by {draft.senderName || "Host"}. Replies go to{" "}
+                    {draft.replyTo || "your reply-to address"}.
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-grey">
+                    <span className="font-semibold text-black">Gather</span> -
+                    Every guest is your +1.
                   </p>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
-      <div>
-        <h3 className="text-sm font-semibold text-black">Delivery status</h3>
-        <p className="mt-1 text-sm text-grey">
-          Each guest receives their own personalised link. Already-sent
-          recipients are skipped on the next send.
-        </p>
-        <ul className="mt-4 divide-y divide-black/[0.06] rounded-2xl border border-black/[0.06]">
-          {guests.map((guest) => {
-            const delivery = deliveryByGuest.get(guest.id);
-            const status = delivery?.status ?? "not sent";
-            return (
-              <li
-                key={guest.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium text-black">
-                    {guestDisplayLabel(guest)}
-                  </p>
-                  <p className="mt-0.5 truncate text-grey">{guest.email}</p>
-                  {delivery?.error ? (
-                    <p className="mt-1 text-xs text-[#9a2a2a]">
-                      {delivery.error}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${
-                      status === "sent"
-                        ? "bg-signature/15 text-black"
-                        : status === "failed" || status === "bounced"
-                          ? "bg-[#fff1f1] text-[#9a2a2a]"
-                          : "bg-soft-grey text-grey"
-                    }`}
-                  >
-                    {status}
-                  </span>
-                  <a
-                    href={guestInvitePath(event.slug, guest.token)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-full px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-soft-grey"
-                  >
-                    Open
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const path = guestInvitePath(event.slug, guest.token);
-                      const url = `${window.location.origin}${path}`;
-                      void navigator.clipboard.writeText(url).catch(() => {
-                        window.prompt("Copy this personalised link:", url);
-                      });
-                    }}
-                    className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:border-black/20"
-                  >
-                    Copy link
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
       </div>
     </div>
   );

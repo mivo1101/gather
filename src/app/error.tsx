@@ -9,7 +9,7 @@ export default function Error({
 }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-white px-6 text-center">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-grey">
+      <p className="text-xs font-semibold uppercase tracking-[0.1em] text-grey">
         Gather
       </p>
       <h1 className="mt-3 text-3xl font-bold text-black">Something went wrong</h1>

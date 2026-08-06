@@ -154,7 +154,7 @@ export function InteractiveRsvpPanel({
         <div className="text-center">
           {resolved.eyebrow ? (
             <p
-              className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${bodyFont}`}
+              className={`text-[10px] font-semibold uppercase tracking-[0.1em] ${bodyFont}`}
               style={{ color: theme.accent }}
             >
               {resolved.eyebrow}
@@ -201,28 +201,27 @@ export function InteractiveRsvpPanel({
                   <div className="flex flex-col gap-2">
                     {(["yes", "no"] as const).map((value) => {
                       const selected = answer === value;
+                      const hasAnswer = answer === "yes" || answer === "no";
                       const label = value === "yes" ? yesLabel : noLabel;
+                      // Keep designed chrome; blur options the guest didn't pick.
+                      const designedStyle = {
+                        backgroundColor: theme.surface || "transparent",
+                        color: theme.accent,
+                        border: `1px solid ${theme.accent}`,
+                        ...(hasAnswer && !selected
+                          ? {
+                              opacity: 0.38,
+                            }
+                          : { opacity: 1 }),
+                      };
                       return (
                         <button
                           key={value}
                           type="button"
                           disabled={!canEdit || pending}
                           onClick={() => setAttend(question.id, value)}
-                          className={`${radius} px-4 py-2.5 text-sm font-medium transition-colors disabled:cursor-default ${bodyFont}`}
-                          style={
-                            selected
-                              ? {
-                                  backgroundColor: theme.accent,
-                                  color: "#ffffff",
-                                  border: `1px solid ${theme.accent}`,
-                                }
-                              : {
-                                  backgroundColor:
-                                    theme.surface || "transparent",
-                                  color: theme.accent,
-                                  border: `1px solid ${theme.accent}`,
-                                }
-                          }
+                          className={`${radius} px-4 py-2.5 text-sm font-medium transition-opacity disabled:cursor-default ${bodyFont}`}
+                          style={designedStyle}
                         >
                           {label}
                         </button>
@@ -305,6 +304,17 @@ export function InteractiveRsvpPanel({
                 <div className="mt-2 flex flex-wrap gap-2">
                   {(question.options || []).map((option) => {
                     const selected = selectedIds.includes(option.id);
+                    const hasChoice = selectedIds.length > 0;
+                    const designedStyle = {
+                      backgroundColor: theme.surface || "transparent",
+                      color: theme.text,
+                      border: `1px solid ${theme.accent}55`,
+                      ...(hasChoice && !selected
+                        ? {
+                            opacity: 0.38,
+                          }
+                        : { opacity: 1 }),
+                    };
                     return (
                       <button
                         key={option.id}
@@ -313,21 +323,8 @@ export function InteractiveRsvpPanel({
                         onClick={() =>
                           toggleChoice(question, option.id, multi)
                         }
-                        className={`${radius} px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-default ${bodyFont}`}
-                        style={
-                          selected
-                            ? {
-                                backgroundColor: theme.accent,
-                                color: "#ffffff",
-                                border: `1px solid ${theme.accent}`,
-                              }
-                            : {
-                                backgroundColor:
-                                  theme.surface || "transparent",
-                                color: theme.text,
-                                border: `1px solid ${theme.accent}55`,
-                              }
-                        }
+                        className={`${radius} px-3 py-1.5 text-xs font-medium transition-opacity disabled:cursor-default ${bodyFont}`}
+                        style={designedStyle}
                       >
                         {option.label}
                       </button>

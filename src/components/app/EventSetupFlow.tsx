@@ -14,10 +14,7 @@ import {
 } from "@/lib/data/event-workspaces";
 import type { EventGuest } from "@/lib/data/guests";
 import type { Invitation } from "@/lib/data/types";
-import type {
-  EmailCampaignDraft,
-  EmailDelivery,
-} from "@/lib/data/email-campaigns";
+import type { EmailCampaignDraft } from "@/lib/data/email-campaigns";
 import { formatEventDate } from "@/lib/format";
 import { invitationEditPath } from "@/lib/invitation-paths";
 import { Button } from "@/components/ui/Button";
@@ -46,7 +43,6 @@ interface EventSetupFlowProps {
   missingGuestsTable?: boolean;
   missingEmailTable?: boolean;
   emailDraft?: EmailCampaignDraft | null;
-  emailDeliveries?: EmailDelivery[];
   designImageUrls?: string[];
   sendingConfigured?: boolean;
   defaultTestEmail?: string;
@@ -251,7 +247,7 @@ function ChooseEventStep({
 
         {mode === "create" ? (
           <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
               Event name
             </span>
             <input
@@ -264,7 +260,7 @@ function ChooseEventStep({
           </label>
         ) : (
           <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
               Your events
             </span>
             <select
@@ -371,7 +367,7 @@ function EventDetailsStep({
         <input type="hidden" name="name" value={event.name} />
 
         <div>
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
             Event name
           </span>
           <p className="mt-2 rounded-2xl border border-black/[0.06] bg-soft-grey/70 px-4 py-3.5 text-sm font-medium text-black">
@@ -384,7 +380,7 @@ function EventDetailsStep({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
               Date
             </span>
             <input
@@ -397,7 +393,7 @@ function EventDetailsStep({
             />
           </label>
           <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
               Time
             </span>
             <input
@@ -411,7 +407,7 @@ function EventDetailsStep({
         </div>
 
         <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
             Time zone
           </span>
           <select
@@ -429,7 +425,7 @@ function EventDetailsStep({
         </label>
 
         <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
             Venue
           </span>
           <input
@@ -443,7 +439,7 @@ function EventDetailsStep({
         </label>
 
         <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
             Address
           </span>
           <input
@@ -484,7 +480,6 @@ export function EventSetupFlow({
   missingGuestsTable = false,
   missingEmailTable = false,
   emailDraft = null,
-  emailDeliveries = [],
   designImageUrls = [],
   sendingConfigured = false,
   defaultTestEmail = "",
@@ -516,7 +511,7 @@ export function EventSetupFlow({
           : "Set up your event";
   const subtitle =
     step === "email"
-      ? "Add a photo, tailor the message, preview as each guest, then send."
+      ? "Add a photo, tailor the message, then send."
       : step === "guests"
         ? "Type guests in or upload a CSV. Display name is what appears on the invitation."
         : step === "details"
@@ -530,24 +525,25 @@ export function EventSetupFlow({
       }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link
-          href={invitationEditPath(invitation)}
-          className="text-sm font-semibold text-grey transition-colors hover:text-black"
-        >
-          ← Back to editor
-        </Link>
         {linkedEvent ? (
           <Link
             href={eventPath(linkedEvent)}
             className="text-sm font-semibold text-grey transition-colors hover:text-black"
           >
-            Open event hub
+            ← Back to event hub
           </Link>
-        ) : null}
+        ) : (
+          <Link
+            href={invitationEditPath(invitation)}
+            className="text-sm font-semibold text-grey transition-colors hover:text-black"
+          >
+            ← Back to editor
+          </Link>
+        )}
       </div>
 
       <div className="mt-6 rounded-[30px] border border-black/[0.07] bg-white p-7 shadow-[0_18px_50px_rgba(0,0,0,0.07)] sm:p-9">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-signature">
+        <p className="text-xs font-semibold uppercase tracking-[0.1em] text-signature">
           {eyebrow}
         </p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-black">
@@ -628,11 +624,9 @@ export function EventSetupFlow({
                 invitation={invitation}
                 guests={initialGuests}
                 initialDraft={emailDraft}
-                deliveries={emailDeliveries}
                 sendingConfigured={sendingConfigured}
                 designImageUrls={designImageUrls}
                 defaultTestEmail={defaultTestEmail}
-                setupMode
               />
             </div>
           ) : (

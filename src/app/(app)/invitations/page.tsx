@@ -59,7 +59,7 @@ export default async function InvitationsPage() {
     <div className="animate-fade-up">
       <header className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-signature">
+          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-signature">
             Event hub
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-black md:text-4xl">

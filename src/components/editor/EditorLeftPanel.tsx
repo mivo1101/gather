@@ -176,7 +176,7 @@ function TextPresetsPanel({
         + Add text
       </button>
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
           Presets
         </p>
         {(
@@ -232,7 +232,7 @@ function BackgroundSummaryPanel({ pages }: { pages: InvitationPage[] }) {
       </div>
 
       <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-grey">
           Colours
         </p>
         <div className="flex flex-wrap gap-2">
@@ -284,7 +284,7 @@ function BackgroundSummaryPanel({ pages }: { pages: InvitationPage[] }) {
       </div>
 
       <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-grey">
           Border
         </p>
         {borders.length === 0 ? (

@@ -146,7 +146,7 @@ function formatInviteDateTime(date: Date) {
 function TodayLabel() {
   return (
     <div className="mt-auto pt-6 text-center">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-signature">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-signature">
         Today
       </p>
     </div>
@@ -169,7 +169,7 @@ function LiveTime() {
           <ClockIcon />
         </span>
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-signature">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-signature">
             Time
           </p>
           <p className="mt-0.5 h-5 text-sm font-medium text-black" aria-hidden="true" />
@@ -186,7 +186,7 @@ function LiveTime() {
         <ClockIcon />
       </span>
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-signature">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-signature">
           Time
         </p>
         <p className="mt-0.5 text-sm font-medium tabular-nums text-black">{time}</p>
@@ -210,7 +210,7 @@ function LiveDateRow() {
         <CalendarIcon />
       </span>
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-signature">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-signature">
           Date
         </p>
         <p className="mt-0.5 text-sm font-medium text-black">
@@ -266,7 +266,7 @@ function InviteCard() {
           <span className="text-signature">
             <StarIcon className="h-5 w-5" />
           </span>
-          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-signature">
+          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-signature">
             You&apos;re invited
           </p>
           <h4 className="mt-2 text-2xl font-bold leading-tight text-black">
@@ -294,7 +294,7 @@ function DetailsCard() {
           <span className="text-signature">
             <PinIcon className="h-5 w-5" />
           </span>
-          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-signature">
+          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-signature">
             Event details
           </p>
           <h4 className="mt-2 text-2xl font-bold leading-tight text-black">
@@ -316,7 +316,7 @@ function DetailsCard() {
               <GlobeIcon />
             </span>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-signature">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-signature">
                 Website
               </p>
               <p className="mt-0.5 text-sm font-medium text-black">
@@ -347,7 +347,7 @@ function RsvpCard() {
           <span className="text-signature">
             <EnvelopeIcon className="h-5 w-5" />
           </span>
-          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-signature">
+          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-signature">
             Kindly respond
           </p>
           <h4 className="mt-2 text-2xl font-bold leading-tight text-black">
@@ -394,7 +394,7 @@ function ThanksCard() {
           <span className="text-signature">
             <HeartIcon className="h-5 w-5" />
           </span>
-          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-signature">
+          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-signature">
             Thank you!
           </p>
           <h4 className="mt-2 max-w-[14rem] text-2xl font-bold leading-tight text-black">

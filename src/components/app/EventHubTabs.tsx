@@ -49,7 +49,7 @@ export function EventHubTabs({
                 aria-current={selected ? "page" : undefined}
                 className={`inline-flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-semibold transition-colors sm:px-4 ${
                   selected
-                    ? "border-black text-black"
+                    ? "border-signature text-black"
                     : "border-transparent text-grey hover:border-black/15 hover:text-black"
                 }`}
               >

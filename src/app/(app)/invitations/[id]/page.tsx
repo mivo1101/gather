@@ -248,7 +248,7 @@ export default async function EventDetailPage({
                         className="mx-auto mt-6 max-w-md"
                       >
                         <label className="block text-left">
-                          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-grey">
+                          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
                             Your designs
                           </span>
                           <select

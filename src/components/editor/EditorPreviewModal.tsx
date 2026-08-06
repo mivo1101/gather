@@ -151,7 +151,7 @@ function IPhoneFrame({ children }: { children: React.ReactNode }) {
             <div className="h-[22px] w-[90px] rounded-full bg-black" />
           </div>
           <div className="flex min-h-[520px] flex-col px-3 pb-6 pt-10">
-            <p className="mb-3 text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-grey">
+            <p className="mb-3 text-center text-[10px] font-semibold uppercase tracking-[0.1em] text-grey">
               Your invitation
             </p>
             <div className="flex flex-1 items-start justify-center overflow-y-auto">
@@ -269,7 +269,7 @@ export function EditorPreviewModal({
     >
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-6">
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-signature">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-signature">
             Preview
           </p>
           <h2 id={titleId} className="truncate text-sm font-semibold text-white">

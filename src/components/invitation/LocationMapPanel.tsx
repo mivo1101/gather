@@ -37,7 +37,7 @@ export function LocationMapPanel({
     >
       <div className="flex flex-1 flex-col px-5 pb-5 pt-5">
         <div className="text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-signature">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-signature">
             Location
           </p>
           <h3 className="mt-2 text-2xl font-bold leading-tight text-black">

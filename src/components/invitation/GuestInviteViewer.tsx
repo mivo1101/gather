@@ -2,20 +2,19 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { InvitationPagePreview } from "@/components/app/InvitationPagePreview";
+import { GuestInviteOpening } from "@/components/invitation/GuestInviteOpening";
 import { InteractiveRsvpPanel } from "@/components/invitation/InteractiveRsvpPanel";
 import { LocationMapPanel } from "@/components/invitation/LocationMapPanel";
 import { cardAspectRatio } from "@/components/editor/canvas-metrics";
 import { submitGuestRsvpAction } from "@/lib/actions/rsvp";
-import {
-  invitationPageRoleLabel,
-  type InvitationPage,
-} from "@/lib/data/invitation-content";
+import type { InvitationPage } from "@/lib/data/invitation-content";
 import {
   pageHasAnswerWidgets,
   type RsvpAnswerValue,
   type RsvpResponse,
 } from "@/lib/data/rsvp-responses";
 import type { Invitation } from "@/lib/data/types";
+import { formatEventDate } from "@/lib/format";
 import { guestDisplayLabel } from "@/lib/invitation-paths";
 import { Logo } from "@/components/ui/Logo";
 
@@ -23,6 +22,10 @@ interface GuestInviteViewerProps {
   invitation: Invitation;
   eventName: string;
   eventSlug: string;
+  eventDate: string | null;
+  timezone: string;
+  venue: string | null;
+  address: string | null;
   guest: {
     prefix: string;
     displayName: string;
@@ -31,10 +34,29 @@ interface GuestInviteViewerProps {
   rsvpResponse?: RsvpResponse | null;
 }
 
+function formatEventTime(iso: string, timeZone: string): string {
+  try {
+    return new Date(iso).toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: timeZone || undefined,
+    });
+  } catch {
+    return new Date(iso).toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+}
+
 export function GuestInviteViewer({
   invitation,
   eventName,
   eventSlug,
+  eventDate,
+  timezone,
+  venue,
+  address,
   guest,
   rsvpResponse = null,
 }: GuestInviteViewerProps) {
@@ -43,15 +65,15 @@ export function GuestInviteViewer({
   const customSize = invitation.content.customSize;
   const aspectRatio = cardAspectRatio(shape, customSize);
   const personalizedName = guestDisplayLabel(guest);
+  const guestFirstName =
+    guest.displayName.trim().split(/\s+/)[0] || personalizedName || "there";
 
-  const firstAnswerPageIndex = pages.findIndex(
-    (page) => page.kind === "rsvp" || pageHasAnswerWidgets(page),
-  );
-  const [pageIndex, setPageIndex] = useState(
-    firstAnswerPageIndex >= 0 && rsvpResponse ? firstAnswerPageIndex : 0,
-  );
+  const [phase, setPhase] = useState<"opening" | "viewing">("opening");
+  const [pageIndex, setPageIndex] = useState(0);
   const safePageIndex = Math.min(pageIndex, Math.max(pages.length - 1, 0));
   const page: InvitationPage | undefined = pages[safePageIndex];
+  const coverPage = pages[0];
+  const isLastPage = safePageIndex >= pages.length - 1;
 
   const [answers, setAnswers] = useState<Record<string, RsvpAnswerValue>>(
     rsvpResponse?.answers ?? {},
@@ -60,10 +82,19 @@ export function GuestInviteViewer({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const roleLabel = useMemo(
-    () => (page ? invitationPageRoleLabel(page.role) : "Page"),
-    [page],
-  );
+  const dateLabel = eventDate ? formatEventDate(eventDate) : null;
+  const timeLabel = eventDate ? formatEventTime(eventDate, timezone) : null;
+  const locationLabel = [venue, address].filter(Boolean).join(", ") || null;
+
+  const headerMeta = useMemo(() => {
+    const lines: string[] = [];
+    if (dateLabel && timeLabel) lines.push(`${dateLabel}, ${timeLabel}`);
+    else if (dateLabel) lines.push(dateLabel);
+    else if (timeLabel) lines.push(timeLabel);
+    if (locationLabel) lines.push(locationLabel);
+    lines.push(`Page ${safePageIndex + 1} of ${pages.length}`);
+    return lines;
+  }, [dateLabel, timeLabel, locationLabel, safePageIndex, pages.length]);
 
   const submitRsvp = async (nextAnswers: Record<string, RsvpAnswerValue>) =>
     submitGuestRsvpAction({
@@ -84,31 +115,129 @@ export function GuestInviteViewer({
     });
   };
 
+  const coverPreview =
+    coverPage && coverPage.kind === "design" ? (
+      <InvitationPagePreview
+        page={coverPage}
+        shape={shape}
+        customSize={customSize}
+        personalizedName={personalizedName}
+        interactive={false}
+        className="h-full w-full"
+      />
+    ) : (
+      <div className="flex h-full w-full flex-col justify-center bg-gradient-to-br from-white to-[#fdebeb] px-6 py-8">
+        <p className="text-xs text-grey">You&apos;re invited to</p>
+        <h3 className="mt-1 text-2xl font-bold tracking-tight text-black">
+          {eventName}
+        </h3>
+        <div className="mt-2 h-0.5 w-10 bg-signature" aria-hidden="true" />
+      </div>
+    );
+
   if (!page) {
     return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <p className="text-sm text-grey">This invitation has no pages yet.</p>
+      <div className="flex min-h-dvh items-center justify-center bg-[#121214] px-4">
+        <p className="text-sm text-white/60">This invitation has no pages yet.</p>
       </div>
     );
   }
 
+  if (phase === "opening") {
+    return (
+      <div className="relative flex min-h-dvh flex-col bg-[#121214]">
+        <div
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(255,96,170,0.12),_transparent_55%)]"
+          aria-hidden="true"
+        />
+        <header className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-6">
+          <Logo href="/" light className="origin-left scale-90" />
+          <p className="truncate text-sm text-white/50">{eventName}</p>
+        </header>
+        <main className="relative z-10 flex flex-1 items-center justify-center overflow-y-auto px-2 py-6 sm:py-10">
+          <GuestInviteOpening
+            guestFirstName={guestFirstName}
+            inviteCard={coverPreview}
+            inviteAspectRatio={aspectRatio}
+            onOpened={() => setPhase("viewing")}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  const pageHasAnswers =
+    page.kind === "design" && pageHasAnswerWidgets(page);
+  const showSubmit =
+    isLastPage &&
+    page.kind === "design" &&
+    (pageHasAnswers || Object.keys(answers).length > 0);
+
+  const pager = pages.length > 1 ? (
+    <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-full bg-black/50 px-3 py-1.5 opacity-100 backdrop-blur-sm transition-opacity lg:opacity-0 lg:group-hover:opacity-100">
+      <button
+        type="button"
+        onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
+        disabled={safePageIndex === 0}
+        className="text-xs font-semibold text-white disabled:opacity-30"
+      >
+        Previous
+      </button>
+      <div className="flex items-center gap-1.5">
+        {pages.map((item, index) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setPageIndex(index)}
+            className={`h-1.5 w-1.5 rounded-full transition-colors ${
+              index === safePageIndex
+                ? "bg-white"
+                : "bg-white/35 hover:bg-white/60"
+            }`}
+            aria-label={`Page ${index + 1}`}
+          />
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => setPageIndex((i) => Math.min(pages.length - 1, i + 1))}
+        disabled={safePageIndex >= pages.length - 1}
+        className="text-xs font-semibold text-white disabled:opacity-30"
+      >
+        Next
+      </button>
+    </div>
+  ) : null;
+
   return (
-    <div className="flex min-h-dvh flex-col bg-gradient-to-br from-signature/[0.12] via-sugar-milk/80 to-soft-grey">
-      <header className="flex items-center justify-between px-4 py-4 sm:px-6">
-        <Logo href="/" className="origin-left scale-90" />
-        <p className="truncate text-sm text-grey">{eventName}</p>
+    <div className="relative flex min-h-dvh flex-col bg-[#121214]">
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(255,96,170,0.1),_transparent_50%)]"
+        aria-hidden="true"
+      />
+
+      <header className="relative z-20 flex shrink-0 items-start justify-between gap-4 px-4 py-3 sm:px-6">
+        <Logo href="/" light className="origin-left scale-90" />
+        <div className="min-w-0 text-right">
+          <p className="truncate text-sm font-semibold text-white">{eventName}</p>
+          {headerMeta.map((line) => (
+            <p key={line} className="mt-0.5 truncate text-xs text-white/45">
+              {line}
+            </p>
+          ))}
+        </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pb-8 sm:px-6">
-        <p className="mb-4 text-center text-sm text-grey">
-          {roleLabel}
-          <span className="px-1.5 text-black/20">·</span>
-          {safePageIndex + 1} of {pages.length}
-        </p>
-
-        <div className="flex flex-1 items-center justify-center">
+      <main className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-3 pb-4 sm:px-6">
+        <div
+          className={`group relative w-full ${
+            page.kind === "design"
+              ? "max-w-[min(100%,36rem)] sm:max-w-[40rem] lg:max-w-[44rem]"
+              : "max-w-xl"
+          }`}
+        >
           {page.kind === "rsvp" ? (
-            <div className="w-full overflow-hidden rounded-[28px] border border-black/[0.07] bg-white shadow-[0_18px_50px_rgba(0,0,0,0.1)]">
+            <div className="relative overflow-hidden rounded-[28px] bg-white shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
               <InteractiveRsvpPanel
                 config={page.rsvpConfig}
                 interactive
@@ -117,27 +246,32 @@ export function GuestInviteViewer({
                 alreadySubmitted={Boolean(rsvpResponse)}
                 onSubmit={submitRsvp}
               />
+              {pager}
             </div>
           ) : page.kind === "location" && page.location ? (
-            <div className="w-full overflow-hidden rounded-[28px] border border-black/[0.07] bg-white shadow-[0_18px_50px_rgba(0,0,0,0.1)]">
+            <div className="relative overflow-hidden rounded-[28px] bg-white shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
               <LocationMapPanel
                 location={page.location}
                 interactive
                 className="min-h-[28rem]"
               />
+              {pager}
             </div>
           ) : (
-            <div className="flex w-full max-w-[22rem] flex-col gap-3">
+            <div className="flex flex-col items-center gap-2">
               <div
-                className="relative w-full overflow-hidden rounded-[18px] shadow-[0_18px_50px_rgba(0,0,0,0.16)]"
-                style={{ aspectRatio: String(aspectRatio) }}
+                className="relative w-full max-h-[min(82dvh,900px)] overflow-hidden rounded-[22px] shadow-[0_24px_60px_rgba(0,0,0,0.4)]"
+                style={{
+                  aspectRatio: String(aspectRatio),
+                  maxWidth: "100%",
+                }}
               >
                 <InvitationPagePreview
                   page={page}
                   shape={shape}
                   customSize={customSize}
                   personalizedName={personalizedName}
-                  interactive={pageHasAnswerWidgets(page)}
+                  interactive
                   answers={answers}
                   onAnswerChange={(questionId, value) => {
                     setAnswers((prev) => ({ ...prev, [questionId]: value }));
@@ -145,29 +279,19 @@ export function GuestInviteViewer({
                   }}
                   className="h-full w-full"
                 />
+                {pager}
               </div>
 
-              {pageHasAnswerWidgets(page) ? (
-                <div className="rounded-2xl border border-black/[0.07] bg-white px-4 py-3 shadow-[0_2px_4px_rgba(0,0,0,0.03)]">
+              {showSubmit ? (
+                <div className="flex flex-col items-center gap-1 pt-1">
                   {error ? (
-                    <p className="mb-2 text-center text-xs text-[#9a2a2a]">
-                      {error}
-                    </p>
+                    <p className="text-xs text-[#ff8f8f]">{error}</p>
                   ) : null}
-                  {submitted ? (
-                    <p className="mb-2 text-center text-xs font-medium text-signature">
-                      Thanks - your RSVP is saved. You can update it anytime.
-                    </p>
-                  ) : (
-                    <p className="mb-2 text-center text-xs text-grey">
-                      Tap your reply on the card, then submit below.
-                    </p>
-                  )}
                   <button
                     type="button"
                     disabled={pending || Object.keys(answers).length === 0}
                     onClick={submitCanvasAnswers}
-                    className="w-full rounded-full bg-black px-4 py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-40"
+                    className="text-sm font-semibold text-white/90 underline decoration-white/35 underline-offset-4 transition-colors hover:text-white hover:decoration-white disabled:opacity-40"
                   >
                     {pending
                       ? "Saving..."
@@ -180,44 +304,6 @@ export function GuestInviteViewer({
             </div>
           )}
         </div>
-
-        {pages.length > 1 ? (
-          <div className="mt-6 flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
-              disabled={safePageIndex === 0}
-              className="rounded-full px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-white/70 disabled:opacity-30"
-            >
-              Previous
-            </button>
-            <div className="flex items-center gap-2">
-              {pages.map((item, index) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setPageIndex(index)}
-                  className={`h-2.5 w-2.5 rounded-full transition-colors ${
-                    index === safePageIndex
-                      ? "bg-black"
-                      : "bg-black/20 hover:bg-black/40"
-                  }`}
-                  aria-label={`Page ${index + 1}, ${invitationPageRoleLabel(item.role)}`}
-                />
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() =>
-                setPageIndex((i) => Math.min(pages.length - 1, i + 1))
-              }
-              disabled={safePageIndex >= pages.length - 1}
-              className="rounded-full px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-white/70 disabled:opacity-30"
-            >
-              Next
-            </button>
-          </div>
-        ) : null}
       </main>
     </div>
   );

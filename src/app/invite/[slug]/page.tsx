@@ -87,6 +87,10 @@ export default async function GuestInvitePage({
       invitation={invite.invitation}
       eventName={invite.event.name}
       eventSlug={invite.event.slug}
+      eventDate={invite.event.eventDate}
+      timezone={invite.event.timezone}
+      venue={invite.event.venue}
+      address={invite.event.address}
       guest={invite.guest}
       rsvpResponse={rsvpResponse}
     />

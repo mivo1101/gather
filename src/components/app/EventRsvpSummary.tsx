@@ -24,7 +24,7 @@ function attendanceLabel(attendance: RsvpResponse["attendance"] | "pending") {
 function attendanceClass(attendance: RsvpResponse["attendance"] | "pending") {
   switch (attendance) {
     case "yes":
-      return "bg-signature/15 text-black";
+      return "bg-[#e8f6ee] text-[#1f6b3f]";
     case "no":
       return "bg-[#fff1f1] text-[#9a2a2a]";
     case "unknown":
@@ -68,7 +68,7 @@ export function EventRsvpSummary({
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-2xl bg-signature/10 px-3 py-3">
+            <div className="rounded-2xl bg-[#e8f6ee] px-3 py-3">
               <p className="text-xl font-bold text-black">{yes}</p>
               <p className="mt-0.5 text-xs text-grey">Attending</p>
             </div>
