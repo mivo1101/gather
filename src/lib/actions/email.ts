@@ -242,6 +242,7 @@ export async function sendInviteEmailsAction(
     let sent = 0;
     let skipped = 0;
     let failed = 0;
+    let firstFailure: string | null = null;
 
     const priorDeliveries = await getDeliveriesForCampaign(campaign.id);
     const alreadySent = new Set(
@@ -293,12 +294,15 @@ export async function sendInviteEmailsAction(
         sent += 1;
       } catch (error) {
         failed += 1;
+        const reason =
+          error instanceof Error ? error.message : "Send failed.";
+        if (!firstFailure) firstFailure = reason;
         await upsertDeliveryRecord({
           campaignId: campaign.id,
           guestId: guest.id,
           status: "failed",
           providerMessageId: null,
-          error: error instanceof Error ? error.message : "Send failed.",
+          error: reason,
         });
       }
     }
@@ -321,12 +325,17 @@ export async function sendInviteEmailsAction(
       failed > 0 ? `${failed} failed` : null,
     ].filter(Boolean);
 
+    let message = parts.length ? parts.join(", ") + "." : "Nothing to send.";
+    if (failed > 0 && firstFailure) {
+      message += ` ${firstFailure}`;
+    }
+
     return {
       ok: true,
       sent,
       skipped,
       failed,
-      message: parts.length ? parts.join(", ") + "." : "Nothing to send.",
+      message,
     };
   } catch (error) {
     return {
