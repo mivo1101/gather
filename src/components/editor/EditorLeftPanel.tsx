@@ -21,6 +21,10 @@ import {
   type InvitationShape,
 } from "./editor-types";
 import type { InvitationTemplate } from "@/lib/data/invitation-templates";
+import {
+  clearInsertDragData,
+  setInsertDragData,
+} from "@/lib/editor-insert-dnd";
 
 interface EditorLeftPanelProps {
   activeTool: EditorToolId;
@@ -165,13 +169,18 @@ function TextPresetsPanel({
       <div>
         <h2 className="text-base font-semibold text-black">Text</h2>
         <p className="mt-1 text-sm text-grey">
-          Add a text box, then style it on the right.
+          Click or drag a text box onto the canvas, then style it on the right.
         </p>
       </div>
       <button
         type="button"
+        draggable
         onClick={() => onAddText()}
-        className="w-full rounded-full bg-black px-4 py-2.5 text-sm font-semibold text-white hover:bg-black/90"
+        onDragStart={(event) => {
+          setInsertDragData(event.dataTransfer, { type: "text" });
+        }}
+        onDragEnd={() => clearInsertDragData()}
+        className="w-full cursor-grab rounded-full bg-black px-4 py-2.5 text-sm font-semibold text-white hover:bg-black/90 active:cursor-grabbing"
       >
         + Add text
       </button>
@@ -189,8 +198,13 @@ function TextPresetsPanel({
           <button
             key={id}
             type="button"
+            draggable
             onClick={() => onAddText(id)}
-            className={`w-full rounded-xl border border-black/10 bg-white px-3 py-3 text-left text-black hover:border-signature/40 ${className}`}
+            onDragStart={(event) => {
+              setInsertDragData(event.dataTransfer, { type: "text", preset: id });
+            }}
+            onDragEnd={() => clearInsertDragData()}
+            className={`w-full cursor-grab rounded-xl border border-black/10 bg-white px-3 py-3 text-left text-black hover:border-signature/40 active:cursor-grabbing ${className}`}
           >
             {label}
           </button>

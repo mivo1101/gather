@@ -46,6 +46,12 @@ import { canvasFontFamilyClass } from "@/lib/canvas-fonts";
 import { effectsToCss } from "@/lib/element-effects";
 import { paperTextureLayerStyle } from "@/lib/paper-textures";
 import { designCanvasSize } from "./canvas-metrics";
+import {
+  clearInsertDragData,
+  getInsertDragData,
+  hasInsertDragData,
+  type EditorInsertPayload,
+} from "@/lib/editor-insert-dnd";
 
 function effectStyle(el: CanvasElement): CSSProperties {
   return effectsToCss(el.style.effects, el.style.color);
@@ -197,6 +203,11 @@ interface EditorCanvasProps {
   onRotate: (id: string) => void;
   /** Called before a mutating interaction so the parent can snapshot history */
   onBeforeChange?: () => void;
+  /** Panel → canvas drag-and-drop insert. */
+  onInsertDrop?: (
+    payload: EditorInsertPayload,
+    drop: { clientX: number; clientY: number; canvas: HTMLElement },
+  ) => void;
 }
 
 function fontWeightValue(style: CanvasElement["style"]) {
@@ -503,9 +514,11 @@ export function EditorCanvas({
   onToggleLock,
   onRotate,
   onBeforeChange,
+  onInsertDrop,
 }: EditorCanvasProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const [insertDragOver, setInsertDragOver] = useState(false);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -1215,7 +1228,9 @@ export function EditorCanvas({
               } ${
                 canvasSelected
                   ? "outline outline-2 outline-signature outline-offset-2"
-                  : ""
+                  : insertDragOver
+                    ? "outline outline-2 outline-signature/70 outline-offset-2"
+                    : ""
               }`}
               style={{
                 ...fillBoxStyle(backgroundColor),
@@ -1235,6 +1250,48 @@ export function EditorCanvas({
                   border && border.style !== "none" ? border.color : undefined,
               }}
               onPointerDown={(event) => beginMarquee(event, false)}
+              onDragEnterCapture={(event) => {
+                if (!onInsertDrop || !hasInsertDragData(event.dataTransfer)) {
+                  return;
+                }
+                event.preventDefault();
+                setInsertDragOver(true);
+              }}
+              onDragOverCapture={(event) => {
+                if (!onInsertDrop || !hasInsertDragData(event.dataTransfer)) {
+                  return;
+                }
+                // Capture phase so drops work over existing canvas elements.
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "copy";
+                setInsertDragOver(true);
+              }}
+              onDragLeave={(event) => {
+                if (
+                  event.currentTarget.contains(
+                    event.relatedTarget as Node | null,
+                  )
+                ) {
+                  return;
+                }
+                setInsertDragOver(false);
+              }}
+              onDropCapture={(event) => {
+                if (!onInsertDrop) return;
+                const payload = getInsertDragData(event.dataTransfer);
+                setInsertDragOver(false);
+                clearInsertDragData();
+                if (!payload) return;
+                event.preventDefault();
+                event.stopPropagation();
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                onInsertDrop(payload, {
+                  clientX: event.clientX,
+                  clientY: event.clientY,
+                  canvas,
+                });
+              }}
             >
             {backgroundTexture !== "none" && (
               <div
@@ -1656,6 +1713,7 @@ export function EditorCanvas({
                       <CanvasWidgetView
                         widget={el.widget}
                         elementStyle={el.style}
+                        surfaceColor={backgroundColor}
                         interactive={false}
                         editing={isEditing}
                         onChange={(widget) =>

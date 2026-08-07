@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "@/components/ui/Logo";
 import { formatRelativeTime } from "@/lib/format";
 import {
   BackIcon,
-  ChevronDownIcon,
   ChevronRightIcon,
   CloseIcon,
   DesktopIcon,
@@ -30,7 +29,6 @@ interface EditorToolbarProps {
   onUndo: () => void;
   onRedo: () => void;
   onSave: () => void;
-  onPublish: (mode: "published" | "draft") => void;
   onContinue: () => void;
   isSaving: boolean;
   isContinuing?: boolean;
@@ -50,14 +48,11 @@ export function EditorToolbar({
   onUndo,
   onRedo,
   onSave,
-  onPublish,
   onContinue,
   isSaving,
   isContinuing = false,
   saveLabel,
 }: EditorToolbarProps) {
-  const [publishOpen, setPublishOpen] = useState(false);
-  const publishRef = useRef<HTMLDivElement>(null);
   // Defer relative time until after mount so SSR and client HTML match
   const [savedLabel, setSavedLabel] = useState("just now");
 
@@ -68,17 +63,6 @@ export function EditorToolbar({
     }, 30_000);
     return () => window.clearInterval(id);
   }, [savedAt]);
-
-  useEffect(() => {
-    if (!publishOpen) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (!publishRef.current?.contains(event.target as Node)) {
-        setPublishOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [publishOpen]);
 
   return (
     <header className="z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-black/5 bg-white px-3 sm:px-4">
@@ -176,47 +160,6 @@ export function EditorToolbar({
         >
           {isSaving ? "Saving…" : saveLabel}
         </button>
-
-        <div className="relative" ref={publishRef}>
-          <button
-            type="button"
-            onClick={() => setPublishOpen((open) => !open)}
-            className="inline-flex items-center gap-1 rounded-full border border-black/10 px-3.5 py-2 text-sm font-semibold text-black transition-colors hover:border-black/20"
-            aria-expanded={publishOpen}
-            aria-label="Publish options"
-          >
-            Publish
-            <ChevronDownIcon className="text-grey" />
-          </button>
-          {publishOpen && (
-            <div className="absolute right-0 top-full z-40 mt-2 min-w-[12rem] overflow-hidden rounded-xl border border-black/5 bg-white py-1 shadow-[0_12px_28px_rgba(0,0,0,0.12)]">
-              <button
-                type="button"
-                className="block w-full px-3 py-2 text-left text-sm text-black hover:bg-soft-grey"
-                onClick={() => {
-                  onPublish("published");
-                  setPublishOpen(false);
-                }}
-              >
-                Publish design
-              </button>
-              <button
-                type="button"
-                className="block w-full px-3 py-2 text-left text-sm text-black hover:bg-soft-grey"
-                onClick={() => {
-                  onPublish("draft");
-                  setPublishOpen(false);
-                }}
-              >
-                Revert to draft
-              </button>
-              <p className="border-t border-black/5 px-3 py-2 text-[11px] leading-4 text-grey">
-                Publishing marks the design ready. Use Continue to connect an
-                event and invite guests.
-              </p>
-            </div>
-          )}
-        </div>
 
         <button
           type="button"

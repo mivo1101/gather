@@ -77,37 +77,42 @@ function EventWorkspaceCard({ workspace }: { workspace: EventWorkspace }) {
   };
 
   return (
-    <article className="group relative rounded-[24px] border border-black/[0.07] bg-white shadow-[0_2px_4px_rgba(0,0,0,0.03)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_45px_rgba(0,0,0,0.08)]">
+    <article className="group relative overflow-hidden rounded-[24px] border border-black/[0.07] bg-white shadow-[0_2px_4px_rgba(0,0,0,0.03)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_45px_rgba(0,0,0,0.08)]">
       <Link
         href={eventPath(workspace)}
         className="block outline-none focus-visible:ring-2 focus-visible:ring-signature/40 focus-visible:ring-inset"
       >
         <div className="flex h-52 items-center justify-center overflow-hidden rounded-t-[23px] bg-[#f2efed] p-5">
-          <div
-            className="relative max-h-full max-w-full overflow-hidden rounded-lg shadow-[0_12px_30px_rgba(0,0,0,0.14)] transition-transform duration-500 group-hover:scale-[1.015]"
-            style={{
-              aspectRatio: String(aspectRatio),
-              width: aspectRatio >= 1 ? "100%" : undefined,
-              height: aspectRatio < 1 ? "100%" : undefined,
-            }}
-          >
-            {firstPage && invitation ? (
-              <InvitationPagePreview
-                page={firstPage}
-                shape={shape}
-                customSize={customSize}
-                className="h-full w-full"
-              />
-            ) : (
-              <div className="flex h-full w-full flex-col items-center justify-center bg-white px-6 text-center">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-signature/10 text-xl text-signature">
-                  +
-                </span>
-                <span className="mt-3 text-xs font-semibold text-black">
-                  Add an invitation design
-                </span>
-              </div>
-            )}
+          {/* Inner clip so hover scale / shadows never tint the neutral stage. */}
+          <div className="flex h-full w-full min-w-0 items-center justify-center overflow-hidden">
+            <div
+              className="relative isolate min-h-0 min-w-0 overflow-hidden rounded-lg bg-[#f2efed] shadow-[0_6px_18px_rgba(0,0,0,0.12)] transition-transform duration-500 group-hover:scale-[1.015]"
+              style={{
+                aspectRatio: String(aspectRatio),
+                height: aspectRatio <= 1 ? "100%" : "auto",
+                width: aspectRatio > 1 ? "100%" : "auto",
+                maxHeight: "100%",
+                maxWidth: "100%",
+              }}
+            >
+              {firstPage && invitation ? (
+                <InvitationPagePreview
+                  page={firstPage}
+                  shape={shape}
+                  customSize={customSize}
+                  className="h-full w-full"
+                />
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center bg-white px-6 text-center">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-signature/10 text-xl text-signature">
+                    +
+                  </span>
+                  <span className="mt-3 text-xs font-semibold text-black">
+                    Add an invitation design
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

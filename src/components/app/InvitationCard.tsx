@@ -292,22 +292,24 @@ export function InvitationCard({
         aria-label={`Edit ${displayTitle}`}
       >
         <div className="relative flex h-[9.5rem] w-[7.25rem] shrink-0 items-center justify-center overflow-hidden rounded-l-2xl bg-[#f3f1ef] p-3 sm:h-[10.5rem] sm:w-32">
-          <div
-            className="relative overflow-hidden rounded-md shadow-[0_6px_18px_rgba(0,0,0,0.1)] transition-transform duration-500 group-hover:scale-[1.02]"
-            style={{
-              aspectRatio: String(previewAspect),
-              maxHeight: "100%",
-              maxWidth: "100%",
-              width: previewAspect >= 1 ? "100%" : undefined,
-              height: previewAspect < 1 ? "100%" : undefined,
-            }}
-          >
-            <InvitationPagePreview
-              page={firstPage}
-              shape={cardShape}
-              customSize={customSize}
-              className="h-full w-full"
-            />
+          <div className="flex h-full w-full min-w-0 items-center justify-center overflow-hidden">
+            <div
+              className="relative isolate min-h-0 min-w-0 overflow-hidden rounded-md bg-[#f3f1ef] shadow-[0_4px_14px_rgba(0,0,0,0.1)] transition-transform duration-500 group-hover:scale-[1.02]"
+              style={{
+                aspectRatio: String(previewAspect),
+                height: previewAspect <= 1 ? "100%" : "auto",
+                width: previewAspect > 1 ? "100%" : "auto",
+                maxHeight: "100%",
+                maxWidth: "100%",
+              }}
+            >
+              <InvitationPagePreview
+                page={firstPage}
+                shape={cardShape}
+                customSize={customSize}
+                className="h-full w-full"
+              />
+            </div>
           </div>
         </div>
 

@@ -231,9 +231,7 @@ export function GuestInviteViewer({
       <main className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-3 pb-4 sm:px-6">
         <div
           className={`group relative w-full ${
-            page.kind === "design"
-              ? "max-w-[min(100%,36rem)] sm:max-w-[40rem] lg:max-w-[44rem]"
-              : "max-w-xl"
+            page.kind === "design" ? "max-w-full" : "max-w-xl"
           }`}
         >
           {page.kind === "rsvp" ? (
@@ -259,11 +257,17 @@ export function GuestInviteViewer({
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
+              {/*
+                Fit inside the viewport while keeping the invitation aspect.
+                Using w-full + max-height alone letterboxes (solid side bands
+                without page texture). Cap width from max height × aspect.
+              */}
               <div
-                className="relative w-full max-h-[min(82dvh,900px)] overflow-hidden rounded-[22px] shadow-[0_24px_60px_rgba(0,0,0,0.4)]"
+                className="relative mx-auto overflow-hidden rounded-[22px] shadow-[0_24px_60px_rgba(0,0,0,0.4)]"
                 style={{
                   aspectRatio: String(aspectRatio),
-                  maxWidth: "100%",
+                  width: `min(100%, calc(min(82dvh, 900px) * ${aspectRatio}))`,
+                  maxHeight: "min(82dvh, 900px)",
                 }}
               >
                 <InvitationPagePreview

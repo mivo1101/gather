@@ -8,6 +8,7 @@ import {
   type EventWorkspace,
 } from "@/lib/data/event-workspaces";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 
 const TIMEZONES = [
   "Australia/Melbourne",
@@ -184,18 +185,20 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
           <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
             Time zone
           </span>
-          <select
+          <Select
             name="timezone"
+            variant="compact"
+            wrapperClassName="mt-1.5 block w-full"
+            className="w-full"
             value={timezone}
             onChange={(e) => setTimezone(e.target.value)}
-            className="mt-1.5 w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/15"
           >
             {TIMEZONES.map((zone) => (
               <option key={zone} value={zone}>
                 {zone.replace(/_/g, " ")}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="block">
           <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">

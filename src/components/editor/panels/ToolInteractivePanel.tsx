@@ -1,6 +1,10 @@
 "use client";
 
 import type { WidgetKind } from "@/lib/data/canvas-elements";
+import {
+  clearInsertDragData,
+  setInsertDragData,
+} from "@/lib/editor-insert-dnd";
 
 const WIDGETS: {
   kind: WidgetKind;
@@ -30,7 +34,7 @@ export function ToolInteractivePanel({ onAddWidget }: ToolInteractivePanelProps)
       <div>
         <h2 className="text-base font-semibold text-black">Interactive</h2>
         <p className="mt-1 text-sm text-grey">
-          Add a block, then style it on the right.
+          Click or drag a block onto the canvas, then style it on the right.
         </p>
       </div>
       <div className="space-y-2">
@@ -38,8 +42,16 @@ export function ToolInteractivePanel({ onAddWidget }: ToolInteractivePanelProps)
           <button
             key={item.kind}
             type="button"
+            draggable
             onClick={() => onAddWidget(item.kind)}
-            className={`flex w-full flex-col items-start rounded-xl border px-3 py-3 text-left transition-colors hover:border-signature/40 ${
+            onDragStart={(event) => {
+              setInsertDragData(event.dataTransfer, {
+                type: "widget",
+                kind: item.kind,
+              });
+            }}
+            onDragEnd={() => clearInsertDragData()}
+            className={`flex w-full cursor-grab flex-col items-start rounded-xl border px-3 py-3 text-left transition-colors hover:border-signature/40 active:cursor-grabbing ${
               item.kind === "guest_name"
                 ? "border-signature/25 bg-signature/5 hover:bg-signature/10"
                 : "border-black/10 bg-white hover:bg-soft-grey/60"

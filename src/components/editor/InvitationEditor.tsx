@@ -70,6 +70,17 @@ import { useHistory } from "./useHistory";
 import { saveElementRecent } from "./ElementsBrowser";
 import { EMPTY_IMAGE_FRAME_SRC } from "./image-frames";
 import { designCanvasSize } from "./canvas-metrics";
+import {
+  clientPointToCanvasPercent,
+  type EditorInsertPayload,
+} from "@/lib/editor-insert-dnd";
+
+type CanvasPoint = { x: number; y: number };
+type DropAnchor = {
+  canvas: HTMLElement;
+  clientX: number;
+  clientY: number;
+};
 
 interface InvitationEditorProps {
   invitation: Invitation;
@@ -857,62 +868,95 @@ export function InvitationEditor({
     });
   };
 
-  const addTextPreset = (preset?: "heading" | "subheading" | "body") => {
+  const addTextPreset = (
+    preset?: "heading" | "subheading" | "body",
+    position?: CanvasPoint,
+  ) => {
+    const placed = (el: CanvasElement) =>
+      position ? { ...el, x: position.x, y: position.y } : el;
+
     if (preset === "heading") {
       addElement(
-        createTextElement({
-          content: "Heading",
-          style: {
-            fontFamily: "playfair",
-            fontSize: 36,
-            fontWeight: "bold",
-            color: defaultElementColor,
-            textAlign: "center",
-            lineHeight: 1.15,
-            letterSpacing: 0,
-            bold: true,
-            italic: false,
-            underline: false,
-            strike: false,
-          },
-        }),
+        placed(
+          createTextElement({
+            content: "Heading",
+            style: {
+              fontFamily: "playfair",
+              fontSize: 36,
+              fontWeight: "bold",
+              color: defaultElementColor,
+              textAlign: "center",
+              lineHeight: 1.15,
+              letterSpacing: 0,
+              bold: true,
+              italic: false,
+              underline: false,
+              strike: false,
+            },
+          }),
+        ),
         true,
       );
       return;
     }
     if (preset === "subheading") {
       addElement(
-        createTextElement({
-          content: "Subheading",
-          style: {
-            fontFamily: "urbanist",
-            fontSize: 20,
-            fontWeight: "medium",
-            color: defaultElementColor,
-            textAlign: "center",
-            lineHeight: 1.3,
-            letterSpacing: 1,
-            bold: false,
-            italic: false,
-            underline: false,
-            strike: false,
-          },
-        }),
+        placed(
+          createTextElement({
+            content: "Subheading",
+            style: {
+              fontFamily: "urbanist",
+              fontSize: 20,
+              fontWeight: "medium",
+              color: defaultElementColor,
+              textAlign: "center",
+              lineHeight: 1.3,
+              letterSpacing: 1,
+              bold: false,
+              italic: false,
+              underline: false,
+              strike: false,
+            },
+          }),
+        ),
         true,
       );
       return;
     }
     if (preset === "body") {
       addElement(
+        placed(
+          createTextElement({
+            content: "Body text",
+            style: {
+              fontFamily: "urbanist",
+              fontSize: 14,
+              fontWeight: "regular",
+              color: defaultElementColor,
+              textAlign: "center",
+              lineHeight: 1.5,
+              letterSpacing: 0,
+              bold: false,
+              italic: false,
+              underline: false,
+              strike: false,
+            },
+          }),
+        ),
+        true,
+      );
+      return;
+    }
+    addElement(
+      placed(
         createTextElement({
-          content: "Body text",
           style: {
-            fontFamily: "urbanist",
-            fontSize: 14,
+            fontFamily: "playfair",
+            fontSize: 20,
             fontWeight: "regular",
             color: defaultElementColor,
             textAlign: "center",
-            lineHeight: 1.5,
+            lineHeight: 1.2,
             letterSpacing: 0,
             bold: false,
             italic: false,
@@ -920,32 +964,19 @@ export function InvitationEditor({
             strike: false,
           },
         }),
-        true,
-      );
-      return;
-    }
-    addElement(
-      createTextElement({
-        style: {
-          fontFamily: "playfair",
-          fontSize: 20,
-          fontWeight: "regular",
-          color: defaultElementColor,
-          textAlign: "center",
-          lineHeight: 1.2,
-          letterSpacing: 0,
-          bold: false,
-          italic: false,
-          underline: false,
-          strike: false,
-        },
-      }),
+      ),
       true,
     );
   };
 
-  const addImageWithOptions = (src: string, frame?: ImageFrame) => {
+  const addImageWithOptions = (
+    src: string,
+    frame?: ImageFrame,
+    drop?: DropAnchor,
+  ) => {
+    // Drop placement always inserts a new image; click may fill an empty frame.
     const emptyFrame =
+      !drop &&
       selected?.type === "image" &&
       selected.content === EMPTY_IMAGE_FRAME_SRC
         ? selected
@@ -984,7 +1015,26 @@ export function InvitationEditor({
         setSelectedId(emptyFrame.id);
         return;
       }
-      addElement(size ? { ...withFrame, ...size } : withFrame);
+      const sized = size ? { ...withFrame, ...size } : withFrame;
+      if (drop) {
+        const width = sized.width ?? 50;
+        const height = sized.height ?? 28;
+        const position = clientPointToCanvasPercent(
+          drop.canvas,
+          drop.clientX,
+          drop.clientY,
+          width,
+          height,
+        );
+        addElement({
+          ...sized,
+          ...position,
+          width,
+          height,
+        });
+        return;
+      }
+      addElement(sized);
     };
 
     if (isPatternGraphicSrc(src)) {
@@ -1241,7 +1291,7 @@ export function InvitationEditor({
     applyTemplate(template);
   };
 
-  const onAddWidget = (kind: WidgetKind) => {
+  const onAddWidget = (kind: WidgetKind, position?: CanvasPoint) => {
     const el = createWidgetElement(kind, undefined, backgroundColor);
     if (kind === "guest_name") {
       const designSize = designCanvasSize(cardAspectRatio(shape, customSize));
@@ -1252,8 +1302,14 @@ export function InvitationEditor({
         100;
       el.width = Math.min(80, Math.max(18, naturalWidth));
       el.height = Math.min(24, Math.max(6, naturalHeight));
-      el.x = (100 - el.width) / 2;
-      el.y = (100 - el.height) / 2;
+      if (!position) {
+        el.x = (100 - el.width) / 2;
+        el.y = (100 - el.height) / 2;
+      }
+    }
+    if (position) {
+      el.x = position.x;
+      el.y = position.y;
     }
     if (kind !== "map") {
       el.style = { ...el.style, color: defaultElementColor };
@@ -1267,6 +1323,111 @@ export function InvitationEditor({
         ? "Map added — drag to place"
         : "Interactive block added — drag to place",
     );
+  };
+
+  const onAddLibraryElement = (
+    item: LibraryElement,
+    position?: CanvasPoint,
+  ) => {
+    saveElementRecent(item.id);
+    const el = sizeNewShapeForCard(
+      createElementFromLibrary(item),
+      cardAspectRatio(shape, customSize),
+    );
+    addElement({
+      ...el,
+      ...(position ?? {}),
+      style: { ...el.style, color: defaultElementColor },
+    });
+  };
+
+  const onInsertDrop = (
+    payload: EditorInsertPayload,
+    drop: DropAnchor,
+  ) => {
+    const place = (width: number, height: number) =>
+      clientPointToCanvasPercent(
+        drop.canvas,
+        drop.clientX,
+        drop.clientY,
+        width,
+        height,
+      );
+
+    if (payload.type === "library") {
+      const el = sizeNewShapeForCard(
+        createElementFromLibrary(payload.item),
+        cardAspectRatio(shape, customSize),
+      );
+      onAddLibraryElement(
+        payload.item,
+        place(el.width, el.height ?? 12),
+      );
+      return;
+    }
+
+    if (payload.type === "text") {
+      addTextPreset(payload.preset, place(60, 10));
+      return;
+    }
+
+    if (payload.type === "image") {
+      addImageWithOptions(payload.src, undefined, drop);
+      return;
+    }
+
+    if (payload.type === "stock") {
+      void (async () => {
+        try {
+          const response = await fetch("/api/stock-images/download", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              downloadLocation: payload.downloadLocation,
+            }),
+          });
+          const result = (await response.json()) as { error?: string };
+          if (!response.ok) {
+            throw new Error(
+              result.error || "Could not add this Unsplash photograph.",
+            );
+          }
+          addImageWithOptions(payload.imageUrl, undefined, drop);
+        } catch (error) {
+          showToast(
+            error instanceof Error
+              ? error.message
+              : "Could not add this Unsplash photograph.",
+          );
+        }
+      })();
+      return;
+    }
+
+    if (payload.type === "widget") {
+      const draft = createWidgetElement(
+        payload.kind,
+        undefined,
+        backgroundColor,
+      );
+      if (payload.kind === "guest_name") {
+        const designSize = designCanvasSize(
+          cardAspectRatio(shape, customSize),
+        );
+        const naturalWidth =
+          ((draft.style.fontSize * 5.6 + 12) / designSize.width) * 100;
+        const naturalHeight =
+          ((draft.style.fontSize * draft.style.lineHeight + 4) /
+            designSize.height) *
+          100;
+        draft.width = Math.min(80, Math.max(18, naturalWidth));
+        draft.height = Math.min(24, Math.max(6, naturalHeight));
+      }
+      onAddWidget(
+        payload.kind,
+        place(draft.width, draft.height ?? 14),
+      );
+    }
   };
 
   const onChangeWidget = (widget: WidgetConfig) => {
@@ -1299,9 +1460,6 @@ export function InvitationEditor({
         onRedo={handleRedo}
         onSave={() => {
           void persist({ force: true });
-        }}
-        onPublish={(mode) => {
-          void persist({ nextStatus: mode, force: true });
         }}
         onContinue={() => {
           void handleContinue();
@@ -1372,19 +1530,9 @@ export function InvitationEditor({
               }))
             }
             onAddText={addTextPreset}
-            onAddLibraryElement={(item: LibraryElement) => {
-              saveElementRecent(item.id);
-              const el = sizeNewShapeForCard(
-                createElementFromLibrary(item),
-                cardAspectRatio(shape, customSize),
-              );
-              addElement({
-                ...el,
-                style: { ...el.style, color: defaultElementColor },
-              });
-            }}
+            onAddLibraryElement={(item) => onAddLibraryElement(item)}
             onAddImageSrc={(src) => addImageWithOptions(src)}
-            onAddWidget={onAddWidget}
+            onAddWidget={(kind) => onAddWidget(kind)}
             onApplyTemplate={onApplyTemplate}
             onCollapse={() => setLeftPanelCollapsed(true)}
           />
@@ -1473,6 +1621,7 @@ export function InvitationEditor({
               updateElement(id, { rotation: (el.rotation + 15) % 360 }, false);
             }}
             onBeforeChange={snapshotBeforeChange}
+            onInsertDrop={onInsertDrop}
           />
           <EditorPageStrip
             collapsed={pagesCollapsed}

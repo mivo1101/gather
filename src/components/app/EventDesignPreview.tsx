@@ -8,6 +8,7 @@ import {
   CloseIcon,
   FitIcon,
 } from "@/components/editor/editor-icons";
+import { Select } from "@/components/ui/Select";
 import {
   invitationPageRoleLabel,
   type InvitationPage,
@@ -209,7 +210,8 @@ export function EventDesignPreview({
           {guests.length > 0 ? (
             <label className="flex min-w-0 items-center gap-2 text-sm">
               <span className="shrink-0 text-grey">As</span>
-              <select
+              <Select
+                variant="pill"
                 value={guest?.id ?? ""}
                 onChange={(event) => {
                   const next = guests.findIndex(
@@ -217,14 +219,14 @@ export function EventDesignPreview({
                   );
                   setGuestIndex(next >= 0 ? next : 0);
                 }}
-                className="max-w-[12rem] truncate rounded-full border border-black/10 bg-white px-3 py-1.5 text-sm font-medium text-black outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/15"
+                className="max-w-[12rem] truncate font-medium"
               >
                 {guests.map((item) => (
                   <option key={item.id} value={item.id}>
                     {guestLabel(item)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           ) : (
             <span className="text-xs text-grey">Add guests to preview names</span>

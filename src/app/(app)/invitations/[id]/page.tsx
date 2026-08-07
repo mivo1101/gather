@@ -7,6 +7,7 @@ import {
 } from "@/components/app/EventHubTabs";
 import { EventRsvpSummary } from "@/components/app/EventRsvpSummary";
 import { Button, PlusIcon } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import { linkInvitationToEventAction } from "@/lib/actions/events";
 import {
   getDeliveriesForEvent,
@@ -251,11 +252,13 @@ export default async function EventDetailPage({
                           <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
                             Your designs
                           </span>
-                          <select
+                          <Select
                             name="invitationId"
                             required
+                            variant="field"
+                            wrapperClassName="mt-2 block w-full"
+                            className="w-full"
                             defaultValue=""
-                            className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-black outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/15"
                           >
                             <option value="" disabled>
                               Select a design
@@ -269,7 +272,7 @@ export default async function EventDetailPage({
                                   : "pages"}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </label>
                         <Button type="submit" size="md" className="mt-4 w-full">
                           Connect design
