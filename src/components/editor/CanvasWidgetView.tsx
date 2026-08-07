@@ -17,6 +17,8 @@ import {
   isGradient,
   isLightColor,
   isTransparent,
+  parseCssColor,
+  rgbToHex,
 } from "@/lib/color-utils";
 import { canvasFontFamilyClass } from "@/lib/canvas-fonts";
 
@@ -26,6 +28,8 @@ interface CanvasWidgetViewProps {
   widget: WidgetConfig;
   elementStyle?: ElementStyle;
   personalizedName?: string;
+  /** Page / card surface behind translucent widget chrome. */
+  surfaceColor?: string | null;
   /** Editor: no navigation / no answering. Preview/guest: interactive. */
   interactive?: boolean;
   /** Stable question id used when saving RSVP answers (usually the element id). */
@@ -39,17 +43,55 @@ interface CanvasWidgetViewProps {
   className?: string;
 }
 
+/**
+ * Resolve chrome fill against the invitation surface so translucent option
+ * boxes on dark cards don't get mistaken for light surfaces.
+ */
+function effectiveChromeSurface(
+  background: string,
+  surface: string | null | undefined,
+): string {
+  const page = surface || "#ffffff";
+  if (!background || isTransparent(background)) return page;
+  if (isGradient(background)) return background;
+
+  const parsed = parseCssColor(background);
+  if (!parsed) return page;
+  if (parsed.a >= 0.92) return background;
+
+  const back = parseCssColor(page) || { r: 255, g: 255, b: 255, a: 1 };
+  const a = Math.min(1, Math.max(0, parsed.a));
+  return rgbToHex(
+    Math.round(parsed.r * a + back.r * (1 - a)),
+    Math.round(parsed.g * a + back.g * (1 - a)),
+    Math.round(parsed.b * a + back.b * (1 - a)),
+  );
+}
+
 /** Prefer configured text colour when it contrasts with the fill; otherwise flip. */
-function readableChromeText(chrome: WidgetChromeStyle): string {
-  const fallback = contrastingInk(chrome.background).ink;
+function readableChromeText(
+  chrome: WidgetChromeStyle,
+  surface?: string | null,
+): string {
+  const effective = effectiveChromeSurface(chrome.background, surface);
+  const fallback = contrastingInk(effective).ink;
   const raw = chrome.textColor || fallback;
   if (isGradient(raw) || isTransparent(raw)) return fallback;
-  if (isLightColor(raw) === isLightColor(chrome.background)) return fallback;
+  if (isLightColor(raw) === isLightColor(effective)) return fallback;
   return raw;
+}
+
+function mutedChromeText(
+  chrome: WidgetChromeStyle,
+  surface?: string | null,
+): string {
+  const ink = readableChromeText(chrome, surface);
+  return isLightColor(ink) ? "rgba(255,255,255,0.58)" : "rgba(31,45,34,0.48)";
 }
 
 export function chromeBoxStyle(
   chrome: WidgetChromeStyle,
+  surface?: string | null,
 ): React.CSSProperties {
   const borderWidth =
     chrome.borderStyle === "none" ? 0 : Math.max(0, chrome.borderWidth);
@@ -60,7 +102,7 @@ export function chromeBoxStyle(
     borderWidth,
     borderStyle: borderWidth > 0 ? chrome.borderStyle : "none",
     borderRadius: normalizeRadius(chrome.radius),
-    color: readableChromeText(chrome),
+    color: readableChromeText(chrome, surface),
   };
 }
 
@@ -107,6 +149,7 @@ export function CanvasWidgetView({
   widget,
   elementStyle,
   personalizedName = "Guest name",
+  surfaceColor = null,
   interactive = false,
   questionId,
   answer,
@@ -121,6 +164,7 @@ export function CanvasWidgetView({
     onChange({ ...widget, ...partial } as WidgetConfig);
   };
   const qid = questionId || widget.kind;
+  const chromeSurface = surfaceColor;
 
   if (widget.kind === "guest_name") {
     const style = elementStyle;
@@ -176,7 +220,7 @@ export function CanvasWidgetView({
     const embedUrl = googleMapsEmbedUrl(query);
     const openUrl = googleMapsOpenUrl(query);
     const mapRadius = normalizeRadius(widget.radius);
-    const buttonStyle = chromeBoxStyle(widget.buttonStyle);
+    const buttonStyle = chromeBoxStyle(widget.buttonStyle, chromeSurface);
     const buttonLabel = widget.buttonLabel.trim() || "Open in Google Maps";
 
     return (
@@ -220,7 +264,7 @@ export function CanvasWidgetView({
               onChange={(buttonLabel) => patch({ buttonLabel })}
               onStopEdit={onStopEdit}
               placeholder="Open in Google Maps"
-              className="shrink-0 px-3 py-2 text-center text-[11px] font-semibold"
+              className="shrink-0 px-3 py-2 text-center text-[11px] font-semibold placeholder:opacity-55"
               style={buttonStyle}
             />
           ) : interactive ? (
@@ -247,7 +291,7 @@ export function CanvasWidgetView({
   }
 
   if (widget.kind === "attend") {
-    const buttonStyle = chromeBoxStyle(widget.buttonStyle);
+    const buttonStyle = chromeBoxStyle(widget.buttonStyle, chromeSurface);
     const btnClass = "block w-full px-3 py-2 text-center text-[11px] font-semibold";
     return (
       <div
@@ -330,7 +374,8 @@ export function CanvasWidgetView({
   }
 
   if (widget.kind === "short_text") {
-    const fieldStyle = chromeBoxStyle(widget.fieldStyle);
+    const fieldStyle = chromeBoxStyle(widget.fieldStyle, chromeSurface);
+    const placeholderColor = mutedChromeText(widget.fieldStyle, chromeSurface);
     return (
       <div
         className={`flex h-full w-full flex-col justify-center gap-1.5 ${className}`}
@@ -359,7 +404,7 @@ export function CanvasWidgetView({
             onChange={(placeholder) => patch({ placeholder })}
             onStopEdit={onStopEdit}
             placeholder="Placeholder…"
-            className="w-full px-3 py-2 text-[11px] opacity-80"
+            className="w-full px-3 py-2 text-[11px] placeholder:opacity-55"
             style={fieldStyle}
           />
         ) : interactive ? (
@@ -368,12 +413,15 @@ export function CanvasWidgetView({
             value={typeof answer === "string" ? answer : ""}
             onChange={(e) => onAnswerChange?.(qid, e.target.value)}
             placeholder={widget.placeholder || "Type here…"}
-            className="w-full px-3 py-2 text-[11px] outline-none placeholder:opacity-55"
-            style={fieldStyle}
+            className="w-full px-3 py-2 text-[11px] outline-none [&::placeholder]:text-[var(--widget-placeholder)]"
+            style={{
+              ...fieldStyle,
+              ["--widget-placeholder" as string]: placeholderColor,
+            }}
           />
         ) : (
           <div className="w-full px-3 py-2 text-[11px]" style={fieldStyle}>
-            <span className="opacity-55">
+            <span style={{ color: placeholderColor }}>
               {widget.placeholder || "Type here…"}
             </span>
           </div>
@@ -389,7 +437,8 @@ export function CanvasWidgetView({
     return null;
   }
 
-  const optionStyle = chromeBoxStyle(widget.optionStyle);
+  const optionStyle = chromeBoxStyle(widget.optionStyle, chromeSurface);
+  const optionPlaceholder = mutedChromeText(widget.optionStyle, chromeSurface);
   const options = widget.options ?? [];
   return (
     <div
@@ -449,7 +498,7 @@ export function CanvasWidgetView({
                   }}
                   onStopEdit={onStopEdit}
                   placeholder="Option"
-                  className="flex-1 text-[11px]"
+                  className="flex-1 text-[11px] placeholder:opacity-55"
                   style={{ color: "inherit" }}
                 />
               </div>
@@ -491,7 +540,7 @@ export function CanvasWidgetView({
                     }
                   }}
                 />
-                <span>{option.label}</span>
+                <span style={{ color: "inherit" }}>{option.label}</span>
               </label>
             );
           }
@@ -510,7 +559,9 @@ export function CanvasWidgetView({
                 }`}
                 aria-hidden="true"
               />
-              <span>{option.label}</span>
+              <span style={{ color: option.label.trim() ? "inherit" : optionPlaceholder }}>
+                {option.label.trim() || "Option"}
+              </span>
             </div>
           );
         })}

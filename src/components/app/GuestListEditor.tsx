@@ -16,6 +16,7 @@ import {
   type GuestDraft,
 } from "@/lib/data/guests";
 import { Button, PlusIcon } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import { BrandCheckbox } from "./BrandCheckbox";
 
 const ROW_PLACEHOLDERS = [
@@ -285,12 +286,14 @@ export function GuestListEditor({
                   className="border-t border-black/[0.06]"
                 >
                   <td className="px-2 py-2 align-top sm:px-3">
-                    <select
+                    <Select
+                      variant="compact"
+                      wrapperClassName="block w-full"
+                      className="w-full min-w-[4.5rem]"
                       value={row.prefix}
                       onChange={(e) =>
                         updateRow(index, { prefix: e.target.value })
                       }
-                      className="w-full min-w-[4.5rem] rounded-xl border border-black/10 bg-white px-2 py-2.5 text-sm outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/15"
                       aria-label={`Prefix for guest ${index + 1}`}
                     >
                       {GUEST_PREFIX_OPTIONS.map((option) => (
@@ -298,7 +301,7 @@ export function GuestListEditor({
                           {option || "-"}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </td>
                   <td className="px-2 py-2 align-top sm:px-3">
                     <input

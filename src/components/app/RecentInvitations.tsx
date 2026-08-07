@@ -246,7 +246,7 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
               onChange={(event) =>
                 setStatus(event.target.value as InvitationStatusFilter)
               }
-              className="appearance-none rounded-full border border-black/10 bg-white/90 py-2 pl-3.5 pr-9 text-sm font-medium text-black shadow-[0_1px_2px_rgba(0,0,0,0.03)] outline-none transition-colors hover:border-black/20 focus-visible:ring-2 focus-visible:ring-signature/40"
+              className="appearance-none rounded-full border border-black/10 bg-white/90 py-2 pl-3.5 pr-10 text-sm font-medium text-black shadow-[0_1px_2px_rgba(0,0,0,0.03)] outline-none transition-colors hover:border-black/20 focus-visible:ring-2 focus-visible:ring-signature/40"
             >
               {statusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -254,7 +254,7 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
                 </option>
               ))}
             </select>
-            <span className="pointer-events-none absolute right-3 text-grey">
+            <span className="pointer-events-none absolute right-3.5 text-grey">
               <ChevronDownIcon />
             </span>
           </label>
@@ -266,7 +266,7 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
               onChange={(event) =>
                 setSort(event.target.value as InvitationSort)
               }
-              className="appearance-none rounded-full border border-black/10 bg-white/90 py-2 pl-3.5 pr-9 text-sm font-medium text-black shadow-[0_1px_2px_rgba(0,0,0,0.03)] outline-none transition-colors hover:border-black/20 focus-visible:ring-2 focus-visible:ring-signature/40"
+              className="appearance-none rounded-full border border-black/10 bg-white/90 py-2 pl-3.5 pr-10 text-sm font-medium text-black shadow-[0_1px_2px_rgba(0,0,0,0.03)] outline-none transition-colors hover:border-black/20 focus-visible:ring-2 focus-visible:ring-signature/40"
             >
               {sortOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -274,7 +274,7 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
                 </option>
               ))}
             </select>
-            <span className="pointer-events-none absolute right-3 text-grey">
+            <span className="pointer-events-none absolute right-3.5 text-grey">
               <ChevronDownIcon />
             </span>
           </label>

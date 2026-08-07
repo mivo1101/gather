@@ -7,6 +7,7 @@ import type {
   WidgetKind,
 } from "@/lib/data/canvas-elements";
 import { widgetKindLabel } from "@/lib/data/canvas-elements";
+import { contrastingInk, isTransparent } from "@/lib/color-utils";
 import { ColourField, EditableNumberInput, PanelSection } from "./shared";
 
 interface SelectedWidgetStylesProps {
@@ -134,11 +135,29 @@ function ChromeFields({
             value={
               chrome.background === "transparent" ? "#ffffff" : chrome.background
             }
-            onChange={(background) => patch({ background })}
+            onChange={(background) =>
+              patch({
+                background,
+                ...(includeTextColor
+                  ? {
+                      textColor: contrastingInk(
+                        isTransparent(background) ? "#ffffff" : background,
+                      ).ink,
+                    }
+                  : null),
+              })
+            }
           />
           <button
             type="button"
-            onClick={() => patch({ background: "transparent" })}
+            onClick={() =>
+              patch({
+                background: "transparent",
+                ...(includeTextColor
+                  ? { textColor: contrastingInk("#ffffff").ink }
+                  : null),
+              })
+            }
             className={`mt-1.5 text-xs font-semibold ${
               chrome.background === "transparent"
                 ? "text-signature"

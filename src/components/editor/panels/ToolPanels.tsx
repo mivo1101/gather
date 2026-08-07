@@ -13,6 +13,10 @@ import {
   PAPER_TEXTURES,
   paperTextureLayerStyle,
 } from "@/lib/paper-textures";
+import {
+  clearInsertDragData,
+  setInsertDragData,
+} from "@/lib/editor-insert-dnd";
 import { ElementsBrowser } from "../ElementsBrowser";
 import { TrashIcon } from "../editor-icons";
 import {
@@ -328,10 +332,23 @@ export function ToolImagesPanel({
             >
               <button
                 type="button"
+                draggable={addingId === null}
                 onClick={() => void addPhoto(photo)}
+                onDragStart={(event) => {
+                  if (addingId !== null) {
+                    event.preventDefault();
+                    return;
+                  }
+                  setInsertDragData(event.dataTransfer, {
+                    type: "stock",
+                    imageUrl: photo.imageUrl,
+                    downloadLocation: photo.downloadLocation,
+                  });
+                }}
+                onDragEnd={() => clearInsertDragData()}
                 disabled={addingId !== null}
-                className="group relative block aspect-[4/3] w-full overflow-hidden bg-soft-grey disabled:cursor-wait"
-                title={`Add photo by ${photo.photographer.name}`}
+                className="group relative block aspect-[4/3] w-full cursor-grab overflow-hidden bg-soft-grey active:cursor-grabbing disabled:cursor-wait"
+                title={`Click or drag photo by ${photo.photographer.name}`}
               >
                 {/* Unsplash requires use of the returned hotlinked image URL. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -339,6 +356,7 @@ export function ToolImagesPanel({
                   src={photo.thumbnailUrl}
                   alt={photo.description}
                   loading="lazy"
+                  draggable={false}
                   className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
                 />
                 <span className="absolute inset-x-2 bottom-2 rounded-full bg-black/70 px-2 py-1 text-center text-[10px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
@@ -637,10 +655,31 @@ export function ToolUploadsPanel({
             >
               <button
                 type="button"
+                draggable={item.kind === "image"}
                 onClick={() => {
                   if (item.kind === "image") onAddImageSrc(item.url);
                 }}
-                className="w-full text-left"
+                onDragStart={(event) => {
+                  if (item.kind !== "image") {
+                    event.preventDefault();
+                    return;
+                  }
+                  setInsertDragData(event.dataTransfer, {
+                    type: "image",
+                    src: item.url,
+                  });
+                }}
+                onDragEnd={() => clearInsertDragData()}
+                className={`w-full text-left ${
+                  item.kind === "image"
+                    ? "cursor-grab active:cursor-grabbing"
+                    : ""
+                }`}
+                title={
+                  item.kind === "image"
+                    ? "Click or drag onto the canvas"
+                    : undefined
+                }
               >
                 <div className="flex aspect-square items-center justify-center bg-soft-grey/60 p-2 text-xs font-semibold text-grey">
                   {item.kind === "image" ? (
@@ -648,6 +687,7 @@ export function ToolUploadsPanel({
                     <img
                       src={item.url}
                       alt=""
+                      draggable={false}
                       className="max-h-full max-w-full object-contain"
                     />
                   ) : (

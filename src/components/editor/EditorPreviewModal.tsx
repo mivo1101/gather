@@ -117,6 +117,7 @@ function PreviewInvitation({
             <CanvasWidgetView
               widget={el.widget}
               elementStyle={el.style}
+              surfaceColor={backgroundColor}
               interactive
               className="h-full w-full"
             />

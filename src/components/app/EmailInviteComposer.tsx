@@ -12,6 +12,7 @@ import type { EventGuest } from "@/lib/data/guests";
 import type { Invitation } from "@/lib/data/types";
 import { guestDisplayLabel, guestInvitePath } from "@/lib/invitation-paths";
 import { Button, PlusIcon } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import { ConfirmDialog } from "@/components/editor/ConfirmDialog";
 
 interface EmailInviteComposerProps {
@@ -438,17 +439,18 @@ export function EmailInviteComposer({
             </p>
             <label className="flex items-center gap-2 text-sm text-black">
               <span className="text-grey">As</span>
-              <select
+              <Select
+                variant="pill"
                 value={previewGuest?.id ?? ""}
                 onChange={(e) => setPreviewGuestId(e.target.value)}
-                className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-sm outline-none focus:border-signature/40"
+                className="font-medium"
               >
                 {guests.map((guest) => (
                   <option key={guest.id} value={guest.id}>
                     {guestDisplayLabel(guest)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           </div>
 

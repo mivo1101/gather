@@ -18,6 +18,7 @@ import type { EmailCampaignDraft } from "@/lib/data/email-campaigns";
 import { formatEventDate } from "@/lib/format";
 import { invitationEditPath } from "@/lib/invitation-paths";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import { EmailInviteComposer } from "./EmailInviteComposer";
 import { GuestListEditor } from "./GuestListEditor";
 
@@ -263,14 +264,16 @@ function ChooseEventStep({
             <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
               Your events
             </span>
-            <select
+            <Select
               name="eventId"
               required
+              variant="field"
+              wrapperClassName="mt-2 block w-full"
+              className="w-full"
               defaultValue={
                 linkableEvents.find((e) => e.invitationId === invitation.id)
                   ?.id ?? ""
               }
-              className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3.5 text-sm text-black outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/15"
             >
               <option value="" disabled>
                 Select an event
@@ -284,7 +287,7 @@ function ChooseEventStep({
                   {event.invitationId === invitation.id ? " · linked" : ""}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         )}
 
@@ -410,18 +413,20 @@ function EventDetailsStep({
           <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
             Time zone
           </span>
-          <select
+          <Select
             name="timezone"
+            variant="field"
+            wrapperClassName="mt-2 block w-full"
+            className="w-full"
             value={timezone}
             onChange={(e) => setTimezone(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3.5 text-sm text-black outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/15"
           >
             {TIMEZONES.map((zone) => (
               <option key={zone} value={zone}>
                 {zone.replace(/_/g, " ")}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
 
         <label className="block">

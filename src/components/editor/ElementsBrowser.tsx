@@ -8,6 +8,10 @@ import {
   searchLibraryElements,
   type LibraryElement,
 } from "@/lib/data/element-library";
+import {
+  clearInsertDragData,
+  setInsertDragData,
+} from "@/lib/editor-insert-dnd";
 import { ChevronLeftIcon } from "./editor-icons";
 import { ShapeGraphic } from "./ShapeGraphic";
 
@@ -99,9 +103,14 @@ function ElementTile({
   return (
     <button
       type="button"
+      draggable
       onClick={() => onSelect(item)}
-      className="group flex h-full w-full flex-col overflow-hidden rounded-xl border border-black/8 bg-white text-left transition-[border-color,transform] hover:-translate-y-0.5 hover:border-signature/35"
-      title={item.name}
+      onDragStart={(event) => {
+        setInsertDragData(event.dataTransfer, { type: "library", item });
+      }}
+      onDragEnd={() => clearInsertDragData()}
+      className="group flex h-full w-full cursor-grab flex-col overflow-hidden rounded-xl border border-black/8 bg-white text-left transition-[border-color,transform] hover:-translate-y-0.5 hover:border-signature/35 active:cursor-grabbing"
+      title={`${item.name} — click or drag onto the canvas`}
     >
       <div
         className={`relative flex shrink-0 items-center justify-center bg-soft-grey/60 ${previewBox}`}

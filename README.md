@@ -2,6 +2,12 @@
 
 Interactive digital invitation platform - **Every guest is your +1**.
 
+Design invitations, personalise them per guest, send email invites, and collect RSVPs.
+
+## Live app
+
+**https://gather-invitation.vercel.app**
+
 ## Getting Started
 
 Install dependencies and run the development server:
@@ -11,7 +17,9 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the landing page.
+Open [http://localhost:3000](http://localhost:3000) for local development.
+
+For production invite links and email, set `NEXT_PUBLIC_APP_URL` / `AUTH_URL` to the live app URL (see `.env.example`).
 
 ## Tech Stack
 
@@ -20,28 +28,29 @@ Open [http://localhost:3000](http://localhost:3000) to view the landing page.
 - **TypeScript**
 - **Tailwind CSS v4**
 - **Urbanist** (Google Fonts)
+- **Supabase** (auth + data)
+- **Resend** (invite email)
+- **Vercel** (hosting)
+
+## What’s included
+
+- Landing page and branded app shell
+- Invitation editor (canvas, templates, interactive widgets)
+- Event hub: design, details, guests, email send
+- Guest invite experience with personalised links and RSVP
 
 ## Project Structure
 
 ```
 src/
-├── app/
-│   ├── globals.css       # Brand tokens & global styles
-│   ├── layout.tsx        # Root layout with Urbanist font
-│   └── page.tsx          # Landing page composition
-└── components/
-    ├── ui/
-    │   ├── Button.tsx    # Reusable button variants
-    │   └── Logo.tsx      # Gather wordmark with + icon
-    └── landing/
-        ├── Navigation.tsx
-        ├── Hero.tsx              # Hero + envelope preview
-        ├── HowItWorks.tsx
-        ├── InteractiveExperience.tsx
-        ├── Features.tsx
-        ├── TemplatePreview.tsx
-        ├── FinalCTA.tsx
-        └── Footer.tsx
+├── app/                 # Routes (landing, auth, home, editor, invite)
+├── components/
+│   ├── app/             # Event hub, guests, email, previews
+│   ├── editor/          # Invitation editor
+│   ├── invitation/      # Guest-facing invite viewer
+│   ├── landing/         # Marketing pages
+│   └── ui/              # Shared UI (Button, Logo, Select)
+└── lib/                 # Actions, data, email, auth helpers
 ```
 
 ## Brand Colours

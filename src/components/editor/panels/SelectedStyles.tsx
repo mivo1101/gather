@@ -26,6 +26,7 @@ import {
   AlignRightIcon,
 } from "../editor-icons";
 import { ImageFramePicker } from "../ImageFramePicker";
+import { Select } from "@/components/ui/Select";
 import {
   ColourField,
   EditableNumberInput,
@@ -64,14 +65,16 @@ export function SelectedGuestNameStyles({
         <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
           Font
         </span>
-        <select
+        <Select
+          variant="compact"
+          wrapperClassName="block w-full"
+          className="w-full"
           value={style.fontFamily}
           onChange={(e) =>
             onChangeStyle({
               fontFamily: e.target.value as ElementStyle["fontFamily"],
             })
           }
-          className="w-full appearance-none rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/20"
           style={{ fontFamily: canvasFontCssFamily(style.fontFamily) }}
         >
           {CANVAS_FONT_GROUPS.map((group) => (
@@ -87,7 +90,7 @@ export function SelectedGuestNameStyles({
               ))}
             </optgroup>
           ))}
-        </select>
+        </Select>
       </label>
 
       <label className="block">
@@ -134,14 +137,16 @@ export function SelectedTextStyles({
         <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
           Font
         </span>
-        <select
+        <Select
+          variant="compact"
+          wrapperClassName="block w-full"
+          className="w-full"
           value={style.fontFamily}
           onChange={(e) =>
             onChangeStyle({
               fontFamily: e.target.value as ElementStyle["fontFamily"],
             })
           }
-          className="w-full appearance-none rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/20"
           style={{ fontFamily: canvasFontCssFamily(style.fontFamily) }}
         >
           {CANVAS_FONT_GROUPS.map((group) => (
@@ -157,7 +162,7 @@ export function SelectedTextStyles({
               ))}
             </optgroup>
           ))}
-        </select>
+        </Select>
       </label>
 
       <div className="grid grid-cols-2 gap-2">
@@ -165,19 +170,21 @@ export function SelectedTextStyles({
           <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
             Weight
           </span>
-          <select
+          <Select
+            variant="compact"
+            wrapperClassName="block w-full"
+            className="w-full"
             value={style.fontWeight}
             onChange={(e) =>
               onChangeStyle({
                 fontWeight: e.target.value as ElementStyle["fontWeight"],
               })
             }
-            className="w-full appearance-none rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-signature/40"
           >
             <option value="regular">Regular</option>
             <option value="medium">Medium</option>
             <option value="bold">Bold</option>
-          </select>
+          </Select>
         </label>
         <label className="block">
           <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">

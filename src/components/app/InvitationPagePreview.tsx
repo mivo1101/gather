@@ -169,8 +169,7 @@ export function InvitationPagePreview({
   return (
     <div
       ref={frameRef}
-      className={`relative overflow-hidden ${className}`}
-      style={{ backgroundColor }}
+      className={`relative isolate overflow-hidden ${className}`}
       aria-hidden={interactive ? undefined : true}
     >
       {elements.length === 0 ? (
@@ -303,6 +302,7 @@ export function InvitationPagePreview({
                 <CanvasWidgetView
                   widget={el.widget}
                   elementStyle={el.style}
+                  surfaceColor={backgroundColor}
                   interactive={interactive}
                   questionId={el.id}
                   answer={answers[el.id]}
