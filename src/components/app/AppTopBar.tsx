@@ -64,10 +64,7 @@ export function ComingSoon({
 }) {
   return (
     <div className="flex min-h-[60vh] flex-col items-start justify-center">
-      <p className="text-sm font-semibold uppercase tracking-[0.1em] text-signature">
-        Coming soon
-      </p>
-      <h1 className="mt-3 text-3xl font-bold tracking-tight text-black">
+      <h1 className="text-3xl font-bold tracking-tight text-black">
         {title}
       </h1>
       <p className="mt-3 max-w-lg text-base text-grey">{description}</p>

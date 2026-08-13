@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import type { User } from "./types";
+import { getStoredUserProfile } from "./users-db";
 import { getGreeting } from "./user-utils";
 
 export { getGreeting };
@@ -33,13 +34,17 @@ export async function getCurrentUser(): Promise<User> {
     redirect("/signin");
   }
 
-  const { firstName, lastName } = splitName(session.user.name);
+  const userId = session.user.id || session.user.email || "unknown";
+  const storedProfile = await getStoredUserProfile(userId);
+  const { firstName, lastName } = splitName(
+    storedProfile?.name || session.user.name,
+  );
 
   return {
-    id: session.user.id || session.user.email || "unknown",
+    id: userId,
     firstName,
     lastName,
     email: session.user.email ?? "",
-    avatarUrl: session.user.image ?? null,
+    avatarUrl: storedProfile?.image || session.user.image || null,
   };
 }

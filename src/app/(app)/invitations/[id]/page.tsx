@@ -209,7 +209,7 @@ export default async function EventDetailPage({
               <div className="mb-4 flex shrink-0 items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-black">
-                    Invitation design
+                    Invitation Design
                   </h2>
                   <p className="mt-1 text-sm text-grey">
                     {invitation
@@ -237,7 +237,7 @@ export default async function EventDetailPage({
                       +
                     </span>
                     <h3 className="mt-4 text-base font-semibold text-black">
-                      Connect an invitation design
+                      Connect an Invitation Design
                     </h3>
                     <p className="mt-2 text-sm leading-6 text-grey">
                       Choose an existing design for this event.
@@ -297,7 +297,7 @@ export default async function EventDetailPage({
               <section className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-[0_2px_4px_rgba(0,0,0,0.03)]">
                 <div className="flex items-center justify-between">
                   <h2 className="text-base font-semibold text-black">
-                    Event setup
+                    Event Setup
                   </h2>
                   <span className="text-xs font-semibold text-signature">
                     {progress}%
@@ -314,16 +314,16 @@ export default async function EventDetailPage({
                     [
                       [
                         "design",
-                        "Invitation design",
+                        "Invitation Design",
                         "Connect and style every page",
                       ],
                       [
                         "details",
-                        "Event details",
+                        "Event Details",
                         "Confirm date, time and location",
                       ],
-                      ["guests", "Guest list", "Add up to 10 recipients"],
-                      ["send", "Email and send", "Compose, test and send"],
+                      ["guests", "Guest List", "Add up to 10 recipients"],
+                      ["send", "Email and Send", "Compose, test and send"],
                     ] as const
                   ).map(([key, title, description], index) => {
                     const complete = workspace.progress[key];
@@ -389,7 +389,7 @@ export default async function EventDetailPage({
           <section className="rounded-[28px] border border-black/[0.07] bg-white p-5 shadow-[0_2px_4px_rgba(0,0,0,0.03)] sm:p-7">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-black">Guest list</h2>
+                <h2 className="text-lg font-semibold text-black">Guest List</h2>
                 <p className="mt-1 text-sm text-grey">
                   {missingGuestsTable
                     ? "Database setup required"

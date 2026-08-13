@@ -187,7 +187,7 @@ function ChooseEventStep({
   return (
     <div className="mt-8">
       <h2 className="text-2xl font-bold tracking-tight text-black">
-        Which event is this invitation for?
+        Which Event Is This Invitation For?
       </h2>
       <p className="mt-2 text-sm leading-6 text-grey">
         Connect “{invitation.title}” to an event workspace so details, guests
@@ -351,7 +351,7 @@ function EventDetailsStep({
   return (
     <div className="mt-8">
       <h2 className="text-2xl font-bold tracking-tight text-black">
-        Confirm event details
+        Confirm Event Details
       </h2>
       <p className="mt-2 text-sm leading-6 text-grey">
         Date, time and location for this event. Venue and address are prefilled
@@ -498,22 +498,14 @@ export function EventSetupFlow({
           ? "details"
           : "event";
 
-  const eyebrow =
-    step === "email"
-      ? "Email and send"
-      : step === "guests"
-        ? "Guest list"
-        : step === "details"
-          ? "Event details"
-          : "Event setup";
   const title =
     step === "email"
-      ? "Compose and send"
+      ? "Compose and Send"
       : step === "guests"
-        ? "Who are you inviting?"
+        ? "Who Are You Inviting?"
         : step === "details"
-          ? "Confirm date and location"
-          : "Set up your event";
+          ? "Confirm Date and Location"
+          : "Set Up Your Event";
   const subtitle =
     step === "email"
       ? "Add a photo, tailor the message, then send."
@@ -548,10 +540,7 @@ export function EventSetupFlow({
       </div>
 
       <div className="mt-6 rounded-[30px] border border-black/[0.07] bg-white p-7 shadow-[0_18px_50px_rgba(0,0,0,0.07)] sm:p-9">
-        <p className="text-xs font-semibold uppercase tracking-[0.1em] text-signature">
-          {eyebrow}
-        </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-black">
+        <h1 className="text-3xl font-bold tracking-tight text-black">
           {title}
         </h1>
         <p className="mt-3 text-sm leading-6 text-grey">{subtitle}</p>

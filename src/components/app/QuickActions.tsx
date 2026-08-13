@@ -144,7 +144,7 @@ export function QuickActions() {
           id="create-invitation-heading"
           className="text-lg font-semibold tracking-tight text-black"
         >
-          Create a new invitation
+          Create a New Invitation
         </h2>
         <p className="mt-0.5 text-sm text-grey">
           {isPending
