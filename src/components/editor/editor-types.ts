@@ -55,12 +55,12 @@ export const EDITOR_TOOLS: {
 }[] = [
   { id: "templates", label: "Templates" },
   { id: "layout", label: "Layout" },
-  { id: "elements", label: "Elements" },
+  { id: "background", label: "Background" },
   { id: "text", label: "Text" },
+  { id: "elements", label: "Elements" },
   { id: "images", label: "Images" },
   { id: "uploads", label: "Uploads" },
   { id: "interactive", label: "Interactive" },
-  { id: "background", label: "Background" },
   { id: "qr", label: "QR Code" },
   { id: "brand", label: "Brand Kit" },
 ];
