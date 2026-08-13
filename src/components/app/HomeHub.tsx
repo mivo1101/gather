@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { User } from "@/lib/data/types";
+import { getGreeting } from "@/lib/data/user-utils";
 import { AppTopBar } from "./AppTopBar";
 import { HubSearchProvider } from "./HubSearchContext";
 import { HomeIcon, TemplatesIcon } from "./icons";
@@ -46,6 +49,14 @@ interface HomeHubProps {
 /** Shared Home / Templates chrome: greeting, underline tabs, search bar. */
 export function HomeHub({ user, greeting, active, children }: HomeHubProps) {
   const { subtitle, searchPlaceholder } = copy[active];
+  const [localGreeting, setLocalGreeting] = useState(greeting);
+
+  useEffect(() => {
+    const updateGreeting = () => setLocalGreeting(getGreeting());
+    updateGreeting();
+    const interval = window.setInterval(updateGreeting, 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   return (
     <HubSearchProvider>
@@ -54,7 +65,7 @@ export function HomeHub({ user, greeting, active, children }: HomeHubProps) {
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-black md:text-4xl">
-                {greeting}, {user.firstName}{" "}
+                {localGreeting}, {user.firstName}{" "}
                 <span aria-hidden="true">👋</span>
               </h1>
               <p className="mt-2 text-base text-grey">{subtitle}</p>
