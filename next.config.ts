@@ -1,6 +1,45 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/images/graphics/birthday/:asset",
+        destination: "/images/graphics/birthday/stickers/:asset",
+        permanent: true,
+      },
+      {
+        source: "/images/graphics/graduation-stickers/:asset",
+        destination: "/images/graphics/graduation/stickers/:asset",
+        permanent: true,
+      },
+      {
+        source: "/images/graphics/graduation/:asset",
+        destination: "/images/graphics/graduation/editorial/:asset",
+        permanent: true,
+      },
+      {
+        source: "/images/graphics/wedding-assets/:asset",
+        destination: "/images/graphics/wedding/stickers/:asset",
+        permanent: true,
+      },
+      {
+        source: "/images/graphics/wedding-silhouettes/:asset",
+        destination: "/images/graphics/wedding/silhouettes/:asset",
+        permanent: true,
+      },
+      {
+        source: "/images/graphics/wedding-watercolour/:asset",
+        destination: "/images/graphics/wedding/watercolour/:asset",
+        permanent: true,
+      },
+      {
+        source: "/images/graphics/wedding/:asset",
+        destination: "/images/graphics/wedding/editorial/:asset",
+        permanent: true,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
