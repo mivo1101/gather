@@ -27,24 +27,12 @@ import {
 } from "./shared";
 
 export function ToolElementsPanel({
-  defaultColor,
-  onDefaultColorChange,
   onAddLibraryElement,
 }: {
-  defaultColor: string;
-  onDefaultColorChange: (color: string) => void;
   onAddLibraryElement: (item: LibraryElement) => void;
 }) {
   return (
-    <div className="space-y-5">
-      <ColourField
-        label="Colour"
-        value={defaultColor}
-        onChange={onDefaultColorChange}
-      />
-      <p className="text-xs text-grey">
-        New elements will use this colour when possible.
-      </p>
+    <div>
       <ElementsBrowser onSelect={onAddLibraryElement} />
     </div>
   );

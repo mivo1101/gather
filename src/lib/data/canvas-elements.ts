@@ -211,7 +211,37 @@ export type ShapeKind =
   | "icon_camera"
   | "icon_music"
   | "icon_cake"
-  | "icon_rings";
+  | "icon_rings"
+  | "icon_sparkles"
+  | "icon_wine"
+  | "icon_cocktail"
+  | "icon_ribbon"
+  | "icon_candle"
+  | "icon_colour_heart"
+  | "icon_colour_star"
+  | "icon_colour_sparkles"
+  | "icon_colour_wine"
+  | "icon_colour_cocktail"
+  | "icon_colour_gift"
+  | "icon_colour_cake"
+  | "icon_colour_rings"
+  | "icon_colour_envelope"
+  | "emoji_wave"
+  | "emoji_heart"
+  | "emoji_party"
+  | "emoji_clap"
+  | "emoji_sparkles"
+  | "emoji_balloon"
+  | "emoji_cake"
+  | "emoji_rings"
+  | "emoji_cheers"
+  | "emoji_bouquet"
+  | "emoji_kiss"
+  | "emoji_love_letter"
+  | "emoji_gift"
+  | "emoji_rose"
+  | "emoji_party_face"
+  | "emoji_raised_hands";
 
 export type DividerStyle =
   | "solid"
@@ -820,7 +850,7 @@ export function createShapeElement(
     kind === "parallelogram" ||
     kind === "trapezoid" ||
     kind === "semicircle";
-  const isIcon = kind.startsWith("icon_");
+  const isIcon = kind.startsWith("icon_") || kind.startsWith("emoji_");
 
   return {
     id: uid("shape"),

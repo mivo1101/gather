@@ -33,8 +33,6 @@ interface EditorLeftPanelProps {
   customSizeOpen?: boolean;
   onCustomSizeOpenChange?: (open: boolean) => void;
   pages: InvitationPage[];
-  defaultElementColor: string;
-  onDefaultElementColorChange: (color: string) => void;
   onShapeChange: (shape: InvitationShape) => void;
   onCustomSizeChange: (size: CustomCanvasSize) => void;
   onAddText: (preset?: "heading" | "subheading" | "body") => void;
@@ -324,8 +322,6 @@ export function EditorLeftPanel({
   customSizeOpen,
   onCustomSizeOpenChange,
   pages,
-  defaultElementColor,
-  onDefaultElementColorChange,
   onShapeChange,
   onCustomSizeChange,
   onAddText,
@@ -363,8 +359,6 @@ export function EditorLeftPanel({
           />
         ) : activeTool === "elements" ? (
           <ToolElementsPanel
-            defaultColor={defaultElementColor}
-            onDefaultColorChange={onDefaultElementColorChange}
             onAddLibraryElement={onAddLibraryElement}
           />
         ) : activeTool === "text" ? (
