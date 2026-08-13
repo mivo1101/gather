@@ -51,6 +51,140 @@ body {
   }
 }
 
+/* System emoji icons on the canvas (Apple Color Emoji on Apple devices). */
+.emoji-icon {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
+}
+
+.emoji-icon--wave {
+  transform-origin: 70% 80%;
+  animation: emoji-wave 2.4s ease-in-out infinite;
+}
+
+.emoji-icon--pulse {
+  animation: emoji-pulse 1.4s ease-in-out infinite;
+}
+
+.emoji-icon--bounce {
+  animation: emoji-bounce 1.8s ease-in-out infinite;
+}
+
+.emoji-icon--clap {
+  transform-origin: center bottom;
+  animation: emoji-clap 1.2s ease-in-out infinite;
+}
+
+.emoji-icon--twinkle {
+  animation: emoji-twinkle 2s ease-in-out infinite;
+}
+
+.emoji-icon--float {
+  animation: emoji-float 2.6s ease-in-out infinite;
+}
+
+.emoji-icon--tilt {
+  transform-origin: center bottom;
+  animation: emoji-tilt 2.2s ease-in-out infinite;
+}
+
+@keyframes emoji-wave {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0deg);
+  }
+  10% {
+    transform: rotate(16deg);
+  }
+  20% {
+    transform: rotate(-10deg);
+  }
+  30% {
+    transform: rotate(14deg);
+  }
+  40% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes emoji-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes emoji-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10%);
+  }
+  55% {
+    transform: translateY(2%);
+  }
+}
+
+@keyframes emoji-clap {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  35% {
+    transform: scale(1.08) rotate(-6deg);
+  }
+  55% {
+    transform: scale(0.96) rotate(4deg);
+  }
+}
+
+@keyframes emoji-twinkle {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08) rotate(8deg);
+    opacity: 0.85;
+  }
+}
+
+@keyframes emoji-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8%);
+  }
+}
+
+@keyframes emoji-tilt {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(8deg);
+  }
+}
+
 /* Reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   html {

@@ -8,12 +8,11 @@ import {
   searchLibraryElements,
   type LibraryElement,
 } from "@/lib/data/element-library";
-import {
-  clearInsertDragData,
-  setInsertDragData,
-} from "@/lib/editor-insert-dnd";
+import { setInsertDragData, clearInsertDragData } from "@/lib/editor-insert-dnd";
 import { ChevronLeftIcon } from "./editor-icons";
 import { ShapeGraphic } from "./ShapeGraphic";
+import { COLOURED_ICON_DEFAULT } from "./ColouredIconGraphic";
+
 
 const ELEMENT_RECENTS_KEY = "gather.editor.elementRecents";
 const MAX_RECENTS = 12;
@@ -22,7 +21,10 @@ type CollectionId =
   | "recent"
   | "icons"
   | "graphics"
-  | "flowers"
+  | "graphics-flowers"
+  | "graphics-birthday"
+  | "graphics-wedding"
+  | "graphics-graduation"
   | "shapes"
   | "dividers";
 
@@ -31,6 +33,17 @@ interface ElementCollection {
   label: string;
   items: LibraryElement[];
 }
+
+const GRAPHICS_SUBCOLLECTIONS: {
+  id: "graphics-flowers" | "graphics-birthday" | "graphics-wedding" | "graphics-graduation";
+  label: string;
+  subcategory: "flowers" | "birthday" | "wedding" | "graduation";
+}[] = [
+  { id: "graphics-flowers", label: "Flowers", subcategory: "flowers" },
+  { id: "graphics-birthday", label: "Birthday", subcategory: "birthday" },
+  { id: "graphics-wedding", label: "Wedding", subcategory: "wedding" },
+  { id: "graphics-graduation", label: "Graduation", subcategory: "graduation" },
+];
 
 export function loadElementRecents(): string[] {
   if (typeof window === "undefined") return [];
@@ -134,7 +147,14 @@ function ElementTile({
                 : shapeBox
             }
           >
-            <ShapeGraphic kind={item.shapeKind} color="#1F2D22" />
+            <ShapeGraphic
+              kind={item.shapeKind}
+              color={
+                item.shapeKind.startsWith("icon_colour_")
+                  ? COLOURED_ICON_DEFAULT
+                  : "#1F2D22"
+              }
+            />
           </div>
         ) : item.kind === "divider" ? (
           <DividerPreview style={item.dividerStyle ?? "solid"} />
@@ -302,16 +322,44 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
         items: LIBRARY_ELEMENTS.filter(
           (item) =>
             item.category === "patterns" &&
-            (item.subcategory === "monogram" ||
+            (item.subcategory === "flowers" ||
+              item.subcategory === "birthday" ||
+              item.subcategory === "wedding" ||
+              item.subcategory === "graduation" ||
+              item.subcategory === "monogram" ||
               item.subcategory === "social"),
         ),
       },
       {
-        id: "flowers",
+        id: "graphics-flowers",
         label: "Flowers",
         items: LIBRARY_ELEMENTS.filter(
           (item) =>
             item.category === "patterns" && item.subcategory === "flowers",
+        ),
+      },
+      {
+        id: "graphics-birthday",
+        label: "Birthday",
+        items: LIBRARY_ELEMENTS.filter(
+          (item) =>
+            item.category === "patterns" && item.subcategory === "birthday",
+        ),
+      },
+      {
+        id: "graphics-wedding",
+        label: "Wedding",
+        items: LIBRARY_ELEMENTS.filter(
+          (item) =>
+            item.category === "patterns" && item.subcategory === "wedding",
+        ),
+      },
+      {
+        id: "graphics-graduation",
+        label: "Graduation",
+        items: LIBRARY_ELEMENTS.filter(
+          (item) =>
+            item.category === "patterns" && item.subcategory === "graduation",
         ),
       },
       {
@@ -328,6 +376,14 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
     [],
   );
 
+  const topCollections = useMemo(
+    () =>
+      collections.filter((collection) =>
+        ["icons", "graphics", "shapes", "dividers"].includes(collection.id),
+      ),
+    [collections],
+  );
+
   const searchResults = useMemo(
     () => (query.trim() ? searchLibraryElements(query) : []),
     [query],
@@ -336,12 +392,22 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
   const expanded = useMemo(() => {
     if (!expandedCollection) return null;
     if (expandedCollection === "recent") {
-      return { label: "Recently used", items: recents };
+      return { label: "Recently used", items: recents, kind: "grid" as const };
     }
-    return (
-      collections.find((collection) => collection.id === expandedCollection) ??
-      null
-    );
+    if (expandedCollection === "graphics") {
+      return { label: "Graphics", items: [], kind: "graphics-hub" as const };
+    }
+    const collection =
+      collections.find((item) => item.id === expandedCollection) ?? null;
+    if (!collection) return null;
+    return {
+      label: collection.label,
+      items: collection.items,
+      kind: "grid" as const,
+      parent: collection.id.startsWith("graphics-")
+        ? ("graphics" as const)
+        : null,
+    };
   }, [collections, expandedCollection, recents]);
 
   const handleSelect = (item: LibraryElement) => {
@@ -381,11 +447,40 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
             </div>
           )}
         </section>
+      ) : expanded?.kind === "graphics-hub" ? (
+        <section className="space-y-4">
+          <button
+            type="button"
+            onClick={() => setExpandedCollection(null)}
+            className="inline-flex items-center gap-1 text-sm font-semibold text-black hover:text-signature"
+          >
+            <ChevronLeftIcon className="h-3.5 w-3.5" />
+            Graphics
+          </button>
+          {GRAPHICS_SUBCOLLECTIONS.map((sub) => {
+            const items = LIBRARY_ELEMENTS.filter(
+              (item) =>
+                item.category === "patterns" &&
+                item.subcategory === sub.subcategory,
+            );
+            return (
+              <CollectionRail
+                key={sub.id}
+                title={sub.label}
+                items={items}
+                onSelect={handleSelect}
+                onSeeAll={() => setExpandedCollection(sub.id)}
+              />
+            );
+          })}
+        </section>
       ) : expanded ? (
         <section className="space-y-3">
           <button
             type="button"
-            onClick={() => setExpandedCollection(null)}
+            onClick={() =>
+              setExpandedCollection(expanded.parent ?? null)
+            }
             className="inline-flex items-center gap-1 text-sm font-semibold text-black hover:text-signature"
           >
             <ChevronLeftIcon className="h-3.5 w-3.5" />
@@ -415,7 +510,7 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
               onSeeAll={() => setExpandedCollection("recent")}
             />
           )}
-          {collections.map((collection) => (
+          {topCollections.map((collection) => (
             <CollectionRail
               key={collection.id}
               title={collection.label}

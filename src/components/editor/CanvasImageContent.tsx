@@ -6,7 +6,11 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { isPatternGraphicSrc } from "@/lib/data/element-library";
+import {
+  isLibraryGraphicSrc,
+  isPatternGraphicSrc,
+  isWeddingSilhouetteSrc,
+} from "@/lib/data/element-library";
 import type {
   ElementEffects,
   ImageFrame,
@@ -216,6 +220,8 @@ export function CanvasImageContent({
 
   const clip = imageFrameClipPath(frame);
   const isPattern = isPatternGraphicSrc(src);
+  const isWeddingSilhouette = isWeddingSilhouetteSrc(src);
+  const isLibraryGraphic = isLibraryGraphicSrc(src);
   const scale = normalizeImageScale(imageScale);
   const fit = clampImageFit({
     imageScale: scale,
@@ -264,6 +270,54 @@ export function CanvasImageContent({
     return (
       <div className={className} style={outerEffect} aria-hidden="true">
         <div className="h-full w-full" style={style} />
+      </div>
+    );
+  }
+
+  if (isWeddingSilhouette) {
+    const base = src.replace(/-preview\.png$/, "");
+    const maskStyle: CSSProperties = {
+      WebkitMaskImage: `url(${base}-fill.png)`,
+      maskImage: `url(${base}-fill.png)`,
+      WebkitMaskSize: "contain",
+      maskSize: "contain",
+      WebkitMaskRepeat: "no-repeat",
+      maskRepeat: "no-repeat",
+      WebkitMaskPosition: "center",
+      maskPosition: "center",
+      backgroundColor: color === "transparent" ? "transparent" : color || "#1F2D22",
+    };
+    return (
+      <div className={className} style={outerEffect}>
+        <div className="relative h-full w-full overflow-hidden" style={{ clipPath: clip }}>
+          {color !== "transparent" && <div className="absolute inset-0" style={maskStyle} />}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`${base}-outline.png`}
+            alt=""
+            draggable={false}
+            className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (isLibraryGraphic) {
+    return (
+      <div className={className} style={outerEffect}>
+        <div
+          className="flex h-full w-full items-center justify-center overflow-hidden"
+          style={{ clipPath: clip }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt=""
+            draggable={false}
+            className="pointer-events-none h-full w-full select-none object-contain"
+          />
+        </div>
       </div>
     );
   }

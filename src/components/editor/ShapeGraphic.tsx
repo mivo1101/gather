@@ -8,6 +8,8 @@ import {
   normalizeHex,
   parseLinearGradient,
 } from "@/lib/color-utils";
+import { ColouredIconGraphic } from "./ColouredIconGraphic";
+import { EmojiGraphic, isEmojiShapeKind } from "./EmojiGraphic";
 
 /** Circular corner radius from the shorter side (stays round when stretched). */
 function RoundedSquareShape({
@@ -152,6 +154,9 @@ export function ShapeGraphic({
   const outlineWidth = Number.isFinite(borderWidth)
     ? Math.max(0, Math.min(24, borderWidth))
     : 0;
+  if (isEmojiShapeKind(kind)) {
+    return <EmojiGraphic kind={kind} className={className} />;
+  }
   const isLine =
     kind === "line" || kind === "line_dashed" || kind === "line_dotted";
   if (outlineWidth > 0 && !isLine) {
@@ -386,6 +391,12 @@ export function ShapeGraphic({
     );
   }
 
+  if (kind.startsWith("icon_colour_")) {
+    return (
+      <ColouredIconGraphic kind={kind} color={color} className={className} />
+    );
+  }
+
   if (kind.startsWith("icon_")) {
     return (
       <SvgFill color={color} className={className}>
@@ -458,6 +469,49 @@ export function ShapeGraphic({
                 <circle cx="9" cy="13" r="5.5" />
                 <circle cx="15" cy="13" r="5.5" />
                 <path d="m6.5 6.5 2.5-3 2.5 3-2.5 2-2.5-2Z" />
+              </>
+            )}
+            {kind === "icon_sparkles" && (
+              <>
+                <path d="m12 2.5 1.4 4.2L17.6 8l-4.2 1.3L12 13.5l-1.4-4.2L6.4 8l4.2-1.3L12 2.5Z" />
+                <path d="m18.5 13.5.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7.7-2.1Z" />
+                <path d="m5.2 14.2.55 1.65 1.65.55-1.65.55L5.2 18.6l-.55-1.65-1.65-.55 1.65-.55.55-1.65Z" />
+              </>
+            )}
+            {kind === "icon_wine" && (
+              <>
+                <path d="M7.5 3h9v1.5c0 3.8-2.2 6.5-4.5 6.5S7.5 8.3 7.5 4.5V3Z" />
+                <path d="M12 11v8.5M8.5 21h7" />
+                <path d="M7.5 7h9" />
+              </>
+            )}
+            {kind === "icon_cocktail" && (
+              <>
+                <path d="m6 4.5 6 8.5 6-8.5" />
+                <path d="M12 13v6.5M8.5 21h7" />
+                <path d="M8.5 4.5h7" />
+                <path d="m15.5 6.5 2.5-2.5" />
+                <circle
+                  cx="18.5"
+                  cy="3.5"
+                  r="0.85"
+                  fill={stroke}
+                  stroke="none"
+                />
+              </>
+            )}
+            {kind === "icon_ribbon" && (
+              <>
+                <path d="M12 3.5c-2.8 0-5 1.9-5 4.4 0 3.2 5 6.6 5 6.6s5-3.4 5-6.6c0-2.5-2.2-4.4-5-4.4Z" />
+                <path d="m9.5 13.5-3 7.5L12 18l5.5 3-3-7.5" />
+              </>
+            )}
+            {kind === "icon_candle" && (
+              <>
+                <path d="M9.5 10h5v10.5h-5z" />
+                <path d="M12 10V7.5" />
+                <path d="M12 7.5c1.1-1.1 1.1-2.4 0-3.5-1.1 1.1-1.1 2.4 0 3.5Z" />
+                <path d="M8 20.5h8" />
               </>
             )}
           </g>

@@ -13,7 +13,11 @@ import {
   CANVAS_FONT_GROUPS,
   canvasFontCssFamily,
 } from "@/lib/canvas-fonts";
-import { isPatternGraphicSrc } from "@/lib/data/element-library";
+import {
+  isDecorativeGraphicSrc,
+  isPatternGraphicSrc,
+  isWeddingSilhouetteSrc,
+} from "@/lib/data/element-library";
 import {
   effectParams,
   resolveEffectKind,
@@ -534,10 +538,12 @@ export function SelectedImageStyles({
   const style = selected.style;
   const effects = style.effects ?? {};
   const isPattern = isPatternGraphicSrc(selected.content);
+  const isWeddingSilhouette = isWeddingSilhouetteSrc(selected.content);
+  const isDecorativeGraphic = isDecorativeGraphicSrc(selected.content);
 
   return (
     <div className="space-y-5">
-      {isPattern && (
+      {(isPattern || isWeddingSilhouette) && (
         <>
           <ColourField
             label="Colour"
@@ -545,17 +551,30 @@ export function SelectedImageStyles({
             onChange={(color) => onChangeStyle({ color })}
           />
           <p className="text-xs text-grey">
-            Colour tints line-art patterns to match your invitation.
+            {isWeddingSilhouette
+              ? "Colour fills the silhouette interior. Choose transparent to reveal the card texture."
+              : "Colour tints line-art patterns to match your invitation."}
           </p>
+          {isWeddingSilhouette && (
+            <button
+              type="button"
+              onClick={() => onChangeStyle({ color: "transparent" })}
+              className="rounded-lg border border-black/10 px-3 py-2 text-xs font-semibold text-black hover:bg-soft-grey"
+            >
+              Transparent interior
+            </button>
+          )}
         </>
       )}
 
-      <PanelSection title="Frames">
-        <ImageFramePicker
-          value={style.frame ?? "none"}
-          onChange={(frame) => onChangeStyle({ frame })}
-        />
-      </PanelSection>
+      {!isDecorativeGraphic && (
+        <PanelSection title="Frames">
+          <ImageFramePicker
+            value={style.frame ?? "none"}
+            onChange={(frame) => onChangeStyle({ frame })}
+          />
+        </PanelSection>
+      )}
 
       <EffectsPicker
         effects={effects}

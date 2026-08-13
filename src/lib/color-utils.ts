@@ -140,6 +140,23 @@ export function rgbToHex(r: number, g: number, b: number): string {
   return `#${to(r)}${to(g)}${to(b)}`.toUpperCase();
 }
 
+/** Blend two hex colours. `amount` is how much of `toward` to mix in (0–1). */
+export function mixHex(
+  from: string,
+  toward: string,
+  amount: number,
+): string {
+  const a = hexToRgb(normalizeHex(from));
+  const b = hexToRgb(normalizeHex(toward));
+  if (!a || !b) return normalizeHex(from);
+  const t = Math.max(0, Math.min(1, amount));
+  return rgbToHex(
+    a.r + (b.r - a.r) * t,
+    a.g + (b.g - a.g) * t,
+    a.b + (b.b - a.b) * t,
+  );
+}
+
 export function rgbToHsv(
   r: number,
   g: number,

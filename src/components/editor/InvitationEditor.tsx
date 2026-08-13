@@ -23,6 +23,8 @@ import {
 } from "@/lib/data/canvas-elements";
 import {
   createElementFromLibrary,
+  isDecorativeGraphicSrc,
+  isLibraryGraphicSrc,
   isPatternGraphicSrc,
   type LibraryElement,
 } from "@/lib/data/element-library";
@@ -271,7 +273,7 @@ export function InvitationEditor({
   const [toast, setToast] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isContinuing, setIsContinuing] = useState(false);
-  const [defaultElementColor, setDefaultElementColor] = useState("#1F2D22");
+  const defaultElementColor = "#1F2D22";
   const [pendingTemplate, setPendingTemplate] =
     useState<InvitationTemplate | null>(null);
   const [customSizeModalOpen, setCustomSizeModalOpen] =
@@ -337,7 +339,9 @@ export function InvitationEditor({
       selected.type === "text"
         ? "text"
         : selected.type === "image"
-          ? "images"
+          ? isDecorativeGraphicSrc(selected.content)
+            ? "elements"
+            : "images"
           : selected.type === "widget"
             ? "interactive"
             : "elements";
@@ -434,6 +438,51 @@ export function InvitationEditor({
     },
     [setElementsOnActivePage],
   );
+
+  useEffect(() => {
+    if (
+      !selected ||
+      selected.type !== "image" ||
+      !isLibraryGraphicSrc(selected.content) ||
+      !selected.height
+    ) {
+      return;
+    }
+
+    const selectedHeight = selected.height;
+    const probe = new window.Image();
+    probe.onload = () => {
+      const cardAspect = cardAspectRatio(shape, customSize);
+      const imageAspect = probe.naturalWidth / Math.max(1, probe.naturalHeight);
+      let height = selectedHeight;
+      let width = (height * imageAspect) / cardAspect;
+      if (width > 90) {
+        width = 90;
+        height = (width * cardAspect) / imageAspect;
+      }
+      width = Math.max(4, Math.round(width * 10) / 10);
+      height = Math.max(4, Math.round(height * 10) / 10);
+      if (
+        Math.abs(width - selected.width) < 0.5 &&
+        Math.abs(height - selectedHeight) < 0.5
+      ) {
+        return;
+      }
+      const centreX = selected.x + selected.width / 2;
+      const centreY = selected.y + selectedHeight / 2;
+      updateElement(
+        selected.id,
+        {
+          x: Math.max(0, Math.min(100 - width, centreX - width / 2)),
+          y: Math.max(0, Math.min(100 - height, centreY - height / 2)),
+          width,
+          height,
+        },
+        false,
+      );
+    };
+    probe.src = selected.content;
+  }, [customSize, selected, shape, updateElement]);
 
   const duplicateElement = useCallback(
     (id: string) => {
@@ -1330,15 +1379,49 @@ export function InvitationEditor({
     position?: CanvasPoint,
   ) => {
     saveElementRecent(item.id);
-    const el = sizeNewShapeForCard(
+    const baseElement = sizeNewShapeForCard(
       createElementFromLibrary(item),
       cardAspectRatio(shape, customSize),
     );
-    addElement({
-      ...el,
-      ...(position ?? {}),
-      style: { ...el.style, color: defaultElementColor },
-    });
+    const colour =
+      item.shapeKind?.startsWith("icon_colour_")
+        ? "#FF60AA"
+        : defaultElementColor;
+    const placeElement = (el: CanvasElement) => {
+      const centred = position
+        ? {
+            x: position.x + (baseElement.width - el.width) / 2,
+            y:
+              position.y +
+              ((baseElement.height ?? 28) - (el.height ?? 28)) / 2,
+          }
+        : {
+            x: (100 - el.width) / 2,
+            y: (100 - (el.height ?? 28)) / 2,
+          };
+      addElement({
+        ...el,
+        ...centred,
+        style: { ...el.style, color: colour },
+      });
+    };
+
+    if (baseElement.type === "image" && isLibraryGraphicSrc(item.preview)) {
+      const probe = new window.Image();
+      probe.onload = () => {
+        const size = photoElementSize(
+          probe.naturalWidth,
+          probe.naturalHeight,
+          cardAspectRatio(shape, customSize),
+        );
+        placeElement({ ...baseElement, ...size });
+      };
+      probe.onerror = () => placeElement(baseElement);
+      probe.src = item.preview;
+      return;
+    }
+
+    placeElement(baseElement);
   };
 
   const onInsertDrop = (
@@ -1517,8 +1600,6 @@ export function InvitationEditor({
             customSizeOpen={customSizeModalOpen}
             onCustomSizeOpenChange={setCustomSizeModalOpen}
             pages={pages}
-            defaultElementColor={defaultElementColor}
-            onDefaultElementColorChange={setDefaultElementColor}
             onShapeChange={(next) =>
               commit((current) => ({ ...current, shape: next }))
             }

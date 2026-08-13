@@ -34,7 +34,7 @@ import {
   normalizeImageScale,
 } from "./CanvasImageContent";
 import { CanvasWidgetView } from "./CanvasWidgetView";
-import { isPatternGraphicSrc } from "@/lib/data/element-library";
+import { isDecorativeGraphicSrc } from "@/lib/data/element-library";
 import { ShapeGraphic } from "./ShapeGraphic";
 import {
   fillBoxStyle,
@@ -1425,7 +1425,7 @@ export function EditorCanvas({
                     if (
                       el.type === "text" ||
                       (el.type === "widget" && !isGuestNameWidget) ||
-                      (el.type === "image" && !isPatternGraphicSrc(el.content))
+                      (el.type === "image" && !isDecorativeGraphicSrc(el.content))
                     ) {
                       onSelect(el.id);
                       onStartEdit(el.id);
@@ -1485,12 +1485,14 @@ export function EditorCanvas({
                       <span className="shrink-0 whitespace-nowrap rounded-full bg-signature/10 px-2 py-0.5 text-[10px] font-semibold capitalize text-signature">
                         {el.type === "widget" && el.widget
                           ? widgetKindLabel(el.widget.kind)
-                          : el.type}
+                          : isDecorativeGraphicSrc(el.content)
+                            ? "Graphic"
+                            : el.type}
                       </span>
                       {(el.type === "text" ||
                         (el.type === "widget" && !isGuestNameWidget) ||
                         (el.type === "image" &&
-                          !isPatternGraphicSrc(el.content))) &&
+                          !isDecorativeGraphicSrc(el.content))) &&
                         !el.locked && (
                         <button
                           type="button"
