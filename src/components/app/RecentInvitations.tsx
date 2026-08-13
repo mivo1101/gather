@@ -229,7 +229,7 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
             id="recent-invitations-heading"
             className="text-2xl font-semibold tracking-tight text-black"
           >
-            {inTrashView ? "Trash" : "Recent invitations"}
+            {inTrashView ? "Trash" : "Recent Invitations"}
           </h2>
           {inTrashView ? (
             <p className="mt-1 text-sm text-grey">

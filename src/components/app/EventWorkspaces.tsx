@@ -143,7 +143,7 @@ function EventWorkspaceCard({ workspace }: { workspace: EventWorkspace }) {
 
           <div className="mt-5">
             <div className="mb-2 flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-black">Event setup</span>
+              <span className="font-semibold text-black">Event Setup</span>
               <span className="text-grey">{percentage}%</span>
             </div>
             <div className="h-1 overflow-hidden rounded-full bg-soft-grey">

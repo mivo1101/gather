@@ -33,7 +33,7 @@ export function EmailSendSummary({
     <section className="rounded-[28px] border border-black/[0.07] bg-white p-5 shadow-[0_2px_4px_rgba(0,0,0,0.03)] sm:p-7">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-black">Email and send</h2>
+          <h2 className="text-lg font-semibold text-black">Email and Send</h2>
           <p className="mt-1 text-sm text-grey">
             Compose the invite email, add a photo, preview and send from
             Continue setup.

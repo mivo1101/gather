@@ -190,7 +190,7 @@ export function GuestListEditor({
   return (
     <div className="mt-8">
       <h2 className="text-2xl font-bold tracking-tight text-black">
-        Add your guests
+        Add Your Guests
       </h2>
       <p className="mt-2 text-sm leading-6 text-grey">
         Use the display name you want on the card - it fills the Guest name

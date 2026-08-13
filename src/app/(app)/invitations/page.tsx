@@ -17,11 +17,8 @@ export default async function InvitationsPage() {
       return (
         <div className="mx-auto max-w-2xl animate-fade-up">
           <div className="rounded-[30px] border border-black/[0.07] bg-white p-7 shadow-[0_18px_50px_rgba(0,0,0,0.07)] sm:p-9">
-            <span className="inline-flex rounded-full bg-signature/10 px-3 py-1 text-xs font-semibold text-signature">
-              One-time setup
-            </span>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-black">
-              Connect the event hub
+            <h1 className="text-3xl font-bold tracking-tight text-black">
+              Connect the Event Hub
             </h1>
             <p className="mt-3 text-sm leading-6 text-grey">
               Complete the database setup to start creating events.
@@ -59,10 +56,7 @@ export default async function InvitationsPage() {
     <div className="animate-fade-up">
       <header className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-signature">
-            Event hub
-          </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-black md:text-4xl">
+          <h1 className="text-3xl font-bold tracking-tight text-black md:text-4xl">
             Invitations
           </h1>
           <p className="mt-2 max-w-2xl text-base text-grey">

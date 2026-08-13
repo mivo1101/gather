@@ -11,6 +11,19 @@ create table public.users (
   updated_at timestamptz not null default now()
 );
 
+create table public.user_settings (
+  user_id text primary key references public.users (id) on delete cascade,
+  timezone text not null default 'Australia/Melbourne',
+  language text not null default 'en-AU',
+  date_format text not null default 'day_month_year',
+  email_rsvp_updates boolean not null default true,
+  email_delivery_issues boolean not null default true,
+  email_event_reminders boolean not null default true,
+  email_product_updates boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table public.invitations (
   id uuid primary key default gen_random_uuid(),
   user_id text not null references public.users (id) on delete cascade,
@@ -69,6 +82,7 @@ create unique index event_guests_event_email_uidx
 create index event_guests_event_id_idx on public.event_guests (event_id);
 
 alter table public.users enable row level security;
+alter table public.user_settings enable row level security;
 alter table public.invitations enable row level security;
 alter table public.events enable row level security;
 alter table public.event_guests enable row level security;

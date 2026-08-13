@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Keep production verification builds away from the live dev server cache.
+  // Running `next build` against `.next` while `next dev` is active corrupts
+  // the dev asset manifest and leaves the page without CSS or JavaScript.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   async redirects() {
     return [
       {

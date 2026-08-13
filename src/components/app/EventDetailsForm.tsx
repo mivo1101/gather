@@ -93,7 +93,7 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
     return (
       <div>
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-black">Event details</h2>
+          <h2 className="text-base font-semibold text-black">Event Details</h2>
           <button
             type="button"
             onClick={() => setEditing(true)}
@@ -140,7 +140,7 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
 
   return (
     <div>
-      <h2 className="text-base font-semibold text-black">Event details</h2>
+      <h2 className="text-base font-semibold text-black">Event Details</h2>
       <form action={saveAction} className="mt-4 space-y-3">
         <label className="block">
           <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
