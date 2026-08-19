@@ -20,17 +20,17 @@ export function FinalCTA() {
         >
           Ready to bring people together?
         </h2>
-        <p className="mt-2 text-lg font-medium text-signature">
+        <p className="mt-2 font-[family-name:var(--font-cursive)] text-xl text-signature sm:text-2xl md:text-3xl">
           Every guest is your +1
         </p>
         <p className="mx-auto mt-4 max-w-lg text-base leading-relaxed text-white/70">
-          Create your first invitation in minutes. No design experience needed -
-          just your event details and a guest list.
+          Set up the event, shape the guest experience and keep every response
+          in one calm, organised place.
         </p>
         <div className="mt-8">
           <Button href="/signin" variant="secondary" size="lg">
             <PlusIcon />
-            Create Your First Invitation
+            Create Your First Event
           </Button>
         </div>
       </div>
