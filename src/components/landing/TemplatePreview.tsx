@@ -14,11 +14,11 @@ const categories = [
     icon: "birthday",
   },
   {
-    name: "Graduations",
-    description: "Mark the milestone with pride",
-    gradient: "from-blue-100 to-indigo-50",
-    accent: "#6366F1",
-    icon: "graduation",
+    name: "Baby & showers",
+    description: "Baby showers, reveals, and naming days",
+    gradient: "from-sky-100 to-cyan-50",
+    accent: "#38BDF8",
+    icon: "baby",
   },
   {
     name: "Corporate Events",
@@ -28,18 +28,18 @@ const categories = [
     icon: "corporate",
   },
   {
-    name: "Baby Showers",
-    description: "Welcome the little one with warmth",
-    gradient: "from-sky-100 to-cyan-50",
-    accent: "#38BDF8",
-    icon: "baby",
+    name: "Dinner & gatherings",
+    description: "Intimate dinners and house parties",
+    gradient: "from-stone-100 to-amber-50",
+    accent: "#A47551",
+    icon: "dinner",
   },
   {
-    name: "Community Gatherings",
-    description: "Bring your community together",
-    gradient: "from-green-100 to-emerald-50",
-    accent: "#34D399",
-    icon: "community",
+    name: "Start from blank",
+    description: "Build something completely your own",
+    gradient: "from-pink-50 to-rose-100",
+    accent: "#FF60AA",
+    icon: "blank",
   },
 ] as const;
 
@@ -76,15 +76,6 @@ function EventIcon({ type, color }: { type: CategoryIcon; color: string }) {
           <circle cx="26" cy="8" r="1.2" fill={color} stroke="none" />
         </svg>
       );
-    case "graduation":
-      return (
-        <svg {...common}>
-          <path d="M4 16l16-8 16 8-16 8-16-8z" />
-          <path d="M10 19v8c0 0 4.5 4 10 4s10-4 10-4v-8" />
-          <path d="M32 16v10" />
-          <circle cx="32" cy="27" r="1.5" fill={color} stroke="none" />
-        </svg>
-      );
     case "corporate":
       return (
         <svg {...common}>
@@ -103,13 +94,19 @@ function EventIcon({ type, color }: { type: CategoryIcon; color: string }) {
           <circle cx="22.5" cy="13" r="1" fill={color} stroke="none" />
         </svg>
       );
-    case "community":
+    case "dinner":
       return (
         <svg {...common}>
-          <circle cx="14" cy="13" r="4" />
-          <circle cx="26" cy="13" r="4" />
-          <circle cx="20" cy="22" r="4" />
-          <path d="M6 30c0-3.5 3-5.5 8-5.5M34 30c0-3.5-3-5.5-8-5.5M12 34c0-3.5 3.2-5.5 8-5.5s8 2 8 5.5" />
+          <circle cx="20" cy="21" r="10" />
+          <circle cx="20" cy="21" r="5" />
+          <path d="M7 7v12M4 7v6c0 2 1.3 3 3 3s3-1 3-3V7M33 7v26M29 7c0 6 1 9 4 9" />
+        </svg>
+      );
+    case "blank":
+      return (
+        <svg {...common}>
+          <rect x="8" y="6" width="24" height="28" rx="2" strokeDasharray="3 3" />
+          <path d="M20 14v12M14 20h12" />
         </svg>
       );
   }
@@ -149,8 +146,8 @@ export function TemplatePreview() {
             Templates for every occasion
           </h2>
           <p className="mt-4 text-base text-grey">
-            Choose from a growing library of beautifully crafted invitation
-            templates, or create your own from scratch.
+            Choose from a growing library of beautifully crafted invitation templates,
+            or create your own from scratch.
           </p>
         </div>
 

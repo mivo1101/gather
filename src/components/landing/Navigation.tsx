@@ -5,8 +5,9 @@ import { Logo } from "@/components/ui/Logo";
 import { Button, PlusIcon } from "@/components/ui/Button";
 
 const navLinks = [
-  { label: "Features", href: "#features" },
   { label: "How It Works", href: "#how-it-works" },
+  { label: "Guest Experience", href: "#guest-experience" },
+  { label: "Features", href: "#features" },
   { label: "Templates", href: "#templates" },
 ];
 
@@ -44,7 +45,7 @@ export function Navigation() {
           </a>
           <Button href="/signin" size="sm">
             <PlusIcon />
-            Create an Invitation
+            Create an Event
           </Button>
         </div>
 
@@ -114,7 +115,7 @@ export function Navigation() {
             <li>
               <Button href="/signin" size="md" className="w-full">
                 <PlusIcon />
-                Create an Invitation
+                Create an Event
               </Button>
             </li>
           </ul>

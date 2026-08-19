@@ -80,52 +80,32 @@ function ChevronLeftIcon({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
-function BuildingArt() {
-  return (
-    <svg className="mx-auto h-20 w-36 text-signature" viewBox="0 0 160 96" fill="none" aria-hidden="true">
-      <path stroke="currentColor" strokeWidth="1.4" d="M28 88V42l52-26 52 26v46" />
-      <path stroke="currentColor" strokeWidth="1.4" d="M48 88V54h64v34" />
-      <path stroke="currentColor" strokeWidth="1.2" d="M64 88V66h32v22M72 72h4M84 72h4M72 80h4M84 80h4" />
-      <path stroke="currentColor" strokeWidth="1.2" d="M20 88h120M36 42h88" />
-      <circle cx="80" cy="34" r="3" fill="currentColor" />
-      <path stroke="currentColor" strokeWidth="1.2" d="M18 70c6-10 14-10 20 0M122 70c6-10 14-10 20 0" />
-    </svg>
-  );
-}
-
 function CardShell({
-  step,
-  total,
   children,
+  tone = "cream",
 }: {
-  step: number;
-  total: number;
   children: ReactNode;
+  tone?: "cream" | "forest" | "blush";
 }) {
+  const backgrounds = {
+    cream:
+      "radial-gradient(circle at 92% 5%, rgba(255, 96, 170, 0.13), transparent 34%), linear-gradient(145deg, #ffffff 0%, #fff8f4 100%)",
+    forest:
+      "radial-gradient(circle at 92% 8%, rgba(255, 96, 170, 0.24), transparent 36%), linear-gradient(145deg, #191919 0%, #000000 100%)",
+    blush:
+      "radial-gradient(circle at 0% 100%, rgba(255,255,255,0.42), transparent 42%), linear-gradient(145deg, #ff9dcc 0%, #ff60aa 100%)",
+  };
+  const dark = tone === "forest";
+
   return (
     <div
-      className="relative flex h-full w-full flex-col overflow-hidden rounded-[1.75rem] border border-black/5 shadow-[0_16px_40px_rgba(0,0,0,0.08)]"
-      style={{
-        background:
-          "linear-gradient(180deg, #ffffff 0%, #fff8f4 55%, #ffe4f0 100%)",
-      }}
+      className={`relative flex h-full w-full flex-col overflow-hidden rounded-[1.75rem] border shadow-[0_22px_55px_rgba(0,0,0,0.16)] ${dark ? "border-white/10" : "border-black/5"}`}
+      style={{ background: backgrounds[tone] }}
     >
-      <div className="relative z-10 flex gap-1.5 px-6 pt-4" aria-hidden="true">
-        {Array.from({ length: total }).map((_, i) => (
-          <span
-            key={i}
-            className={`h-1 flex-1 rounded-full ${
-              i <= step ? "bg-signature" : "bg-signature/20"
-            }`}
-          />
-        ))}
-      </div>
       {children}
     </div>
   );
 }
-
-const CARD_TOTAL = 5;
 
 function formatInviteDateTime(date: Date) {
   const weekday = date.toLocaleDateString("en-AU", { weekday: "long" });
@@ -141,16 +121,6 @@ function formatInviteDateTime(date: Date) {
   });
 
   return { weekday, fullDate, time };
-}
-
-function TodayLabel() {
-  return (
-    <div className="mt-auto pt-6 text-center">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-signature">
-        Today
-      </p>
-    </div>
-  );
 }
 
 function LiveTime() {
@@ -169,7 +139,7 @@ function LiveTime() {
           <ClockIcon />
         </span>
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-signature">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-signature">
             Time
           </p>
           <p className="mt-0.5 h-5 text-sm font-medium text-black" aria-hidden="true" />
@@ -186,7 +156,7 @@ function LiveTime() {
         <ClockIcon />
       </span>
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-signature">
+        <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-signature">
           Time
         </p>
         <p className="mt-0.5 text-sm font-medium tabular-nums text-black">{time}</p>
@@ -210,7 +180,7 @@ function LiveDateRow() {
         <CalendarIcon />
       </span>
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-signature">
+        <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-signature">
           Date
         </p>
         <p className="mt-0.5 text-sm font-medium text-black">
@@ -223,35 +193,48 @@ function LiveDateRow() {
 
 function CoverCard() {
   return (
-    <CardShell step={0} total={CARD_TOTAL}>
-      <div className="relative z-10 flex flex-1 flex-col px-7 pb-6 pt-4">
-        <div className="flex flex-1 flex-col items-center justify-start pt-6 text-center">
-          <span className="text-signature">
-            <StarIcon className="h-5 w-5" />
-          </span>
-          <p className="mt-4 text-sm text-grey">From the Gather Team,</p>
-          <p className="mt-2 text-sm text-grey">
-            To{" "}
-            <span className="font-[family-name:var(--font-cursive)] text-3xl font-normal leading-none text-signature">
-              You
-            </span>
-          </p>
-          <div className="mt-3 h-0.5 w-10 bg-signature" aria-hidden="true" />
-          <p className="mt-4 max-w-[16rem] text-3xl font-bold leading-snug text-black">
-            Open your{" "}
-            <span className="text-signature">first invitation</span>
-          </p>
+    <CardShell tone="forest">
+      <div className="pointer-events-none absolute inset-3 rounded-[1.35rem] border border-signature/35" aria-hidden="true" />
+      <div className="pointer-events-none absolute left-5 top-10 h-20 w-px bg-gradient-to-b from-transparent via-signature/60 to-transparent" aria-hidden="true" />
+      <div className="relative z-20 flex flex-1 flex-col px-8 pb-7 pt-5 text-center">
+        <div className="flex items-center justify-center gap-2 text-signature">
+          <span className="h-px w-7 bg-current/60" aria-hidden="true" />
+          <StarIcon className="h-3.5 w-3.5" />
+          <span className="h-px w-7 bg-current/60" aria-hidden="true" />
         </div>
-
-        <TodayLabel />
+        <p className="mt-4 text-[9px] font-semibold uppercase tracking-[0.28em] text-white/75">
+          The Gather Team presents
+        </p>
+        <p className="mt-3 text-xs text-white/65">A private invitation for</p>
+        <p className="mt-0.5 font-[family-name:var(--font-windsong)] text-4xl leading-none text-signature">
+          You
+        </p>
+        <h4 className="mt-4 font-[family-name:var(--font-instrument-serif)] text-[2rem] leading-[0.98] text-white">
+          Come experience
+          <span className="mt-1 block italic text-signature">Gather</span>
+        </h4>
+        <p className="mt-3 text-[10px] uppercase tracking-[0.18em] text-white/55">
+          Design · Connect · Celebrate
+        </p>
+        <span className="mt-auto self-center rounded-full border border-signature/45 bg-signature px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-white shadow-[0_6px_18px_rgba(255,96,170,0.28)]">
+          Open your invitation
+        </span>
       </div>
 
       <Image
-        src="/images/flowers/flower-2.png"
+        src="/images/graphics/wedding/editorial/romantic-botanical.png"
         alt=""
-        width={110}
-        height={110}
-        className="pointer-events-none absolute -bottom-1 -right-2 w-24 select-none"
+        width={1100}
+        height={1100}
+        className="pointer-events-none absolute -bottom-14 -right-14 z-10 w-52 select-none opacity-90 drop-shadow-[0_8px_18px_rgba(0,0,0,0.24)]"
+        aria-hidden="true"
+      />
+      <Image
+        src="/images/graphics/wedding/editorial/gilded-flourish.png"
+        alt=""
+        width={1100}
+        height={1100}
+        className="pointer-events-none absolute -left-10 -top-9 w-28 -rotate-12 select-none grayscale opacity-20"
         aria-hidden="true"
       />
     </CardShell>
@@ -260,125 +243,145 @@ function CoverCard() {
 
 function InviteCard() {
   return (
-    <CardShell step={1} total={CARD_TOTAL}>
-      <div className="relative z-10 flex flex-1 flex-col px-7 pb-6 pt-4">
-        <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <span className="text-signature">
-            <StarIcon className="h-5 w-5" />
-          </span>
-          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-signature">
-            You&apos;re invited
-          </p>
-          <h4 className="mt-2 text-2xl font-bold leading-tight text-black">
-            Experience <span className="text-signature">Gather</span>
-          </h4>
-          <div className="mt-2 h-0.5 w-10 bg-signature" aria-hidden="true" />
-          <p className="mt-3 max-w-[15rem] text-sm leading-relaxed text-grey">
-            We help you create beautifully crafted, interactive invitations for
-            every event, gathering, and meaningful occasion.
-          </p>
-          <p className="mt-4 font-[family-name:var(--font-cursive)] text-2xl text-signature">
-            Create Yours Now!
-          </p>
+    <CardShell tone="cream">
+      <div className="pointer-events-none absolute inset-3 rounded-[1.35rem] border border-signature/20" aria-hidden="true" />
+      <div className="relative z-20 flex flex-1 flex-col px-8 pb-7 pt-5 text-center">
+        <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-signature">
+          You&apos;re invited
+        </p>
+        <div className="mx-auto mt-2 h-px w-12 bg-signature/70" aria-hidden="true" />
+        <h4 className="mt-3 font-[family-name:var(--font-instrument-serif)] text-[2rem] leading-[0.96] text-black">
+          A beautiful way
+          <span className="mt-1 block italic text-signature">to gather</span>
+        </h4>
+        <p className="mx-auto mt-3 max-w-[13.5rem] text-[11px] leading-relaxed text-grey">
+          Join us for a first look at invitations designed to feel personal,
+          thoughtful and genuinely memorable.
+        </p>
+        <div className="relative mt-auto h-28" aria-hidden="true">
+          <Image
+            src="/images/graphics/wedding/watercolour/champagne-toast.png"
+            alt=""
+            fill
+            sizes="220px"
+            className="object-contain object-bottom drop-shadow-[0_7px_12px_rgba(91,68,47,0.12)]"
+          />
         </div>
+        <p className="mt-1 font-[family-name:var(--font-windsong)] text-2xl leading-none text-signature">
+          We&apos;d love you there
+        </p>
       </div>
+      <span className="pointer-events-none absolute right-5 top-10 text-signature/60" aria-hidden="true">
+        <StarIcon className="h-4 w-4" />
+      </span>
     </CardShell>
   );
 }
 
 function DetailsCard() {
   return (
-    <CardShell step={2} total={CARD_TOTAL}>
-      <div className="relative z-10 flex flex-1 flex-col px-7 pb-6 pt-4">
-        <div className="flex flex-col items-center text-center">
-          <span className="text-signature">
-            <PinIcon className="h-5 w-5" />
+    <CardShell tone="cream">
+      <div className="pointer-events-none absolute inset-3 rounded-[1.35rem] border border-signature/20" aria-hidden="true" />
+      <Image
+        src="/images/graphics/wedding/watercolour/botanical-corner.png"
+        alt=""
+        width={1200}
+        height={1200}
+        className="pointer-events-none absolute -bottom-12 -left-14 w-44 select-none opacity-70"
+        aria-hidden="true"
+      />
+      <div className="relative z-20 flex flex-1 flex-col px-8 pb-7 pt-5">
+        <div className="text-center">
+          <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-black text-signature">
+            <PinIcon className="h-4 w-4" />
           </span>
-          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-signature">
-            Event details
+          <p className="mt-2 text-[9px] font-semibold uppercase tracking-[0.25em] text-signature">
+            When & where
           </p>
-          <h4 className="mt-2 text-2xl font-bold leading-tight text-black">
-            Gather
+          <h4 className="mt-1 font-[family-name:var(--font-instrument-serif)] text-3xl leading-none text-black">
+            Gather House
           </h4>
-          <p className="mt-1 text-sm text-grey">Melbourne, Australia</p>
-          <div className="mt-2 h-0.5 w-10 bg-signature" aria-hidden="true" />
+          <p className="mt-1 text-[11px] text-grey">Melbourne, Australia</p>
         </div>
 
-        <div className="mt-4">
-          <BuildingArt />
-        </div>
-
-        <div className="mt-auto space-y-3 pt-3">
-          <LiveTime />
+        <div className="mt-4 space-y-2 rounded-2xl border border-black/5 bg-white/80 p-4 shadow-[0_8px_25px_rgba(0,0,0,0.06)] backdrop-blur-sm">
           <LiveDateRow />
+          <div className="h-px bg-black/10" aria-hidden="true" />
+          <LiveTime />
+          <div className="h-px bg-black/10" aria-hidden="true" />
           <div className="flex items-start gap-3">
             <span className="mt-0.5 text-signature">
               <GlobeIcon />
             </span>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-signature">
-                Website
+              <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-signature">
+                Online
               </p>
               <p className="mt-0.5 text-sm font-medium text-black">
-                www.gather.com
+                gather.com
               </p>
             </div>
           </div>
         </div>
+        <span className="mt-auto self-end rounded-full bg-black px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-white">
+          Open location
+        </span>
       </div>
-
-      <Image
-        src="/images/flowers/flower-5.png"
-        alt=""
-        width={100}
-        height={100}
-        className="pointer-events-none absolute bottom-1 right-3 w-20 select-none"
-        aria-hidden="true"
-      />
     </CardShell>
   );
 }
 
 function RsvpCard() {
   return (
-    <CardShell step={3} total={CARD_TOTAL}>
-      <div className="relative z-10 flex flex-1 flex-col px-7 pb-6 pt-4">
+    <CardShell tone="blush">
+      <Image
+        src="/images/graphics/wedding/watercolour/botanical-corner.png"
+        alt=""
+        width={1200}
+        height={1200}
+        className="pointer-events-none absolute -right-16 -top-16 w-44 rotate-180 select-none opacity-45"
+        aria-hidden="true"
+      />
+      <div className="pointer-events-none absolute inset-3 rounded-[1.35rem] border border-white/35" aria-hidden="true" />
+      <div className="relative z-20 flex flex-1 flex-col px-8 pb-7 pt-5">
         <div className="flex flex-col items-center text-center">
-          <span className="text-signature">
-            <EnvelopeIcon className="h-5 w-5" />
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-signature">
+            <EnvelopeIcon className="h-4 w-4" />
           </span>
-          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-signature">
+          <p className="mt-2 text-[9px] font-semibold uppercase tracking-[0.25em] text-black/65">
             Kindly respond
           </p>
-          <h4 className="mt-2 text-2xl font-bold leading-tight text-black">
+          <h4 className="mt-1 max-w-[14rem] font-[family-name:var(--font-instrument-serif)] text-[1.85rem] leading-[1.02] text-black">
             Will you be joining us?
           </h4>
-          <div className="mt-2 h-0.5 w-10 bg-signature" aria-hidden="true" />
+          <p className="mt-2 text-[10px] leading-relaxed text-black/65">
+            Choose a response below — we&apos;ll save it instantly.
+          </p>
         </div>
 
-        <div className="mt-6 flex flex-col gap-2.5">
+        <div className="mt-4 flex flex-col gap-2.5">
           <button
             type="button"
             tabIndex={-1}
-            className="rounded-full border border-signature px-4 py-2.5 text-sm font-medium text-signature transition-colors hover:bg-signature hover:text-white"
+            className="rounded-full bg-black px-4 py-2.5 text-sm font-medium text-white shadow-[0_6px_15px_rgba(0,0,0,0.18)] transition-transform hover:scale-[1.02]"
           >
             ✓ Yes, can&apos;t wait!
           </button>
           <button
             type="button"
             tabIndex={-1}
-            className="rounded-full border border-signature px-4 py-2.5 text-sm font-medium text-signature transition-colors hover:bg-signature hover:text-white"
+            className="rounded-full border border-black/30 bg-white/35 px-4 py-2.5 text-sm font-medium text-black transition-colors hover:bg-white/55"
           >
             ✕ Sorry, can&apos;t make it
           </button>
         </div>
 
         <div className="mt-auto pt-5">
-          <p className="text-xs font-medium text-black">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black/70">
             Leave us a message (optional)
           </p>
-          <div className="mt-2 rounded-2xl border border-signature/40 bg-soft-grey/60 px-4 py-3 text-sm text-grey">
-            Type here...
+          <div className="mt-2 rounded-2xl border border-white/55 bg-white/45 px-4 py-3 text-sm text-black/55 backdrop-blur-sm">
+            Write something lovely…
           </div>
         </div>
       </div>
@@ -388,27 +391,42 @@ function RsvpCard() {
 
 function ThanksCard() {
   return (
-    <CardShell step={4} total={CARD_TOTAL}>
-      <div className="relative z-10 flex flex-1 flex-col px-7 pb-6 pt-4">
-        <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <span className="text-signature">
-            <HeartIcon className="h-5 w-5" />
-          </span>
-          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-signature">
-            Thank you!
-          </p>
-          <h4 className="mt-2 max-w-[14rem] text-2xl font-bold leading-tight text-black">
-            We can&apos;t wait to be part of your next event
-          </h4>
-          <div className="mt-2 h-0.5 w-10 bg-signature" aria-hidden="true" />
-          <span className="mt-6 text-signature">
-            <StarIcon className="h-4 w-4" />
-          </span>
-          <p className="mt-3 text-sm text-signature">With love,</p>
-          <p className="mt-1 font-[family-name:var(--font-cursive)] text-3xl text-black">
-            Gather Team
-          </p>
+    <CardShell tone="forest">
+      <div className="pointer-events-none absolute inset-3 rounded-[1.35rem] border border-signature/35" aria-hidden="true" />
+      <Image
+        src="/images/graphics/wedding/editorial/romantic-botanical.png"
+        alt=""
+        width={1100}
+        height={1100}
+        className="pointer-events-none absolute -bottom-20 left-1/2 w-52 -translate-x-1/2 select-none opacity-90 drop-shadow-[0_8px_18px_rgba(0,0,0,0.2)]"
+        aria-hidden="true"
+      />
+      <div className="relative z-20 flex flex-1 flex-col px-8 pb-7 pt-5 text-center">
+        <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-full border border-signature/55 bg-signature/10 text-signature">
+          <HeartIcon className="h-4 w-4" />
+        </span>
+        <p className="mt-3 text-[9px] font-semibold uppercase tracking-[0.28em] text-white/75">
+          Your response is in
+        </p>
+        <h4 className="mt-3 font-[family-name:var(--font-instrument-serif)] text-[2rem] leading-[0.98] text-white">
+          We can&apos;t wait
+          <span className="mt-1 block italic text-signature">to gather</span>
+        </h4>
+        <p className="mx-auto mt-3 max-w-[13rem] text-[11px] leading-relaxed text-white/65">
+          Thank you for being part of the moments that matter.
+        </p>
+        <div className="mt-3 flex items-center justify-center gap-2 text-signature/70">
+          <span className="h-px w-8 bg-current" aria-hidden="true" />
+          <StarIcon className="h-3 w-3" />
+          <span className="h-px w-8 bg-current" aria-hidden="true" />
         </div>
+        <p className="mt-2 text-[10px] text-white/55">With love,</p>
+        <p className="font-[family-name:var(--font-windsong)] text-3xl leading-none text-signature">
+          Gather Team
+        </p>
+        <span className="mx-auto mt-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[8px] font-semibold uppercase tracking-[0.18em] text-white/75">
+          Every guest is your +1
+        </span>
       </div>
     </CardShell>
   );
@@ -522,7 +540,7 @@ const highlights = [
     ),
   },
   {
-    text: "Event details shown through individual cards - no scrolling required",
+    text: "One focused page at a time, with no long invitation page to scroll",
     icon: (
       <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
         <rect x="7" y="3" width="10" height="18" rx="2" />
@@ -531,7 +549,7 @@ const highlights = [
     ),
   },
   {
-    text: "Cards can include details, location, schedule, RSVP, and personal messages",
+    text: "Add guest names, maps, attendance buttons and custom questions",
     icon: (
       <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 20s-6.2-3.9-8.5-7.5C1.8 9.8 2.6 6.6 5.5 5.4c1.7-.7 3.6-.1 4.7 1.3C11.3 5.3 13.2 4.7 14.9 5.4c2.9 1.2 3.7 4.4 2 7.1C18.2 16.1 12 20 12 20z" />
@@ -551,7 +569,7 @@ const highlights = [
 
 export function InteractiveExperience() {
   return (
-    <section className="bg-soft-grey py-14 sm:py-20 md:py-28">
+    <section id="guest-experience" className="bg-soft-grey py-14 sm:py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-5 sm:px-6">
         <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,0.75fr)] lg:gap-8">
           <div className="min-w-0">
@@ -562,11 +580,11 @@ export function InteractiveExperience() {
               </span>
             </h2>
             <p className="mt-4 text-sm leading-relaxed text-grey sm:text-base">
-              Recipients open a personalised envelope, then explore your event
-              through beautifully{" "}
+              Every guest opens an invitation made for them, then moves through
+              your event one beautifully{" "}
               <br className="hidden md:block" />
-              designed cards - each one fitting perfectly on screen without any
-              scrolling.
+              designed page at a time. They can view the location, answer your
+              questions and RSVP without leaving the invitation.
             </p>
             <ul className="mt-8 flex flex-col gap-4">
               {highlights.map((item) => (
