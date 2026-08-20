@@ -36,16 +36,10 @@ export function Navigation() {
           ))}
         </ul>
 
-        <div className="hidden items-center gap-4 md:flex">
-          <a
-            href="/signin"
-            className="text-sm font-medium text-grey transition-colors hover:text-black"
-          >
-            Sign In
-          </a>
+        <div className="hidden items-center md:flex">
           <Button href="/signin" size="sm">
             <PlusIcon />
-            Create an Event
+            Sign In
           </Button>
         </div>
 
@@ -104,18 +98,9 @@ export function Navigation() {
               </li>
             ))}
             <li>
-              <a
-                href="/signin"
-                className="block text-base font-medium text-grey"
-                onClick={() => setMenuOpen(false)}
-              >
-                Sign In
-              </a>
-            </li>
-            <li>
               <Button href="/signin" size="md" className="w-full">
                 <PlusIcon />
-                Create an Event
+                Sign In
               </Button>
             </li>
           </ul>

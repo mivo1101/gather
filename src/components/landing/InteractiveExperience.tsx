@@ -85,17 +85,19 @@ function CardShell({
   tone = "cream",
 }: {
   children: ReactNode;
-  tone?: "cream" | "forest" | "blush";
+  tone?: "cream" | "forest" | "berry" | "blush";
 }) {
   const backgrounds = {
     cream:
       "radial-gradient(circle at 92% 5%, rgba(255, 96, 170, 0.13), transparent 34%), linear-gradient(145deg, #ffffff 0%, #fff8f4 100%)",
     forest:
       "radial-gradient(circle at 92% 8%, rgba(255, 96, 170, 0.24), transparent 36%), linear-gradient(145deg, #191919 0%, #000000 100%)",
+    berry:
+      "radial-gradient(circle at 84% 8%, rgba(255, 96, 170, 0.3), transparent 32%), radial-gradient(circle at 12% 88%, rgba(255, 96, 170, 0.12), transparent 38%), linear-gradient(150deg, #211019 0%, #120d11 48%, #050505 100%)",
     blush:
       "radial-gradient(circle at 0% 100%, rgba(255,255,255,0.42), transparent 42%), linear-gradient(145deg, #ff9dcc 0%, #ff60aa 100%)",
   };
-  const dark = tone === "forest";
+  const dark = tone === "forest" || tone === "berry";
 
   return (
     <div
@@ -193,50 +195,50 @@ function LiveDateRow() {
 
 function CoverCard() {
   return (
-    <CardShell tone="forest">
-      <div className="pointer-events-none absolute inset-3 rounded-[1.35rem] border border-signature/35" aria-hidden="true" />
-      <div className="pointer-events-none absolute left-5 top-10 h-20 w-px bg-gradient-to-b from-transparent via-signature/60 to-transparent" aria-hidden="true" />
-      <div className="relative z-20 flex flex-1 flex-col px-8 pb-7 pt-5 text-center">
-        <div className="flex items-center justify-center gap-2 text-signature">
-          <span className="h-px w-7 bg-current/60" aria-hidden="true" />
-          <StarIcon className="h-3.5 w-3.5" />
-          <span className="h-px w-7 bg-current/60" aria-hidden="true" />
-        </div>
-        <p className="mt-4 text-[9px] font-semibold uppercase tracking-[0.28em] text-white/75">
-          The Gather Team presents
+    <CardShell tone="berry">
+      <div className="pointer-events-none absolute inset-3 rounded-[1.35rem] border border-signature/45" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-5 rounded-[1.1rem] border border-white/[0.06]" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-0 text-signature" aria-hidden="true">
+        <StarIcon className="absolute left-8 top-9 h-3.5 w-3.5 opacity-75" />
+        <StarIcon className="absolute right-9 top-14 h-2.5 w-2.5 opacity-55" />
+        <StarIcon className="absolute bottom-16 left-7 h-2 w-2 opacity-45" />
+        <StarIcon className="absolute bottom-9 right-8 h-4 w-4 opacity-65" />
+        <span className="absolute right-16 top-8 h-1.5 w-1.5 rounded-full bg-white/35" />
+        <span className="absolute bottom-24 left-11 h-1 w-1 rounded-full bg-white/35" />
+      </div>
+
+      <div className="relative z-20 flex flex-1 flex-col px-8 pb-6 pt-10 text-center">
+        <p className="text-sm font-semibold tracking-tight text-white/80">
+          Gather represents
         </p>
-        <p className="mt-3 text-xs text-white/65">A private invitation for</p>
-        <p className="mt-0.5 font-[family-name:var(--font-windsong)] text-4xl leading-none text-signature">
+        <div className="mx-auto mt-3 flex items-center gap-2 text-signature/80">
+          <span className="h-px w-7 bg-current" aria-hidden="true" />
+          <StarIcon className="h-3 w-3" />
+          <span className="h-px w-7 bg-current" aria-hidden="true" />
+        </div>
+        <p className="mt-3 text-[10px] uppercase tracking-[0.16em] text-white/55">
+          A private invitation for
+        </p>
+        <p className="mt-0.5 font-[family-name:var(--font-windsong)] text-[2.6rem] leading-none text-signature">
           You
         </p>
-        <h4 className="mt-4 font-[family-name:var(--font-instrument-serif)] text-[2rem] leading-[0.98] text-white">
+        <h4 className="mt-3 font-[family-name:var(--font-instrument-serif)] text-[1.85rem] leading-[0.96] text-white">
           Come experience
           <span className="mt-1 block italic text-signature">Gather</span>
         </h4>
-        <p className="mt-3 text-[10px] uppercase tracking-[0.18em] text-white/55">
+        <p className="mt-3 text-[8px] font-semibold uppercase tracking-[0.22em] text-white/45">
           Design · Connect · Celebrate
         </p>
-        <span className="mt-auto self-center rounded-full border border-signature/45 bg-signature px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-white shadow-[0_6px_18px_rgba(255,96,170,0.28)]">
-          Open your invitation
-        </span>
+        <div className="mt-auto flex flex-col items-center gap-2">
+          <p className="text-[8px] uppercase tracking-[0.18em] text-white/45">
+            Melbourne · 21 August 2026
+          </p>
+          <span className="rounded-full border border-white/15 bg-signature px-4 py-2 text-[8px] font-semibold uppercase tracking-[0.17em] text-white shadow-[0_8px_22px_rgba(255,96,170,0.3)]">
+            Open invitation&nbsp; →
+          </span>
+        </div>
       </div>
 
-      <Image
-        src="/images/graphics/wedding/editorial/romantic-botanical.png"
-        alt=""
-        width={1100}
-        height={1100}
-        className="pointer-events-none absolute -bottom-14 -right-14 z-10 w-52 select-none opacity-90 drop-shadow-[0_8px_18px_rgba(0,0,0,0.24)]"
-        aria-hidden="true"
-      />
-      <Image
-        src="/images/graphics/wedding/editorial/gilded-flourish.png"
-        alt=""
-        width={1100}
-        height={1100}
-        className="pointer-events-none absolute -left-10 -top-9 w-28 -rotate-12 select-none grayscale opacity-20"
-        aria-hidden="true"
-      />
     </CardShell>
   );
 }
@@ -245,7 +247,7 @@ function InviteCard() {
   return (
     <CardShell tone="cream">
       <div className="pointer-events-none absolute inset-3 rounded-[1.35rem] border border-signature/20" aria-hidden="true" />
-      <div className="relative z-20 flex flex-1 flex-col px-8 pb-7 pt-5 text-center">
+      <div className="relative z-20 flex flex-1 flex-col px-8 pb-7 pt-8 text-center">
         <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-signature">
           You&apos;re invited
         </p>
@@ -333,7 +335,7 @@ function DetailsCard() {
 
 function RsvpCard() {
   return (
-    <CardShell tone="blush">
+    <CardShell tone="cream">
       <Image
         src="/images/graphics/wedding/watercolour/botanical-corner.png"
         alt=""
@@ -342,7 +344,7 @@ function RsvpCard() {
         className="pointer-events-none absolute -right-16 -top-16 w-44 rotate-180 select-none opacity-45"
         aria-hidden="true"
       />
-      <div className="pointer-events-none absolute inset-3 rounded-[1.35rem] border border-white/35" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-3 rounded-[1.35rem] border border-signature/20" aria-hidden="true" />
       <div className="relative z-20 flex flex-1 flex-col px-8 pb-7 pt-5">
         <div className="flex flex-col items-center text-center">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-signature">
@@ -370,7 +372,7 @@ function RsvpCard() {
           <button
             type="button"
             tabIndex={-1}
-            className="rounded-full border border-black/30 bg-white/35 px-4 py-2.5 text-sm font-medium text-black transition-colors hover:bg-white/55"
+            className="rounded-full border border-black/20 bg-signature/10 px-4 py-2.5 text-sm font-medium text-black transition-colors hover:bg-signature/15"
           >
             ✕ Sorry, can&apos;t make it
           </button>
@@ -380,7 +382,7 @@ function RsvpCard() {
           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black/70">
             Leave us a message (optional)
           </p>
-          <div className="mt-2 rounded-2xl border border-white/55 bg-white/45 px-4 py-3 text-sm text-black/55 backdrop-blur-sm">
+          <div className="mt-2 rounded-2xl border border-black/10 bg-white/80 px-4 py-3 text-sm text-black/55 backdrop-blur-sm">
             Write something lovely…
           </div>
         </div>

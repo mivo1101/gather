@@ -35,14 +35,6 @@ export function Hero() {
             personalised emails and keep every RSVP together in one event
             workspace.
           </p>
-          <ul className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs font-semibold text-black/65 lg:justify-start" aria-label="Gather features">
-            {["Design", "Guests", "Email", "RSVPs"].map((item) => (
-              <li key={item} className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-signature" aria-hidden="true" />
-                {item}
-              </li>
-            ))}
-          </ul>
           <div className="flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 lg:justify-start">
             <Button href="/signin" size="lg" className="w-full sm:w-auto">
               <PlusIcon />
