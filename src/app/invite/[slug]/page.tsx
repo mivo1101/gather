@@ -4,6 +4,7 @@ import { GuestInviteViewer } from "@/components/invitation/GuestInviteViewer";
 import { getPersonalisedInvite } from "@/lib/data/personalised-invites";
 import { getRsvpResponseForGuest } from "@/lib/data/rsvp-responses";
 import { Logo } from "@/components/ui/Logo";
+import { auth } from "@/auth";
 
 export async function generateMetadata({
   params,
@@ -82,6 +83,9 @@ export default async function GuestInvitePage({
     }
   }
 
+  const session = await auth();
+  const organiserPreview = session?.user?.id === invite.event.userId;
+
   return (
     <GuestInviteViewer
       invitation={invite.invitation}
@@ -93,6 +97,7 @@ export default async function GuestInvitePage({
       address={invite.event.address}
       guest={invite.guest}
       rsvpResponse={rsvpResponse}
+      organiserPreview={organiserPreview}
     />
   );
 }

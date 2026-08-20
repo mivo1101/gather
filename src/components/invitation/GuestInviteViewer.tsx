@@ -32,6 +32,7 @@ interface GuestInviteViewerProps {
     token: string;
   };
   rsvpResponse?: RsvpResponse | null;
+  organiserPreview?: boolean;
 }
 
 function formatEventTime(iso: string, timeZone: string): string {
@@ -59,6 +60,7 @@ export function GuestInviteViewer({
   address,
   guest,
   rsvpResponse = null,
+  organiserPreview = false,
 }: GuestInviteViewerProps) {
   const pages = invitation.content.pages;
   const shape = invitation.content.shape ?? "portrait";
@@ -96,12 +98,18 @@ export function GuestInviteViewer({
     return lines;
   }, [dateLabel, timeLabel, locationLabel, safePageIndex, pages.length]);
 
-  const submitRsvp = async (nextAnswers: Record<string, RsvpAnswerValue>) =>
-    submitGuestRsvpAction({
+  const submitRsvp = async (nextAnswers: Record<string, RsvpAnswerValue>) => {
+    if (organiserPreview) {
+      return {
+        error: "RSVP changes are disabled in organiser preview.",
+      };
+    }
+    return submitGuestRsvpAction({
       eventSlug,
       token: guest.token,
       answers: nextAnswers,
     });
+  };
 
   const submitCanvasAnswers = () => {
     setError(null);
@@ -135,6 +143,14 @@ export function GuestInviteViewer({
       </div>
     );
 
+  const organiserNotice = organiserPreview ? (
+    <p className="relative z-20 px-4 text-center text-xs text-white/55 sm:text-sm">
+      <span className="font-semibold text-signature">Organiser preview</span>
+      <span aria-hidden="true"> · </span>
+      RSVP editing is disabled
+    </p>
+  ) : null;
+
   if (!page) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-[#121214] px-4">
@@ -154,6 +170,7 @@ export function GuestInviteViewer({
           <Logo href="/" light className="origin-left scale-90" />
           <p className="truncate text-sm text-white/50">{eventName}</p>
         </header>
+        {organiserNotice}
         <main className="relative z-10 flex flex-1 items-center justify-center overflow-y-auto px-2 py-6 sm:py-10">
           <GuestInviteOpening
             guestFirstName={guestFirstName}
@@ -169,6 +186,7 @@ export function GuestInviteViewer({
   const pageHasAnswers =
     page.kind === "design" && pageHasAnswerWidgets(page);
   const showSubmit =
+    !organiserPreview &&
     isLastPage &&
     page.kind === "design" &&
     (pageHasAnswers || Object.keys(answers).length > 0);
@@ -228,6 +246,8 @@ export function GuestInviteViewer({
         </div>
       </header>
 
+      {organiserNotice}
+
       <main className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-3 pb-4 sm:px-6">
         <div
           className={`group relative w-full ${
@@ -238,11 +258,11 @@ export function GuestInviteViewer({
             <div className="relative overflow-hidden rounded-[28px] bg-white shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
               <InteractiveRsvpPanel
                 config={page.rsvpConfig}
-                interactive
+                interactive={!organiserPreview}
                 className="min-h-[28rem]"
                 initialAnswers={rsvpResponse?.answers ?? {}}
                 alreadySubmitted={Boolean(rsvpResponse)}
-                onSubmit={submitRsvp}
+                onSubmit={organiserPreview ? undefined : submitRsvp}
               />
               {pager}
             </div>
@@ -275,12 +295,19 @@ export function GuestInviteViewer({
                   shape={shape}
                   customSize={customSize}
                   personalizedName={personalizedName}
-                  interactive
+                  interactive={!organiserPreview}
                   answers={answers}
-                  onAnswerChange={(questionId, value) => {
-                    setAnswers((prev) => ({ ...prev, [questionId]: value }));
-                    setError(null);
-                  }}
+                  onAnswerChange={
+                    organiserPreview
+                      ? undefined
+                      : (questionId, value) => {
+                          setAnswers((prev) => ({
+                            ...prev,
+                            [questionId]: value,
+                          }));
+                          setError(null);
+                        }
+                  }
                   className="h-full w-full"
                 />
                 {pager}

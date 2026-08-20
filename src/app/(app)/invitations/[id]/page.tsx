@@ -6,6 +6,7 @@ import {
   parseEventHubTab,
 } from "@/components/app/EventHubTabs";
 import { EventRsvpSummary } from "@/components/app/EventRsvpSummary";
+import { GuestInviteLinks } from "@/components/app/GuestInviteLinks";
 import { Button, PlusIcon } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { linkInvitationToEventAction } from "@/lib/actions/events";
@@ -23,6 +24,7 @@ import {
 import { getGuestsForEvent, type EventGuest } from "@/lib/data/guests";
 import {
   getRsvpResponsesForEvent,
+  rsvpConfigFromInvitation,
   type RsvpResponse,
 } from "@/lib/data/rsvp-responses";
 import { getCurrentUser } from "@/lib/data/user";
@@ -389,7 +391,9 @@ export default async function EventDetailPage({
           <section className="rounded-[28px] border border-black/[0.07] bg-white p-5 shadow-[0_2px_4px_rgba(0,0,0,0.03)] sm:p-7">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-black">Guest List</h2>
+                <h2 className="text-lg font-semibold text-black">
+                  Guest Directory
+                </h2>
                 <p className="mt-1 text-sm text-grey">
                   {missingGuestsTable
                     ? "Database setup required"
@@ -418,35 +422,14 @@ export default async function EventDetailPage({
                 in Supabase, then refresh.
               </p>
             ) : guests.length > 0 ? (
-              <ul className="divide-y divide-black/[0.06] rounded-2xl border border-black/[0.06]">
-                {guests.map((guest) => (
-                  <li
-                    key={guest.id}
-                    className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-3 text-sm"
-                  >
-                    <span className="font-medium text-black">
-                      {[guest.prefix, guest.displayName]
-                        .filter(Boolean)
-                        .join(" ")}
-                    </span>
-                    <span className="flex items-center gap-2 text-grey">
-                      {guest.email}
-                      {deliveries.some(
-                        (delivery) =>
-                          delivery.guestId === guest.id &&
-                          delivery.status === "sent",
-                      ) ? (
-                        <span className="rounded-full bg-black px-2.5 py-1 text-[11px] font-semibold text-white">
-                          Sent
-                        </span>
-                      ) : null}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <GuestInviteLinks
+                eventSlug={workspace.slug}
+                guests={guests}
+                copyEnabled={Boolean(invitation)}
+              />
             ) : (
               <p className="rounded-2xl border border-dashed border-black/10 bg-soft-grey/50 px-4 py-8 text-center text-sm text-grey">
-                Add guests to personalise invitations and track RSVPs.
+                Add guests to manage their names and contact details here.
               </p>
             )}
           </section>
@@ -473,6 +456,11 @@ export default async function EventDetailPage({
           <EventRsvpSummary
             guests={guests}
             responses={rsvpResponses}
+            questions={
+              invitation
+                ? (rsvpConfigFromInvitation(invitation)?.questions ?? [])
+                : []
+            }
             missingTable={missingRsvpTable}
           />
         ) : null}

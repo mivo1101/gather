@@ -27,6 +27,9 @@ export function EmailSendSummary({
   const failedCount = deliveries.filter(
     (d) => d.status === "failed" || d.status === "bounced",
   ).length;
+  const deliveryByGuestId = new Map(
+    deliveries.map((delivery) => [delivery.guestId, delivery]),
+  );
   const emailHref = `${invitationContinuePath(invitation)}?step=email`;
 
   return (
@@ -35,8 +38,8 @@ export function EmailSendSummary({
         <div>
           <h2 className="text-lg font-semibold text-black">Email and Send</h2>
           <p className="mt-1 text-sm text-grey">
-            Compose the invite email, add a photo, preview and send from
-            Continue setup.
+            Review every guest’s email status here, or edit and send invitation
+            emails.
           </p>
         </div>
         <Button href={emailHref} size="sm">
@@ -70,8 +73,8 @@ export function EmailSendSummary({
           </div>
 
           <ul className="divide-y divide-black/[0.06] rounded-2xl border border-black/[0.06]">
-            {guests.slice(0, 5).map((guest) => {
-              const delivery = deliveries.find((d) => d.guestId === guest.id);
+            {guests.map((guest) => {
+              const delivery = deliveryByGuestId.get(guest.id);
               const status = delivery?.status ?? "not sent";
               return (
                 <li
@@ -101,11 +104,6 @@ export function EmailSendSummary({
               );
             })}
           </ul>
-          {guests.length > 5 ? (
-            <p className="text-xs text-grey">
-              +{guests.length - 5} more in Continue setup
-            </p>
-          ) : null}
         </div>
       )}
     </section>
