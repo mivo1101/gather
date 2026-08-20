@@ -96,7 +96,7 @@ const cinzelDecorative = Cinzel_Decorative({
 });
 
 export const metadata: Metadata = {
-  title: "Gather — Invitations and event guest management",
+  title: "Gather",
   description:
     "Design interactive digital invitations, organise guests, send personalised invitation emails and track RSVPs in one event workspace.",
   keywords: [
