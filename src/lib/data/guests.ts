@@ -133,7 +133,7 @@ export function validateGuestDrafts(
         errors.push({
           row: index,
           field: "email",
-          message: `Duplicate of row ${prior + 1}. Use one row per email.`,
+          message: "This email is already used by another guest.",
         });
       } else {
         seenEmails.set(key, index);

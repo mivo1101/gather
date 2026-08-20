@@ -14,6 +14,10 @@ import { guestDisplayLabel, guestInvitePath } from "@/lib/invitation-paths";
 import { Button, PlusIcon } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { EmailRecipientDialog } from "./EmailRecipientDialog";
+import {
+  EmailSendResultDialog,
+  type EmailSendResult,
+} from "./EmailSendResultDialog";
 
 interface EmailInviteComposerProps {
   eventId: string;
@@ -62,6 +66,7 @@ export function EmailInviteComposer({
   const [selectedGuestIds, setSelectedGuestIds] = useState<Set<string>>(
     new Set(),
   );
+  const [sendResult, setSendResult] = useState<EmailSendResult | null>(null);
   const [pending, startTransition] = useTransition();
 
   const previewGuest =
@@ -101,8 +106,24 @@ export function EmailInviteComposer({
     action: (
       eventId: string,
       formData: FormData,
-    ) => Promise<{ ok: true; message?: string } | { error: string }>,
+    ) => Promise<
+      | {
+          ok: true;
+          message?: string;
+          sent?: number;
+          failed?: number;
+          skipped?: number;
+        }
+      | { error: string }
+    >,
     recipientGuestIds?: string[],
+    onSuccess?: (result: {
+      ok: true;
+      message?: string;
+      sent?: number;
+      failed?: number;
+      skipped?: number;
+    }) => void,
   ) => {
     const formData = new FormData();
     formData.set("subject", draft.subject);
@@ -126,7 +147,8 @@ export function EmailInviteComposer({
         setError(result.error);
         return;
       }
-      setMessage(result.message ?? "Saved.");
+      if (onSuccess) onSuccess(result);
+      else setMessage(result.message ?? "Saved.");
       router.refresh();
     });
   };
@@ -435,7 +457,27 @@ export function EmailInviteComposer({
             onCancel={() => setConfirmSendOpen(false)}
             onConfirm={() => {
               setConfirmSendOpen(false);
-              runAction(sendInviteEmailsAction, Array.from(selectedGuestIds));
+              runAction(
+                sendInviteEmailsAction,
+                Array.from(selectedGuestIds),
+                (result) => {
+                  setMessage(null);
+                  setSendResult({
+                    sent: result.sent ?? 0,
+                    failed: result.failed ?? 0,
+                    skipped: result.skipped ?? 0,
+                  });
+                },
+              );
+            }}
+          />
+
+          <EmailSendResultDialog
+            result={sendResult}
+            onClose={() => setSendResult(null)}
+            onViewStatus={() => {
+              setSendResult(null);
+              router.push(`/invitations/${event.slug}?tab=email`);
             }}
           />
 

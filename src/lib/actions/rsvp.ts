@@ -6,6 +6,8 @@ import {
   type RsvpAnswerValue,
 } from "@/lib/data/rsvp-responses";
 import { eventPath } from "@/lib/data/event-workspaces";
+import { getPersonalisedInvite } from "@/lib/data/personalised-invites";
+import { auth } from "@/auth";
 
 export async function submitGuestRsvpAction(input: {
   eventSlug: string;
@@ -13,6 +15,17 @@ export async function submitGuestRsvpAction(input: {
   answers: Record<string, RsvpAnswerValue>;
 }): Promise<{ ok: true } | { error: string }> {
   try {
+    const session = await auth();
+    if (session?.user?.id) {
+      const invite = await getPersonalisedInvite(input.eventSlug, input.token);
+      if (invite?.event.userId === session.user.id) {
+        return {
+          error:
+            "RSVP changes are disabled while previewing as the organiser.",
+        };
+      }
+    }
+
     await submitRsvpByInviteToken({
       eventSlug: input.eventSlug,
       token: input.token,

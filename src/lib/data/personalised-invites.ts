@@ -10,6 +10,7 @@ import { invitationSlug } from "@/lib/invitation-paths";
 export interface PersonalisedInvite {
   event: {
     id: string;
+    userId: string;
     name: string;
     slug: string;
     eventDate: string | null;
@@ -153,6 +154,7 @@ export async function getPersonalisedInvite(
   return {
     event: {
       id: event.id,
+      userId: event.user_id,
       name: event.name,
       slug: event.slug,
       eventDate: event.event_date,

@@ -10,11 +10,13 @@ import {
 interface GuestInviteLinksProps {
   eventSlug: string;
   guests: EventGuest[];
+  copyEnabled?: boolean;
 }
 
 export function GuestInviteLinks({
   eventSlug,
   guests,
+  copyEnabled = true,
 }: GuestInviteLinksProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -29,44 +31,49 @@ export function GuestInviteLinks({
       setCopiedId(guest.id);
       window.setTimeout(() => setCopiedId(null), 1600);
     } catch {
-      window.prompt("Copy this personalised link:", url);
+      window.prompt("Copy invitation link:", url);
     }
   };
 
   return (
     <ul className="divide-y divide-black/[0.06] rounded-2xl border border-black/[0.06]">
-      {guests.map((guest) => (
-        <li
-          key={guest.id}
-          className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
-        >
-          <div className="min-w-0">
-            <p className="font-medium text-black">
-              {guestDisplayLabel(guest)}
-            </p>
-            <p className="mt-0.5 truncate text-grey">{guest.email}</p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <a
-              href={guestInvitePath(eventSlug, guest.token)}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-full px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-soft-grey"
-            >
-              Open
-            </a>
-            <button
-              type="button"
-              onClick={() => {
-                void copyLink(guest);
-              }}
-              className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:border-black/20"
-            >
-              {copiedId === guest.id ? "Copied" : "Copy link"}
-            </button>
-          </div>
-        </li>
-      ))}
+      {guests.map((guest) => {
+        const isCopied = copiedId === guest.id;
+        return (
+          <li
+            key={guest.id}
+            className="group flex items-center justify-between gap-3 px-4 py-3 text-sm"
+          >
+            <div className="min-w-0">
+              <p className="font-medium text-black">
+                {guestDisplayLabel(guest)}
+              </p>
+              <p className="mt-0.5 truncate text-grey">{guest.email}</p>
+            </div>
+            {copyEnabled ? (
+              <button
+                type="button"
+                onClick={() => {
+                  void copyLink(guest);
+                }}
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signature/30 sm:h-auto sm:w-auto sm:px-3 sm:py-1.5 sm:text-xs sm:font-semibold sm:focus-visible:opacity-100 ${
+                  isCopied
+                    ? "bg-signature text-black opacity-100"
+                    : "bg-black text-white hover:bg-black/90 sm:opacity-0 sm:group-hover:opacity-100"
+                }`}
+                aria-label={`${isCopied ? "Copied invitation link for" : "Copy invitation link for"} ${guestDisplayLabel(guest)}`}
+              >
+                <span className="sm:hidden" aria-hidden="true">
+                  {isCopied ? "✓" : "⧉"}
+                </span>
+                <span className="hidden sm:inline">
+                  {isCopied ? "Copied ✓" : "Copy link"}
+                </span>
+              </button>
+            ) : null}
+          </li>
+        );
+      })}
     </ul>
   );
 }
