@@ -205,6 +205,40 @@ export async function getGuestsForEvent(
   return ((data as GuestRow[] | null) ?? []).map(mapGuest);
 }
 
+/** Guest IDs with an invitation that was successfully sent. */
+export async function getSentGuestIdsForEvent(
+  eventId: string,
+): Promise<Set<string>> {
+  const supabase = getSupabaseAdmin();
+  const { data: guests, error: guestError } = await supabase
+    .from("event_guests")
+    .select("id")
+    .eq("event_id", eventId);
+
+  if (guestError) throw new Error(formatGuestDbError(guestError.message));
+
+  const guestIds = ((guests as Array<{ id: string }> | null) ?? []).map(
+    (guest) => guest.id,
+  );
+  if (guestIds.length === 0) return new Set();
+
+  const { data, error } = await supabase
+    .from("event_email_deliveries")
+    .select("guest_id")
+    .eq("status", "sent")
+    .in("guest_id", guestIds);
+
+  // No invitation can have been sent before the email tables exist.
+  if (error && isMissingEmailDeliveriesTable(error.message)) return new Set();
+  if (error) throw new Error(`Failed to load invitation status: ${error.message}`);
+
+  return new Set(
+    ((data as Array<{ guest_id: string }> | null) ?? []).map(
+      (delivery) => delivery.guest_id,
+    ),
+  );
+}
+
 export async function replaceGuestsForEvent(input: {
   eventId: string;
   userId: string;
@@ -236,6 +270,25 @@ export async function replaceGuestsForEvent(input: {
   const existingByEmail = new Map(
     existing.map((guest) => [guest.email.toLowerCase(), guest]),
   );
+
+  const sentGuestIds = await getSentGuestIdsForEvent(input.eventId);
+  for (const sentGuestId of sentGuestIds) {
+    const prior = existingById.get(sentGuestId);
+    const submitted = validation.guests.find(
+      (guest) => guest.id === sentGuestId,
+    );
+    if (
+      !prior ||
+      !submitted ||
+      submitted.prefix !== prior.prefix ||
+      submitted.displayName !== prior.displayName ||
+      submitted.email.toLowerCase() !== prior.email.toLowerCase()
+    ) {
+      throw new Error(
+        "This invitation has already been sent. This guest’s details can no longer be changed or removed.",
+      );
+    }
+  }
 
   const now = new Date().toISOString();
   const keepIds = new Set<string>();
@@ -305,6 +358,16 @@ function isMissingGuestsTable(message: string) {
   const lower = message.toLowerCase();
   return (
     lower.includes("event_guests") &&
+    (lower.includes("does not exist") ||
+      lower.includes("schema cache") ||
+      lower.includes("could not find the table"))
+  );
+}
+
+function isMissingEmailDeliveriesTable(message: string) {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("event_email_deliveries") &&
     (lower.includes("does not exist") ||
       lower.includes("schema cache") ||
       lower.includes("could not find the table"))

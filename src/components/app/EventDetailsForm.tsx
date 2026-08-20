@@ -8,6 +8,7 @@ import {
   type EventWorkspace,
 } from "@/lib/data/event-workspaces";
 import { Button } from "@/components/ui/Button";
+import { RequiredMark } from "@/components/ui/RequiredMark";
 import { Select } from "@/components/ui/Select";
 
 const TIMEZONES = [
@@ -145,10 +146,12 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
         <label className="block">
           <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
             Name
+            <RequiredMark />
           </span>
           <input
             name="name"
             required
+            aria-required="true"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="mt-1.5 w-full rounded-xl border border-black/10 bg-soft-grey/50 px-3 py-2.5 text-sm outline-none focus:border-signature/40 focus:bg-white focus:ring-2 focus:ring-signature/15"
@@ -158,11 +161,13 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
           <label className="block">
             <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
               Date
+              <RequiredMark />
             </span>
             <input
               type="date"
               name="date"
               required
+              aria-required="true"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               className="mt-1.5 w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/15"
@@ -171,10 +176,13 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
           <label className="block">
             <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
               Time
+              <RequiredMark />
             </span>
             <input
               type="time"
               name="time"
+              required
+              aria-required="true"
               value={time}
               onChange={(e) => setTime(e.target.value)}
               className="mt-1.5 w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/15"
@@ -184,9 +192,12 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
         <label className="block">
           <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
             Time zone
+            <RequiredMark />
           </span>
           <Select
             name="timezone"
+            required
+            aria-required="true"
             variant="compact"
             wrapperClassName="mt-1.5 block w-full"
             className="w-full"
@@ -203,9 +214,12 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
         <label className="block">
           <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
             Venue
+            <RequiredMark />
           </span>
           <input
             name="venue"
+            required
+            aria-required="true"
             value={venue}
             onChange={(e) => setVenue(e.target.value)}
             onBlur={() => notifyIfDifferent("venue", venue, designVenue)}
@@ -215,9 +229,12 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
         <label className="block">
           <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
             Address
+            <RequiredMark />
           </span>
           <input
             name="address"
+            required
+            aria-required="true"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             onBlur={() => notifyIfDifferent("address", address, designAddress)}

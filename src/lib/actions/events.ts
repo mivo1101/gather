@@ -155,10 +155,20 @@ export async function saveEventDetailsAction(formData: FormData) {
   if (!date) {
     redirect(`${continueBase}?step=details&error=date-required`);
   }
+  if (!time) {
+    redirect(`${continueBase}?step=details&error=time-required`);
+  }
+  if (!timezone) {
+    redirect(`${continueBase}?step=details&error=timezone-required`);
+  }
+  if (!venue) {
+    redirect(`${continueBase}?step=details&error=venue-required`);
+  }
+  if (!address) {
+    redirect(`${continueBase}?step=details&error=address-required`);
+  }
 
-  const eventDate = time
-    ? new Date(`${date}T${time}:00`).toISOString()
-    : new Date(`${date}T12:00:00`).toISOString();
+  const eventDate = new Date(`${date}T${time}:00`).toISOString();
 
   let event;
   try {
@@ -205,11 +215,13 @@ export async function updateEventDetailsFromHubAction(
   const venue = String(formData.get("venue") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
 
-  if (!name || !date) redirect(`${eventPath(event)}?error=details-required`);
+  if (!name || !date || !time || !timezone || !venue || !address) {
+    redirect(
+      `${eventPath(event)}?error=${encodeURIComponent("Complete all required event details.")}`,
+    );
+  }
 
-  const eventDate = time
-    ? new Date(`${date}T${time}:00`).toISOString()
-    : new Date(`${date}T12:00:00`).toISOString();
+  const eventDate = new Date(`${date}T${time}:00`).toISOString();
 
   const updated = await updateEventDetailsForUser({
     userId: session.user.id,

@@ -18,6 +18,7 @@ import type { EmailCampaignDraft } from "@/lib/data/email-campaigns";
 import { formatEventDate } from "@/lib/format";
 import { invitationEditPath } from "@/lib/invitation-paths";
 import { Button } from "@/components/ui/Button";
+import { RequiredMark } from "@/components/ui/RequiredMark";
 import { Select } from "@/components/ui/Select";
 import { EmailInviteComposer } from "./EmailInviteComposer";
 import { GuestListEditor } from "./GuestListEditor";
@@ -40,6 +41,7 @@ interface EventSetupFlowProps {
   linkableEvents: EventWorkspace[];
   initialStep: EventSetupStepId;
   initialGuests?: EventGuest[];
+  sentGuestIds?: string[];
   errorMessage?: string | null;
   missingGuestsTable?: boolean;
   missingEmailTable?: boolean;
@@ -94,13 +96,13 @@ function StepRail({
       id: "guests" as const,
       label: "Guests",
       done: guestsDone,
-      href: linked ? "?step=guests" : null,
+      href: linked && detailsDone ? "?step=guests" : null,
     },
     {
       id: "email" as const,
       label: "Email",
       done: emailDone,
-      href: linked && guestsDone ? "?step=email" : null,
+      href: linked && detailsDone && guestsDone ? "?step=email" : null,
     },
   ];
 
@@ -250,10 +252,12 @@ function ChooseEventStep({
           <label className="block">
             <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
               Event name
+              <RequiredMark />
             </span>
             <input
               name="name"
               required
+              aria-required="true"
               maxLength={90}
               defaultValue={invitation.title}
               className="mt-2 w-full rounded-2xl border border-black/10 bg-soft-grey/60 px-4 py-3.5 text-sm text-black outline-none placeholder:text-grey focus:border-signature/40 focus:bg-white focus:ring-2 focus:ring-signature/15"
@@ -372,6 +376,7 @@ function EventDetailsStep({
         <div>
           <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
             Event name
+            <RequiredMark />
           </span>
           <p className="mt-2 rounded-2xl border border-black/[0.06] bg-soft-grey/70 px-4 py-3.5 text-sm font-medium text-black">
             {event.name}
@@ -385,11 +390,13 @@ function EventDetailsStep({
           <label className="block">
             <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
               Date
+              <RequiredMark />
             </span>
             <input
               type="date"
               name="date"
               required
+              aria-required="true"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3.5 text-sm text-black outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/15"
@@ -398,10 +405,13 @@ function EventDetailsStep({
           <label className="block">
             <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
               Time
+              <RequiredMark />
             </span>
             <input
               type="time"
               name="time"
+              required
+              aria-required="true"
               value={time}
               onChange={(e) => setTime(e.target.value)}
               className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3.5 text-sm text-black outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/15"
@@ -412,9 +422,12 @@ function EventDetailsStep({
         <label className="block">
           <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
             Time zone
+            <RequiredMark />
           </span>
           <Select
             name="timezone"
+            required
+            aria-required="true"
             variant="field"
             wrapperClassName="mt-2 block w-full"
             className="w-full"
@@ -432,9 +445,12 @@ function EventDetailsStep({
         <label className="block">
           <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
             Venue
+            <RequiredMark />
           </span>
           <input
             name="venue"
+            required
+            aria-required="true"
             value={venue}
             onChange={(e) => setVenue(e.target.value)}
             onBlur={() => notifyIfDifferent("venue", venue, designVenue)}
@@ -446,9 +462,12 @@ function EventDetailsStep({
         <label className="block">
           <span className="text-xs font-semibold uppercase tracking-[0.08em] text-grey">
             Address
+            <RequiredMark />
           </span>
           <input
             name="address"
+            required
+            aria-required="true"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             onBlur={() => notifyIfDifferent("address", address, designAddress)}
@@ -457,13 +476,7 @@ function EventDetailsStep({
           />
         </label>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-          <Link
-            href={eventPath(event)}
-            className="text-sm font-semibold text-grey transition-colors hover:text-black"
-          >
-            Skip for now
-          </Link>
+        <div className="flex justify-end pt-2">
           <SubmitButton label="Save details" pendingLabel="Saving…" />
         </div>
       </form>
@@ -481,6 +494,7 @@ export function EventSetupFlow({
   linkableEvents,
   initialStep,
   initialGuests = [],
+  sentGuestIds = [],
   errorMessage,
   missingGuestsTable = false,
   missingEmailTable = false,
@@ -585,6 +599,7 @@ export function EventSetupFlow({
               eventSlug={linkedEvent.slug}
               invitationSlug={invitation.slug}
               initialGuests={initialGuests}
+              sentGuestIds={sentGuestIds}
             />
           )
         ) : step === "email" && linkedEvent ? (
@@ -617,6 +632,7 @@ export function EventSetupFlow({
                 }}
                 invitation={invitation}
                 guests={initialGuests}
+                sentGuestIds={sentGuestIds}
                 initialDraft={emailDraft}
                 sendingConfigured={sendingConfigured}
                 designImageUrls={designImageUrls}
