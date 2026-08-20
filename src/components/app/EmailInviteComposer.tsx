@@ -13,7 +13,7 @@ import type { Invitation } from "@/lib/data/types";
 import { guestDisplayLabel, guestInvitePath } from "@/lib/invitation-paths";
 import { Button, PlusIcon } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
-import { ConfirmDialog } from "@/components/editor/ConfirmDialog";
+import { EmailRecipientDialog } from "./EmailRecipientDialog";
 
 interface EmailInviteComposerProps {
   eventId: string;
@@ -27,6 +27,7 @@ interface EmailInviteComposerProps {
   };
   invitation: Invitation | null;
   guests: EventGuest[];
+  sentGuestIds?: string[];
   initialDraft: EmailCampaignDraft;
   sendingConfigured: boolean;
   designImageUrls: string[];
@@ -43,6 +44,7 @@ export function EmailInviteComposer({
   event,
   invitation,
   guests,
+  sentGuestIds = [],
   initialDraft,
   sendingConfigured,
   designImageUrls,
@@ -57,6 +59,9 @@ export function EmailInviteComposer({
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [confirmSendOpen, setConfirmSendOpen] = useState(false);
+  const [selectedGuestIds, setSelectedGuestIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [pending, startTransition] = useTransition();
 
   const previewGuest =
@@ -97,6 +102,7 @@ export function EmailInviteComposer({
       eventId: string,
       formData: FormData,
     ) => Promise<{ ok: true; message?: string } | { error: string }>,
+    recipientGuestIds?: string[],
   ) => {
     const formData = new FormData();
     formData.set("subject", draft.subject);
@@ -108,6 +114,9 @@ export function EmailInviteComposer({
     formData.set("ctaLabel", draft.ctaLabel);
     formData.set("heroImageUrl", draft.heroImageUrl);
     if (draft.includeCalendar) formData.set("includeCalendar", "on");
+    for (const guestId of recipientGuestIds ?? []) {
+      formData.append("guestId", guestId);
+    }
 
     setMessage(null);
     setError(null);
@@ -400,23 +409,33 @@ export function EmailInviteComposer({
               type="button"
               size="md"
               disabled={pending || !sendingConfigured}
-              onClick={() => setConfirmSendOpen(true)}
+              onClick={() => {
+                const sentIds = new Set(sentGuestIds);
+                setSelectedGuestIds(
+                  new Set(
+                    guests
+                      .filter((guest) => !sentIds.has(guest.id))
+                      .map((guest) => guest.id),
+                  ),
+                );
+                setConfirmSendOpen(true);
+              }}
             >
               Send to guests
               <PlusIcon />
             </Button>
           </div>
 
-          <ConfirmDialog
+          <EmailRecipientDialog
             open={confirmSendOpen}
-            title="Send invites?"
-            description={`Send personalised invites to ${guests.length} recipient${guests.length === 1 ? "" : "s"}? Already-sent guests will be skipped.`}
-            confirmLabel="Send to guests"
-            cancelLabel="Cancel"
+            guests={guests}
+            sentGuestIds={sentGuestIds}
+            selectedGuestIds={selectedGuestIds}
+            onSelectedGuestIdsChange={setSelectedGuestIds}
             onCancel={() => setConfirmSendOpen(false)}
             onConfirm={() => {
               setConfirmSendOpen(false);
-              runAction(sendInviteEmailsAction);
+              runAction(sendInviteEmailsAction, Array.from(selectedGuestIds));
             }}
           />
 

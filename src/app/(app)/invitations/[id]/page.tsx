@@ -429,7 +429,18 @@ export default async function EventDetailPage({
                         .filter(Boolean)
                         .join(" ")}
                     </span>
-                    <span className="text-grey">{guest.email}</span>
+                    <span className="flex items-center gap-2 text-grey">
+                      {guest.email}
+                      {deliveries.some(
+                        (delivery) =>
+                          delivery.guestId === guest.id &&
+                          delivery.status === "sent",
+                      ) ? (
+                        <span className="rounded-full bg-black px-2.5 py-1 text-[11px] font-semibold text-white">
+                          Sent
+                        </span>
+                      ) : null}
+                    </span>
                   </li>
                 ))}
               </ul>

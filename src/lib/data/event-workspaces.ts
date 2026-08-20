@@ -71,7 +71,11 @@ async function mapEvent(row: EventRow): Promise<EventWorkspace> {
     : null;
   const design = hasDesignedPage(invitation);
   const details = Boolean(
-    row.event_date && (row.venue?.trim() || row.address?.trim()),
+    row.name.trim() &&
+      row.event_date &&
+      row.timezone.trim() &&
+      row.venue?.trim() &&
+      row.address?.trim(),
   );
   const guestCount = await countGuestsForEvent(row.id);
   const guests = guestCount > 0;

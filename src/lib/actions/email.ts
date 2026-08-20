@@ -102,6 +102,16 @@ function heroForSend(draft: EmailCampaignDraft): string | null {
   return chosen ? absoluteUrl(chosen) : null;
 }
 
+function hasCompleteEventDetails(event: EventWorkspace): boolean {
+  return Boolean(
+    event.name.trim() &&
+      event.eventDate &&
+      event.timezone.trim() &&
+      event.venue?.trim() &&
+      event.address?.trim(),
+  );
+}
+
 export async function saveEmailCampaignAction(
   eventId: string,
   formData: FormData,
@@ -146,6 +156,9 @@ export async function sendTestInviteEmailAction(
 
     if (!event.invitation) {
       return { error: "Connect an invitation design before sending." };
+    }
+    if (!hasCompleteEventDetails(event)) {
+      return { error: "Complete all required event details first." };
     }
 
     const guests = await getGuestsForEvent(event.id);
@@ -227,11 +240,34 @@ export async function sendInviteEmailsAction(
     if (!event.invitation) {
       return { error: "Connect an invitation design before sending." };
     }
+    if (!hasCompleteEventDetails(event)) {
+      return { error: "Complete all required event details first." };
+    }
 
     const guests = await getGuestsForEvent(event.id);
     if (guests.length === 0) {
       return { error: "Add at least one guest before sending." };
     }
+
+    const requestedGuestIds = Array.from(
+      new Set(
+        formData
+          .getAll("guestId")
+          .map((value) => String(value).trim())
+          .filter(Boolean),
+      ),
+    );
+    if (requestedGuestIds.length === 0) {
+      return { error: "Select at least one guest to send to." };
+    }
+
+    const guestsById = new Map(guests.map((guest) => [guest.id, guest]));
+    if (requestedGuestIds.some((guestId) => !guestsById.has(guestId))) {
+      return { error: "One or more selected guests could not be found." };
+    }
+    const selectedGuests = requestedGuestIds.map(
+      (guestId) => guestsById.get(guestId)!,
+    );
 
     const campaign = await upsertEmailCampaignForEvent({
       eventId,
@@ -254,7 +290,7 @@ export async function sendInviteEmailsAction(
     const draft = campaignDraftFromSaved(campaign);
     const heroImageUrl = heroForSend(draft);
 
-    for (const guest of guests) {
+    for (const guest of selectedGuests) {
       if (alreadySent.has(guest.id)) {
         skipped += 1;
         continue;

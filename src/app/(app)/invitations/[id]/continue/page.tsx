@@ -9,7 +9,11 @@ import {
   getEventByInvitationId,
   getLinkableEventsForInvitation,
 } from "@/lib/data/event-workspaces";
-import { getGuestsForEvent, type EventGuest } from "@/lib/data/guests";
+import {
+  getGuestsForEvent,
+  getSentGuestIdsForEvent,
+  type EventGuest,
+} from "@/lib/data/guests";
 import { getInvitationByRouteKeyForUser } from "@/lib/data/invitations";
 import {
   listInvitationImageCandidates,
@@ -38,8 +42,16 @@ function decodeError(raw: string | undefined) {
       return "Event name is required.";
     case "date-required":
       return "Event date is required.";
+    case "time-required":
+      return "Event time is required.";
+    case "timezone-required":
+      return "Time zone is required.";
+    case "venue-required":
+      return "Venue is required.";
+    case "address-required":
+      return "Address is required.";
     case "details-required":
-      return "Name and date are required.";
+      return "Complete all required event details.";
     default:
       return value;
   }
@@ -89,6 +101,14 @@ export default async function InvitationContinuePage({
     redirect(`${invitationContinuePath(invitation)}?step=event`);
   }
 
+  if (
+    linkedEvent &&
+    !linkedEvent.progress.details &&
+    (requestedStep === "guests" || requestedStep === "email")
+  ) {
+    redirect(`${invitationContinuePath(invitation)}?step=details`);
+  }
+
   if (!rawStep && linkedEvent) {
     if (!linkedEvent.progress.details) {
       redirect(`${invitationContinuePath(invitation)}?step=details`);
@@ -100,6 +120,7 @@ export default async function InvitationContinuePage({
   }
 
   let initialGuests: EventGuest[] = [];
+  let sentGuestIds: string[] = [];
   let missingGuestsTable = false;
   if (
     (requestedStep === "guests" || requestedStep === "email") &&
@@ -107,6 +128,9 @@ export default async function InvitationContinuePage({
   ) {
     try {
       initialGuests = await getGuestsForEvent(linkedEvent.id);
+      sentGuestIds = Array.from(
+        await getSentGuestIdsForEvent(linkedEvent.id),
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
       if (message.includes("Missing guests table")) {
@@ -183,6 +207,7 @@ export default async function InvitationContinuePage({
       linkableEvents={linkableEvents}
       initialStep={initialStep}
       initialGuests={initialGuests}
+      sentGuestIds={sentGuestIds}
       errorMessage={decodeError(error)}
       missingGuestsTable={missingGuestsTable}
       missingEmailTable={missingEmailTable}
