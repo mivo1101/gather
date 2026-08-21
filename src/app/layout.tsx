@@ -30,6 +30,8 @@ const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-playfair",
   display: "swap",
+  // Canvas-only serif: never above the fold, so skip the preload request.
+  preload: false,
 });
 
 const windsong = WindSong({

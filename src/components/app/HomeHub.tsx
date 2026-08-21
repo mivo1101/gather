@@ -62,16 +62,20 @@ export function HomeHub({ user, greeting, active, children }: HomeHubProps) {
     <HubSearchProvider>
       <div className="flex flex-col gap-8">
         <header className="animate-fade-up">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-black md:text-4xl">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between xl:gap-6">
+            {/* Greeting holds its width; the search bar beside it absorbs
+                the squeeze so the heading stays on one line. */}
+            <div className="min-w-0 xl:shrink-0">
+              <h1 className="text-3xl font-bold tracking-tight text-black md:text-4xl xl:whitespace-nowrap">
                 {localGreeting}, {user.firstName}{" "}
                 <span aria-hidden="true">👋</span>
               </h1>
-              <p className="mt-2 text-base text-grey">{subtitle}</p>
+              <p className="mt-2 text-base text-grey xl:max-w-md">
+                {subtitle}
+              </p>
             </div>
 
-            <div className="w-full xl:max-w-[42rem] xl:pt-0.5">
+            <div className="w-full min-w-0 xl:max-w-[42rem] xl:flex-1 xl:pt-0.5">
               <AppTopBar
                 user={user}
                 searchPlaceholder={searchPlaceholder}

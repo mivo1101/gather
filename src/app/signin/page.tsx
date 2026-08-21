@@ -45,16 +45,20 @@ export default async function SignInPage({
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#211916]">
+      {/* Poster paints instantly; the 720p clip is ~290 kB instead of 5.5 MB.
+          preload="metadata" keeps the video off the critical path. */}
       <video
         className="absolute inset-0 h-full w-full object-cover"
         autoPlay
         muted
         loop
         playsInline
-        preload="auto"
+        preload="metadata"
+        poster="/images/landing/login-poster.jpg"
         aria-hidden="true"
       >
-        <source src="/videos/login-background.mp4" type="video/mp4" />
+        <source src="/videos/login-background-720.webm" type="video/webm" />
+        <source src="/videos/login-background-720.mp4" type="video/mp4" />
       </video>
 
       <div

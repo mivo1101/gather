@@ -11,7 +11,7 @@ import {
   designLocationFromInvitation,
   eventPath,
   type EventWorkspace,
-} from "@/lib/data/event-workspaces";
+} from "@/lib/data/event-workspace-utils";
 import type { EventGuest } from "@/lib/data/guests";
 import type { Invitation } from "@/lib/data/types";
 import type { EmailCampaignDraft } from "@/lib/data/email-campaigns";

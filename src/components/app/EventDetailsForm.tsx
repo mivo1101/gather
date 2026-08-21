@@ -13,7 +13,7 @@ import { updateEventDetailsFromHubAction } from "@/lib/actions/events";
 import {
   designLocationFromInvitation,
   type EventWorkspace,
-} from "@/lib/data/event-workspaces";
+} from "@/lib/data/event-workspace-utils";
 import { Button } from "@/components/ui/Button";
 import { RequiredMark } from "@/components/ui/RequiredMark";
 import { Select } from "@/components/ui/Select";
