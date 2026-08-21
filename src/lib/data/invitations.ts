@@ -17,7 +17,7 @@ import type {
   InvitationUpdate,
 } from "./types";
 
-interface InvitationRow {
+export interface InvitationRow {
   id: string;
   user_id: string;
   title: string;
@@ -31,7 +31,7 @@ interface InvitationRow {
   updated_at: string;
 }
 
-const INVITATION_COLUMNS =
+export const INVITATION_COLUMNS =
   "id, user_id, title, slug, status, cover_image, event_date, location, content, created_at, updated_at";
 
 function mapInvitation(row: InvitationRow): Invitation {
@@ -51,6 +51,13 @@ function mapInvitation(row: InvitationRow): Invitation {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+/** Map an embedded Supabase invitation row and retain legacy slug upgrades. */
+export async function invitationFromDatabaseRow(
+  row: InvitationRow,
+): Promise<Invitation> {
+  return maybeUpgradeSlug(mapInvitation(row));
 }
 
 function sortInvitations(

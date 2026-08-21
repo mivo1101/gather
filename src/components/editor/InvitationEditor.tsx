@@ -1789,7 +1789,6 @@ export function InvitationEditor({
         title={title}
         shape={shape}
         customSize={customSize}
-        rsvp={contentMeta.rsvp}
         onClose={() => setPreviewOpen(false)}
       />
 

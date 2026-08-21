@@ -4,6 +4,9 @@ import { countGuestsForEvent } from "./guests";
 import {
   getInvitationForUser,
   getInvitationsForUser,
+  INVITATION_COLUMNS,
+  invitationFromDatabaseRow,
+  type InvitationRow,
 } from "./invitations";
 import type { Invitation } from "./types";
 
@@ -49,6 +52,11 @@ interface EventRow {
   invitation_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface EventListRow extends EventRow {
+  invitation: InvitationRow | null;
+  event_guests: Array<{ id: string }> | null;
 }
 
 const EVENT_COLUMNS =
@@ -107,6 +115,47 @@ async function mapEvent(row: EventRow): Promise<EventWorkspace> {
   };
 }
 
+async function mapEventListRow(row: EventListRow): Promise<EventWorkspace> {
+  const invitation = row.invitation
+    ? await invitationFromDatabaseRow(row.invitation)
+    : null;
+  const design = hasDesignedPage(invitation);
+  const details = Boolean(
+    row.name.trim() &&
+      row.event_date &&
+      row.timezone.trim() &&
+      row.venue?.trim() &&
+      row.address?.trim(),
+  );
+  const guests = (row.event_guests?.length ?? 0) > 0;
+  const send = row.status === "active" || row.status === "completed";
+  const values = [design, details, guests, send];
+
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    slug: row.slug,
+    status: row.status,
+    eventDate: row.event_date,
+    timezone: row.timezone,
+    venue: row.venue,
+    address: row.address,
+    invitationId: row.invitation_id,
+    invitation,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    progress: {
+      design,
+      details,
+      guests,
+      send,
+      completed: values.filter(Boolean).length,
+      total: values.length,
+    },
+  };
+}
+
 async function allocateEventSlug(
   userId: string,
   name: string,
@@ -136,12 +185,16 @@ export async function getEventWorkspacesForUser(
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("events")
-    .select(EVENT_COLUMNS)
+    .select(
+      `${EVENT_COLUMNS}, invitation:invitations (${INVITATION_COLUMNS}), event_guests (id)`,
+    )
     .eq("user_id", userId)
     .order("updated_at", { ascending: false });
 
   if (error) throw new Error(formatEventDbError(error.message));
-  return Promise.all(((data as EventRow[] | null) ?? []).map(mapEvent));
+  return Promise.all(
+    ((data as unknown as EventListRow[] | null) ?? []).map(mapEventListRow),
+  );
 }
 
 export async function getEventWorkspaceForUser(

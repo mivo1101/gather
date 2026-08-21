@@ -217,7 +217,6 @@ interface EditorPreviewModalProps {
   title: string;
   shape: InvitationShape;
   customSize: CustomCanvasSize;
-  rsvp?: { prompt: string; note: string };
   onClose: () => void;
 }
 
@@ -230,7 +229,6 @@ export function EditorPreviewModal({
   title,
   shape,
   customSize,
-  rsvp,
   onClose,
 }: EditorPreviewModalProps) {
   const titleId = useId();

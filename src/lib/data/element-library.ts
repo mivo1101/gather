@@ -45,40 +45,6 @@ export interface LibraryElement {
   tags?: string[];
 }
 
-export const ELEMENT_CATEGORIES: {
-  id: ElementCategoryId;
-  label: string;
-}[] = [
-  { id: "patterns", label: "Patterns" },
-  { id: "shapes", label: "Shapes" },
-  { id: "dividers", label: "Dividers" },
-];
-
-export const PATTERN_SUBCATEGORIES: {
-  id: PatternSubcategoryId;
-  label: string;
-}[] = [
-  { id: "all", label: "All" },
-  { id: "flowers", label: "Flowers" },
-  { id: "birthday", label: "Birthday" },
-  { id: "wedding", label: "Wedding" },
-  { id: "graduation", label: "Graduation" },
-  { id: "monogram", label: "Monogram" },
-  { id: "icons", label: "Icons" },
-  { id: "social", label: "Social" },
-];
-
-export const SHAPE_SUBCATEGORIES: {
-  id: ShapeSubcategoryId;
-  label: string;
-}[] = [
-  { id: "all", label: "All" },
-  { id: "lines", label: "Lines" },
-  { id: "basic", label: "Basic shapes" },
-  { id: "polygons", label: "Polygons" },
-  { id: "stars", label: "Stars" },
-];
-
 export const LIBRARY_ELEMENTS: LibraryElement[] = [
   // Patterns — Flowers
   {

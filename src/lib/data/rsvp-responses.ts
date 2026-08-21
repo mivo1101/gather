@@ -6,7 +6,6 @@ import type {
 } from "@/lib/data/invitation-content";
 import type { Invitation } from "@/lib/data/types";
 import { getPersonalisedInvite } from "@/lib/data/personalised-invites";
-import { getEventWorkspaceForUser } from "@/lib/data/event-workspaces";
 
 export type RsvpAttendance = "yes" | "no" | "unknown";
 export type RsvpAnswerValue = string | string[];
@@ -210,17 +209,6 @@ export async function getRsvpResponsesForEvent(
 
   if (error) throw new Error(formatRsvpDbError(error.message));
   return ((data ?? []) as RsvpRow[]).map(mapRow);
-}
-
-export async function getRsvpResponsesForEventForUser(input: {
-  userId: string;
-  eventId: string;
-}): Promise<RsvpResponse[]> {
-  const event = await getEventWorkspaceForUser(input.userId, input.eventId);
-  if (!event || event.id !== input.eventId) {
-    throw new Error("Event not found.");
-  }
-  return getRsvpResponsesForEvent(event.id);
 }
 
 /** Upsert RSVP for a guest identified by invite token + event slug. */

@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import { unstable_cache } from "next/cache";
+import { cache } from "react";
 import { auth } from "@/auth";
 import type { User } from "./types";
 import { getStoredUserProfile } from "./users-db";
@@ -27,24 +29,35 @@ function splitName(fullName?: string | null): {
  * Returns the signed-in user from the Auth.js session.
  * Redirects to /signin when there is no active session.
  */
-export async function getCurrentUser(): Promise<User> {
-  const session = await auth();
-
-  if (!session?.user) {
-    redirect("/signin");
-  }
-
-  const userId = session.user.id || session.user.email || "unknown";
-  const storedProfile = await getStoredUserProfile(userId);
-  const { firstName, lastName } = splitName(
-    storedProfile?.name || session.user.name,
-  );
-
-  return {
-    id: userId,
-    firstName,
-    lastName,
-    email: session.user.email ?? "",
-    avatarUrl: storedProfile?.image || session.user.image || null,
-  };
+function getCachedStoredUserProfile(userId: string) {
+  return unstable_cache(
+    () => getStoredUserProfile(userId),
+    ["user-profile", userId],
+    { revalidate: 300, tags: [`user-profile:${userId}`] },
+  )();
 }
+
+/** Deduplicated across layouts and pages for the duration of one render. */
+export const getCurrentUser = cache(
+  async function getCurrentUser(): Promise<User> {
+    const session = await auth();
+
+    if (!session?.user) {
+      redirect("/signin");
+    }
+
+    const userId = session.user.id || session.user.email || "unknown";
+    const storedProfile = await getCachedStoredUserProfile(userId);
+    const { firstName, lastName } = splitName(
+      storedProfile?.name || session.user.name,
+    );
+
+    return {
+      id: userId,
+      firstName,
+      lastName,
+      email: session.user.email ?? "",
+      avatarUrl: storedProfile?.image || session.user.image || null,
+    };
+  },
+);

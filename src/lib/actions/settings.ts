@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import {
@@ -45,6 +45,7 @@ export async function updateProfileAction(formData: FormData) {
 
   try {
     await updateUserProfile(userId, [firstName, lastName].filter(Boolean).join(" "));
+    revalidateTag(`user-profile:${userId}`);
     revalidatePath("/settings");
     revalidatePath("/home");
     return { ok: true, message: "Changes saved." };

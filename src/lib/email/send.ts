@@ -8,10 +8,6 @@ function configuredFromAddress(): string {
   );
 }
 
-export function emailFromAddress(): string {
-  return configuredFromAddress();
-}
-
 export function isEmailSendingConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY?.trim());
 }

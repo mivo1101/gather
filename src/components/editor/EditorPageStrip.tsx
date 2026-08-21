@@ -1,6 +1,5 @@
 "use client";
 
-import type { CanvasElement } from "@/lib/data/canvas-elements";
 import {
   invitationPageRoleLabel,
   type InvitationPage,

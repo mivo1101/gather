@@ -11,8 +11,7 @@ import { Button, PlusIcon } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { linkInvitationToEventAction } from "@/lib/actions/events";
 import {
-  getDeliveriesForEvent,
-  getEmailCampaignForEvent,
+  getEmailSummaryForEvent,
   type EmailDelivery,
 } from "@/lib/data/email-campaigns";
 import {
@@ -60,9 +59,6 @@ export default async function EventDetailPage({
     redirect(`${eventPath(workspace)}${suffix}`);
   }
 
-  const availableDesigns = workspace.invitation
-    ? []
-    : await getUnlinkedInvitationsForUser(user.id);
   const invitation = workspace.invitation;
   const location = eventLocation(workspace);
   const progress = Math.round(
@@ -70,51 +66,52 @@ export default async function EventDetailPage({
   );
   const linkDesign = linkInvitationToEventAction.bind(null, workspace.id);
 
+  const [designsResult, guestsResult, emailResult, rsvpResult] =
+    await Promise.allSettled([
+      invitation
+        ? Promise.resolve([])
+        : getUnlinkedInvitationsForUser(user.id),
+      getGuestsForEvent(workspace.id),
+      getEmailSummaryForEvent(workspace.id),
+      getRsvpResponsesForEvent(workspace.id),
+    ]);
+
+  if (designsResult.status === "rejected") throw designsResult.reason;
+  const availableDesigns = designsResult.value;
+
   let guests: EventGuest[] = [];
   let missingGuestsTable = false;
-  try {
-    guests = await getGuestsForEvent(workspace.id);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "";
-    if (message.includes("Missing guests table")) {
-      missingGuestsTable = true;
-    } else {
-      throw err;
-    }
+  if (guestsResult.status === "fulfilled") {
+    guests = guestsResult.value;
+  } else if (String(guestsResult.reason).includes("Missing guests table")) {
+    missingGuestsTable = true;
+  } else {
+    throw guestsResult.reason;
   }
 
   let campaignSubject: string | null = null;
   let deliveries: EmailDelivery[] = [];
   let missingEmailTable = false;
-  try {
-    const campaign = await getEmailCampaignForEvent(workspace.id);
-    if (campaign) {
-      campaignSubject = campaign.subject;
-      deliveries = await getDeliveriesForEvent(workspace.id);
-    }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "";
-    if (
-      message.includes("Missing email tables") ||
-      message.includes("Missing email hero")
-    ) {
-      missingEmailTable = true;
-    } else {
-      throw err;
-    }
+  if (emailResult.status === "fulfilled") {
+    campaignSubject = emailResult.value.campaign?.subject ?? null;
+    deliveries = emailResult.value.deliveries;
+  } else if (
+    String(emailResult.reason).includes("Missing email tables") ||
+    String(emailResult.reason).includes("Missing email hero")
+  ) {
+    missingEmailTable = true;
+  } else {
+    throw emailResult.reason;
   }
 
   let rsvpResponses: RsvpResponse[] = [];
   let missingRsvpTable = false;
-  try {
-    rsvpResponses = await getRsvpResponsesForEvent(workspace.id);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "";
-    if (message.includes("Missing RSVP table")) {
-      missingRsvpTable = true;
-    } else {
-      throw err;
-    }
+  if (rsvpResult.status === "fulfilled") {
+    rsvpResponses = rsvpResult.value;
+  } else if (String(rsvpResult.reason).includes("Missing RSVP table")) {
+    missingRsvpTable = true;
+  } else {
+    throw rsvpResult.reason;
   }
 
   const continueHref = invitation

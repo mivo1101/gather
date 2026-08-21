@@ -934,12 +934,3 @@ export function ToolBackgroundPanel({
     </div>
   );
 }
-
-export function ToolPlaceholder({ title }: { title: string }) {
-  return (
-    <EmptyHint>
-      {title} tools are available as shortcuts — use Layout and canvas controls
-      for now.
-    </EmptyHint>
-  );
-}
