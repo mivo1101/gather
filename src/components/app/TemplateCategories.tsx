@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { buildJustifiedRows, targetRowHeight } from "./justified-rows";
 import {
   TEMPLATE_CATEGORIES,
   getTemplatesByCategory,
@@ -142,7 +143,14 @@ const categoryIcons: Record<
   other: OtherEventsIcon,
 };
 
-function TemplateCard({ template }: { template: InvitationTemplate }) {
+function TemplateCard({
+  template,
+  size,
+}: {
+  template: InvitationTemplate;
+  /** Explicit px box from the justified grid. Omit to size from the shape. */
+  size?: { width: number; height: number };
+}) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const preview = templatePreviewPage(template);
   const isLandscape = template.shape === "landscape";
@@ -160,16 +168,22 @@ function TemplateCard({ template }: { template: InvitationTemplate }) {
     <>
       <article
         data-template-card={template.id}
-        className={`group h-40 shrink-0 sm:h-[17.75rem] ${aspectClass}`}
+        className={
+          size
+            ? "group shrink-0"
+            : `group h-40 shrink-0 sm:h-[17.75rem] ${aspectClass}`
+        }
         style={
-          isCustom
-            ? {
-                aspectRatio: cardAspectRatio(
-                  "custom",
-                  template.customSize,
-                ),
-              }
-            : undefined
+          size
+            ? { width: size.width, height: size.height }
+            : isCustom
+              ? {
+                  aspectRatio: cardAspectRatio(
+                    "custom",
+                    template.customSize,
+                  ),
+                }
+              : undefined
         }
       >
         <button
@@ -205,21 +219,179 @@ function TemplateCard({ template }: { template: InvitationTemplate }) {
   );
 }
 
-function CategorySection({
+const GRID_GAP = 16;
+
+/**
+ * How many designs a category rail teases before "See all". The rail is a
+ * teaser, not a browser - scrubbing sideways through thirty cards is worse
+ * than opening the theme, and every card here renders a full page preview.
+ */
+const RAIL_LIMIT = 6;
+
+/**
+ * Squares, then landscapes, then portraits. Grouping similar aspect ratios
+ * keeps justified rows from pairing a 9:16 card with a 16:9 one, which on a
+ * narrow screen squeezes the portrait down to an unreadable sliver.
+ */
+function galleryOrder(templates: InvitationTemplate[]): InvitationTemplate[] {
+  const rank = (template: InvitationTemplate) =>
+    template.shape === "square" ? 0 : template.shape === "landscape" ? 1 : 2;
+  return [...templates].sort((a, b) => rank(a) - rank(b));
+}
+
+/**
+ * Templates laid out in rows that always fill the width. Falls back to a plain
+ * wrapped row until the container has been measured, so the server-rendered
+ * markup still shows cards at a sensible size.
+ */
+function JustifiedTemplateGrid({
+  templates: unordered,
+}: {
+  templates: InvitationTemplate[];
+}) {
+  const templates = useMemo(() => galleryOrder(unordered), [unordered]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState<number | null>(null);
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setWidth(entry.contentRect.width);
+    });
+    observer.observe(node);
+    setWidth(node.clientWidth);
+    return () => observer.disconnect();
+  }, []);
+
+  const aspects = useMemo(
+    () =>
+      templates.map((template) =>
+        cardAspectRatio(template.shape ?? "portrait", template.customSize),
+      ),
+    [templates],
+  );
+
+  const rows = useMemo(() => {
+    if (width === null) return null;
+    return buildJustifiedRows(aspects, {
+      width,
+      gap: GRID_GAP,
+      targetHeight: targetRowHeight(width),
+    });
+  }, [aspects, width]);
+
+  return (
+    <div ref={containerRef}>
+      {rows === null ? (
+        <div className="flex flex-wrap items-start gap-4">
+          {templates.map((template) => (
+            <TemplateCard key={template.id} template={template} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {rows.map((row, rowIndex) => (
+            <div key={rowIndex} className="flex items-start gap-4">
+              {row.items.map((itemIndex) => {
+                const template = templates[itemIndex];
+                return (
+                  <TemplateCard
+                    key={template.id}
+                    template={template}
+                    size={{
+                      width: row.height * aspects[itemIndex],
+                      height: row.height,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Single theme, opened from "See all" - replaces the whole hub listing. */
+function CategoryDetail({
   category,
   templates,
+  onBack,
 }: {
   category: TemplateCategory;
   templates: InvitationTemplate[];
+  onBack: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const Icon = categoryIcons[category.id];
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <button
+          type="button"
+          onClick={onBack}
+          className="-ml-1 inline-flex items-center gap-1.5 rounded-full px-1 py-1 text-sm font-semibold text-grey transition-colors hover:text-black"
+        >
+          <svg
+            className="h-4 w-4"
+            viewBox="0 0 20 20"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M12.5 4.5 7 10l5.5 5.5"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          All events
+        </button>
+
+        <div className="mt-3 flex items-center gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-signature/10 text-signature">
+            <Icon />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-2xl font-semibold tracking-tight text-black">
+              {category.title}
+            </h2>
+            <p className="mt-0.5 text-sm text-grey">
+              {templates.length}{" "}
+              {templates.length === 1 ? "template" : "templates"} ·{" "}
+              {category.description}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <JustifiedTemplateGrid templates={templates} />
+    </div>
+  );
+}
+
+function CategorySection({
+  category,
+  templates,
+  onOpen,
+}: {
+  category: TemplateCategory;
+  templates: InvitationTemplate[];
+  onOpen: () => void;
+}) {
   const [canScrollBackward, setCanScrollBackward] = useState(false);
   const [canScrollForward, setCanScrollForward] = useState(false);
   const railRef = useRef<HTMLDivElement>(null);
 
+  // Rail keeps newest-first order; the grid behind "See all" groups by shape.
+  const railTemplates = templates.slice(0, RAIL_LIMIT);
+
   useEffect(() => {
     const rail = railRef.current;
-    if (!rail || expanded) {
+    if (!rail) {
       setCanScrollBackward(false);
       setCanScrollForward(false);
       return;
@@ -238,7 +410,7 @@ function CategorySection({
       rail.removeEventListener("scroll", update);
       observer.disconnect();
     };
-  }, [expanded, templates.length]);
+  }, [railTemplates.length]);
 
   if (templates.length === 0) return null;
 
@@ -271,22 +443,6 @@ function CategorySection({
     );
   }
 
-  const portraitTemplates = templates.filter(
-    (template) =>
-      template.shape !== "landscape" && template.shape !== "square",
-  );
-  const squareTemplates = templates.filter(
-    (template) => template.shape === "square",
-  );
-  const landscapeTemplates = templates.filter(
-    (template) => template.shape === "landscape",
-  );
-  const galleryTemplates = [
-    ...squareTemplates,
-    ...landscapeTemplates,
-    ...portraitTemplates,
-  ];
-
   return (
     <section
       id={`category-${category.id}`}
@@ -305,11 +461,10 @@ function CategorySection({
         </div>
         <button
           type="button"
-          aria-expanded={expanded}
-          onClick={() => setExpanded((current) => !current)}
+          onClick={onOpen}
           className="shrink-0 text-sm font-semibold text-signature transition-opacity hover:opacity-75"
         >
-          {expanded ? "Show less" : "See more"}
+          See all {templates.length} →
         </button>
       </div>
 
@@ -317,18 +472,14 @@ function CategorySection({
         <div
           ref={railRef}
           data-template-rail={category.id}
-          className={`flex items-start gap-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
-            expanded
-              ? "flex-wrap overflow-visible"
-              : "flex-nowrap overflow-x-auto scroll-smooth pr-12"
-          }`}
+          className="flex flex-nowrap items-start gap-4 overflow-x-auto scroll-smooth pr-12 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {galleryTemplates.map((template) => (
+          {railTemplates.map((template) => (
             <TemplateCard key={template.id} template={template} />
           ))}
         </div>
 
-        {!expanded && canScrollBackward && (
+        {canScrollBackward && (
           <>
             <div
               className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-gradient-to-r from-sugar-milk via-sugar-milk/80 to-transparent"
@@ -363,7 +514,7 @@ function CategorySection({
           </>
         )}
 
-        {!expanded && canScrollForward && (
+        {canScrollForward && (
           <>
             <div
               className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-sugar-milk via-sugar-milk/80 to-transparent"
@@ -406,6 +557,27 @@ function CategorySection({
 export function TemplateCategories() {
   const { query } = useHubSearch();
   const search = query.trim().toLowerCase();
+  const [openCategoryId, setOpenCategoryId] =
+    useState<TemplateCategory["id"] | null>(null);
+
+  // Searching spans every category, so a live query drops the theme view.
+  useEffect(() => {
+    if (search) setOpenCategoryId(null);
+  }, [search]);
+
+  // "See all" can be clicked from the bottom of a long page, so bring the
+  // reader back to the top of the theme they just opened.
+  useEffect(() => {
+    if (openCategoryId) window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [openCategoryId]);
+
+  const openCategory = useMemo(
+    () =>
+      openCategoryId
+        ? TEMPLATE_CATEGORIES.find((c) => c.id === openCategoryId) ?? null
+        : null,
+    [openCategoryId],
+  );
 
   const sections = useMemo(() => {
     return TEMPLATE_CATEGORIES.map((category) => {
@@ -427,6 +599,16 @@ export function TemplateCategories() {
       category.id === "other" ? !search : templates.length > 0,
     );
   }, [search]);
+
+  if (openCategory) {
+    return (
+      <CategoryDetail
+        category={openCategory}
+        templates={getTemplatesByCategory(openCategory.id)}
+        onBack={() => setOpenCategoryId(null)}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-12">
@@ -458,9 +640,10 @@ export function TemplateCategories() {
               const Icon = categoryIcons[category.id];
 
               return (
-                <a
+                <button
                   key={category.id}
-                  href={`#category-${category.id}`}
+                  type="button"
+                  onClick={() => setOpenCategoryId(category.id)}
                   className="group flex w-24 flex-col items-center gap-1.5 text-center text-black"
                 >
                   <span
@@ -471,7 +654,7 @@ export function TemplateCategories() {
                   <span className="whitespace-nowrap text-xs font-medium leading-tight group-hover:font-semibold">
                     {category.title}
                   </span>
-                </a>
+                </button>
               );
             })}
           </nav>
@@ -493,6 +676,7 @@ export function TemplateCategories() {
             key={category.id}
             category={category}
             templates={templates}
+            onOpen={() => setOpenCategoryId(category.id)}
           />
         ))
       )}
