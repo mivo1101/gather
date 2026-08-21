@@ -194,6 +194,81 @@ export async function getInvitationsForUser(
   );
 }
 
+interface LinkedEventDetails {
+  eventDate: string | null;
+  location: string | null;
+}
+
+interface LinkedEventRow {
+  invitation_id: string | null;
+  event_date: string | null;
+  venue: string | null;
+  address: string | null;
+}
+
+/**
+ * Date and venue are usually filled in on the event, not the design, so a linked
+ * invitation row keeps a null event_date/location. Look up what the events carry
+ * so lists can fill those blanks instead of reading "not set".
+ */
+async function linkedEventDetailsForUser(
+  userId: string,
+): Promise<Map<string, LinkedEventDetails>> {
+  const supabase = getSupabaseAdmin();
+
+  const { data, error } = await supabase
+    .from("events")
+    .select("invitation_id, event_date, venue, address")
+    .eq("user_id", userId)
+    .not("invitation_id", "is", null);
+
+  if (error) {
+    throw new Error(formatInvitationDbError(error.message));
+  }
+
+  const byInvitation = new Map<string, LinkedEventDetails>();
+  for (const row of (data ?? []) as LinkedEventRow[]) {
+    if (!row.invitation_id) continue;
+    const location = [row.venue, row.address]
+      .map((part) => part?.trim())
+      .filter((part): part is string => Boolean(part))
+      .join(", ");
+    byInvitation.set(row.invitation_id, {
+      eventDate: row.event_date,
+      location: location || null,
+    });
+  }
+
+  return byInvitation;
+}
+
+/**
+ * Invitations for card lists, with any missing date/location borrowed from the
+ * event they are linked to. Values saved on the design always win.
+ */
+export async function getInvitationsWithEventDetailsForUser(
+  userId: string,
+  query: InvitationQuery = {},
+): Promise<Invitation[]> {
+  const [invitations, linked] = await Promise.all([
+    getInvitationsForUser(userId, query),
+    linkedEventDetailsForUser(userId),
+  ]);
+
+  const merged = invitations.map((invitation) => {
+    const details = linked.get(invitation.id);
+    if (!details) return invitation;
+    return {
+      ...invitation,
+      eventDate: invitation.eventDate ?? details.eventDate,
+      location: invitation.location ?? details.location,
+    };
+  });
+
+  // Borrowed dates change the order, so sort again once the blanks are filled.
+  return sortInvitations(merged, query.sort);
+}
+
 /** Fetch a single invitation owned by the user (by UUID). */
 export async function getInvitationForUser(
   userId: string,

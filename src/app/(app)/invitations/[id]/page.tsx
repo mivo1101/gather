@@ -7,6 +7,7 @@ import {
 } from "@/components/app/EventHubTabs";
 import { EventRsvpSummary } from "@/components/app/EventRsvpSummary";
 import { GuestInviteLinks } from "@/components/app/GuestInviteLinks";
+import { StatusDot, type StatusTone } from "@/components/app/StatusDot";
 import { Button, PlusIcon } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { linkInvitationToEventAction } from "@/lib/actions/events";
@@ -45,11 +46,11 @@ const eventStatusLabels: Record<EventStatus, string> = {
   archived: "Archived",
 };
 
-const eventStatusStyles: Record<EventStatus, string> = {
-  draft: "bg-[#f1f1f3] text-[#66676d] ring-1 ring-black/[0.06]",
-  active: "bg-[#e2f5e9] text-[#267448] ring-1 ring-[#267448]/10",
-  completed: "bg-[#fff0c2] text-[#85620e] ring-1 ring-[#85620e]/10",
-  archived: "bg-[#e6e6e9] text-[#73747a] ring-1 ring-black/[0.06]",
+const eventStatusTones: Record<EventStatus, StatusTone> = {
+  draft: "neutral",
+  active: "green",
+  completed: "gold",
+  archived: "muted",
 };
 
 export default async function EventDetailPage({
@@ -184,11 +185,10 @@ export default async function EventDetailPage({
       <header className="mt-5 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${eventStatusStyles[workspace.status]}`}
-            >
-              {eventStatusLabels[workspace.status]}
-            </span>
+            <StatusDot
+              tone={eventStatusTones[workspace.status]}
+              label={eventStatusLabels[workspace.status]}
+            />
             <span className="text-xs text-grey">
               Updated {formatRelativeTime(workspace.updatedAt)}
             </span>

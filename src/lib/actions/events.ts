@@ -83,6 +83,7 @@ export async function createEventAction(formData: FormData) {
   });
 
   revalidatePath("/invitations");
+  revalidatePath("/home");
   redirect(eventPath(event));
 }
 
@@ -103,6 +104,7 @@ export async function linkInvitationToEventAction(
   });
 
   revalidatePath("/invitations");
+  revalidatePath("/home");
   revalidatePath(eventPath(event));
   redirect(eventPath(event));
 }
@@ -171,6 +173,7 @@ export async function connectDesignToEventAction(formData: FormData) {
   }
 
   revalidatePath("/invitations");
+  revalidatePath("/home");
   revalidatePath(eventPath(event));
   redirect(`${continueBase}?step=details`);
 }
@@ -246,6 +249,7 @@ export async function saveEventDetailsAction(formData: FormData) {
   }
 
   revalidatePath("/invitations");
+  revalidatePath("/home");
   revalidatePath(eventPath(event));
   redirect(
     invitation
@@ -323,6 +327,7 @@ export async function updateEventDetailsFromHubAction(
     }
 
     revalidatePath("/invitations");
+    revalidatePath("/home");
     revalidatePath(eventPath(updated));
     return { ok: true, message };
   } catch (error) {
@@ -347,6 +352,7 @@ export async function setEventArchivedAction(
       status: archived ? "archived" : "draft",
     });
     revalidatePath("/invitations");
+    revalidatePath("/home");
     return { ok: true };
   } catch (error) {
     return {
@@ -368,6 +374,7 @@ export async function permanentlyDeleteEventAction(
     });
     if (!deleted) return { error: "Event not found." };
     revalidatePath("/invitations");
+    revalidatePath("/home");
     return { ok: true };
   } catch (error) {
     return {

@@ -15,12 +15,13 @@ import { cardAspectRatio } from "@/components/editor/CanvasImageContent";
 import { BrandCheckbox } from "./BrandCheckbox";
 import { MoreIcon, PencilIcon } from "./icons";
 import { InvitationPagePreview } from "./InvitationPagePreview";
+import { StatusDot, type StatusTone } from "./StatusDot";
 
-const statusStyles = {
-  draft: "bg-[#fde8d8] text-[#9a5a2a]",
-  published: "bg-[#e4f3ec] text-[#2f7a5b]",
-  archived: "bg-soft-grey text-grey",
-} as const;
+const statusTones = {
+  draft: "amber",
+  published: "green",
+  archived: "muted",
+} as const satisfies Record<string, StatusTone>;
 
 const statusLabels = {
   draft: "Draft",
@@ -291,7 +292,7 @@ export function InvitationCard({
         className="flex min-w-0 flex-1 outline-none focus-visible:ring-2 focus-visible:ring-signature/40 focus-visible:ring-inset"
         aria-label={`Edit ${displayTitle}`}
       >
-        <div className="relative flex h-[9.5rem] w-[7.25rem] shrink-0 items-center justify-center overflow-hidden rounded-l-2xl bg-[#f3f1ef] p-3 sm:h-[10.5rem] sm:w-32">
+        <div className="relative flex h-[9.5rem] w-[6.5rem] shrink-0 items-center justify-center overflow-hidden rounded-l-2xl bg-[#f3f1ef] p-2.5 sm:h-[10.5rem] sm:w-28">
           <div className="flex h-full w-full min-w-0 items-center justify-center overflow-hidden">
             <div
               className="relative isolate min-h-0 min-w-0 overflow-hidden rounded-md bg-[#f3f1ef] shadow-[0_4px_14px_rgba(0,0,0,0.1)] transition-transform duration-500 group-hover:scale-[1.02]"
@@ -313,16 +314,16 @@ export function InvitationCard({
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 px-4 py-3">
+        <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 px-3.5 py-3">
           <h3 className="truncate text-base font-semibold text-black">
             {displayTitle}
           </h3>
-          <p className="truncate text-sm text-grey">
+          <p className="truncate text-[11px] text-grey">
             {invitation.eventDate
               ? formatEventDate(invitation.eventDate)
               : "Event date not set"}
           </p>
-          <p className="truncate text-sm text-grey">
+          <p className="truncate text-[11px] text-grey">
             {invitation.location || "Location not set"}
           </p>
           {error && (
@@ -331,30 +332,30 @@ export function InvitationCard({
         </div>
       </Link>
 
-      <div className="flex w-[14.5rem] shrink-0 flex-col items-end justify-center gap-1.5 border-l border-black/[0.06] px-4 py-3 pr-11">
-        <span
-          className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusStyles[invitation.status]}`}
-        >
-          {statusLabels[invitation.status]}
-        </span>
-        <div className="flex flex-wrap items-center justify-end gap-1.5">
-          <span className="inline-flex items-center gap-1 rounded-full bg-soft-grey px-2 py-0.5 text-[11px] font-medium text-black/70">
-            <ShapeGlyph shape={cardShape} />
-            {shapeLabels[cardShape]}
+      <div className="flex w-[14.5rem] shrink-0 flex-col items-end justify-center gap-1 border-l border-black/[0.06] px-4 py-3 pr-11">
+        <StatusDot
+          tone={statusTones[invitation.status]}
+          label={statusLabels[invitation.status]}
+        />
+        <p className="inline-flex items-center gap-1.5 text-right text-[11px] text-grey">
+          <ShapeGlyph shape={cardShape} className="h-3 w-3 shrink-0" />
+          <span>{shapeLabels[cardShape]}</span>
+          <span aria-hidden="true" className="text-black/20">
+            ·
           </span>
-          <span className="inline-flex items-center rounded-full bg-soft-grey px-2 py-0.5 text-[11px] font-medium text-black/70">
+          <span>
             {pageCount} {pageCount === 1 ? "page" : "pages"}
           </span>
-        </div>
-        <p className="inline-flex items-center gap-1 text-right text-[11px] text-grey">
-          <PencilIcon className="h-3 w-3 shrink-0" />
-          <span>Edited {formatRelativeTime(invitation.updatedAt)}</span>
+        </p>
+        <p className="text-right text-[11px] text-grey">
+          Edited {formatRelativeTime(invitation.updatedAt)}
         </p>
         <Link
           href={editHref}
-          className="mt-1 rounded-full bg-signature/10 px-3 py-1.5 text-xs font-semibold text-signature transition-colors hover:bg-signature/15"
+          className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-signature/10 px-3 py-1.5 text-xs font-semibold text-signature transition-colors hover:bg-signature/15"
         >
           {invitation.status === "published" ? "View / edit" : "Continue editing"}
+          <span aria-hidden="true">→</span>
         </Link>
       </div>
 
