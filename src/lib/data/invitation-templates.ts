@@ -63,6 +63,8 @@ export interface InvitationTemplate {
   description: string;
   /** Event name given to invitations created from this template. */
   eventTitle?: string;
+  /** Date this design joined the catalogue; drives newest-first ordering. */
+  addedOn?: string;
   shape?: InvitationCanvasShape;
   /** Required when `shape` is "custom" - the card's real-world dimensions. */
   customSize?: InvitationCustomSize;
@@ -832,6 +834,7 @@ const PHOTO_SUITE: Palette = {
 
 const weddingPhotoSuite: InvitationTemplate = {
   id: "wedding-photo-suite",
+  addedOn: "2026-07-25",
   categoryId: "wedding",
   title: "Photo Cover Suite",
   description:
@@ -1094,6 +1097,7 @@ const ARCH_MODERN: Palette = {
 
 const weddingArchModern: InvitationTemplate = {
   id: "wedding-arch-modern",
+  addedOn: "2026-07-25",
   categoryId: "wedding",
   title: "Arch Modern",
   description: "Gallery-white minimalism with an arched portrait and hairlines",
@@ -1377,6 +1381,7 @@ const WINERY: Palette = {
 
 const weddingWineryClassic: InvitationTemplate = {
   id: "wedding-winery-classic",
+  addedOn: "2026-07-25",
   categoryId: "wedding",
   title: "Winery Classic",
   description:
@@ -1679,6 +1684,7 @@ const COASTAL: Palette = {
 
 const weddingCoastalEditorial: InvitationTemplate = {
   id: "wedding-coastal-editorial-landscape",
+  addedOn: "2026-08-02",
   categoryId: "wedding",
   title: "Coastal Editorial",
   description:
@@ -1967,6 +1973,7 @@ const MILESTONE: Palette = {
 
 const birthdayMilestoneSeventy: InvitationTemplate = {
   id: "birthday-milestone-70",
+  addedOn: "2026-07-25",
   categoryId: "birthday",
   title: "Milestone Seventy",
   description: "Ink black and champagne gold for a landmark birthday",
@@ -2228,6 +2235,7 @@ const BIG_ONE: Palette = {
 
 const birthdayBigOne: InvitationTemplate = {
   id: "birthday-big-one-20",
+  addedOn: "2026-07-25",
   categoryId: "birthday",
   title: "The Big One",
   description: "Oversized numerals, arch portrait, and acid-gold energy",
@@ -2520,6 +2528,7 @@ const GOLD21: Palette = {
 
 const birthdayTwentyOneGold: InvitationTemplate = {
   id: "birthday-twenty-one-gold",
+  addedOn: "2026-07-25",
   categoryId: "birthday",
   title: "Twenty One Gold",
   description: "Antique gold script with a split date grid on ivory",
@@ -2830,6 +2839,7 @@ const ROOFTOP: Palette = {
 
 const birthdayRooftopAfterglow: InvitationTemplate = {
   id: "birthday-rooftop-afterglow-landscape",
+  addedOn: "2026-08-02",
   categoryId: "birthday",
   title: "Rooftop Afterglow",
   description: "Midnight rooftop energy with neon pink and wide photo panels",
@@ -3109,6 +3119,7 @@ const CLOUDS: Palette = {
 
 const babySoftClouds: InvitationTemplate = {
   id: "baby-soft-clouds",
+  addedOn: "2026-07-25",
   categoryId: "baby",
   title: "Soft Clouds",
   description: "Cloud-soft blues and cotton paper for a gentle baby shower",
@@ -3379,6 +3390,7 @@ const NURSERY: Palette = {
 
 const babyNeutralNursery: InvitationTemplate = {
   id: "baby-neutral-nursery",
+  addedOn: "2026-07-25",
   categoryId: "baby",
   title: "Neutral Nursery",
   description: "Warm oat linen with olive sprigs and an arched portrait",
@@ -3666,6 +3678,7 @@ const REVEAL_BLUE = "#5FA8E8";
 
 const babyPinkBlueReveal: InvitationTemplate = {
   id: "baby-pink-blue",
+  addedOn: "2026-07-25",
   categoryId: "baby",
   title: "Pink & Blue Reveal",
   description: "A split pink-and-blue reveal party with a guess-the-answer RSVP",
@@ -3906,6 +3919,7 @@ const WILDFLOWER: Palette = {
 
 const babyLittleWildflower: InvitationTemplate = {
   id: "baby-little-wildflower-landscape",
+  addedOn: "2026-08-02",
   categoryId: "baby",
   title: "Little Wildflower",
   description: "Sage and blush garden shower laid out across a wide canvas",
@@ -4186,6 +4200,7 @@ const LAUNCH: Palette = {
 
 const corporateProductLaunch: InvitationTemplate = {
   id: "corporate-product-launch",
+  addedOn: "2026-07-25",
   categoryId: "corporate",
   title: "Product Launch",
   description: "Signal-green on near-black with a timed agenda and venue map",
@@ -4466,6 +4481,7 @@ const TEAM: Palette = {
 
 const corporateTeamDinner: InvitationTemplate = {
   id: "corporate-team-dinner",
+  addedOn: "2026-07-25",
   categoryId: "corporate",
   title: "Team Dinner",
   description: "Forest green and cream for an understated annual dinner",
@@ -4739,6 +4755,7 @@ const SUMMIT: Palette = {
 
 const corporateConference: InvitationTemplate = {
   id: "corporate-conference",
+  addedOn: "2026-07-25",
   categoryId: "corporate",
   title: "Conference Summit",
   description: "Grid-built summit invite with a two-day schedule and delegate RSVP",
@@ -5066,6 +5083,7 @@ const FORUM: Palette = {
 
 const corporateFutureForum: InvitationTemplate = {
   id: "corporate-future-forum-landscape",
+  addedOn: "2026-08-02",
   categoryId: "corporate",
   title: "Future Forum",
   description: "High-contrast conference identity with a four-track programme",
@@ -5383,6 +5401,7 @@ const SUPPER: Palette = {
 
 const dinnerIntimateSupper: InvitationTemplate = {
   id: "dinner-intimate-supper",
+  addedOn: "2026-07-25",
   categoryId: "dinner",
   title: "Intimate Supper",
   description: "Candlelit paper, a written menu, and a small table for eight",
@@ -5646,6 +5665,7 @@ const GARDEN: Palette = {
 
 const dinnerGardenParty: InvitationTemplate = {
   id: "dinner-garden-party",
+  addedOn: "2026-07-25",
   categoryId: "dinner",
   title: "Garden Party",
   description: "Lawn greens and long-table dining with a find-us map",
@@ -5909,6 +5929,7 @@ const COCKTAIL: Palette = {
 
 const dinnerCocktailHour: InvitationTemplate = {
   id: "dinner-cocktail-hour",
+  addedOn: "2026-07-25",
   categoryId: "dinner",
   title: "Cocktail Hour",
   description: "Low-light bar invite in ink and brass with a short drinks list",
@@ -6163,6 +6184,7 @@ const MED: Palette = {
 
 const dinnerMediterraneanTable: InvitationTemplate = {
   id: "dinner-mediterranean-table-landscape",
+  addedOn: "2026-08-02",
   categoryId: "dinner",
   title: "Mediterranean Table",
   description: "Terracotta and olive supper laid out along a wide table",
@@ -6427,6 +6449,7 @@ const ACADEMIC_GOLD = "#B8912F";
  */
 const graduationCapAndGown: InvitationTemplate = {
   id: "graduation-cap-and-gown",
+  addedOn: "2026-08-22",
   categoryId: "graduation",
   title: "Cap & Gown",
   description: "Ceremony invitation in academic navy, burgundy, and gold leaf",
@@ -6768,6 +6791,7 @@ const CLASS_OF: Palette = {
  */
 const graduationClassOf: InvitationTemplate = {
   id: "graduation-class-of",
+  addedOn: "2026-08-22",
   categoryId: "graduation",
   title: "Class Of",
   description: "Square poster invite with a giant year and a ticket-stub detail page",
@@ -7063,6 +7087,7 @@ const NEXT_CHAPTER: Palette = {
  */
 const graduationNextChapter: InvitationTemplate = {
   id: "graduation-next-chapter-landscape",
+  addedOn: "2026-08-22",
   categoryId: "graduation",
   title: "Next Chapter",
   description: "Wide editorial spread for a graduate stepping into what's next",
@@ -7340,6 +7365,7 @@ const AO_DAI: Palette = {
  */
 const graduationAoDai: InvitationTemplate = {
   id: "graduation-ao-dai",
+  addedOn: "2026-08-22",
   categoryId: "graduation",
   title: "Áo Dài Honours",
   description:
@@ -7653,6 +7679,7 @@ const NEW_KEYS: Palette = {
  */
 const otherNewKeys: InvitationTemplate = {
   id: "other-new-keys",
+  addedOn: "2026-08-22",
   categoryId: "other",
   title: "New Keys",
   description: "Housewarming postcard in warm clay with an arched front door",
@@ -7961,6 +7988,7 @@ const EVERGREEN: Palette = {
  */
 const otherEvergreen: InvitationTemplate = {
   id: "other-evergreen",
+  addedOn: "2026-08-22",
   categoryId: "other",
   title: "Evergreen",
   description: "Christmas dinner in spruce and gold, set as a hand-written menu",
@@ -8211,6 +8239,7 @@ const COUNTDOWN: Palette = {
  */
 const otherCountdown: InvitationTemplate = {
   id: "other-countdown",
+  addedOn: "2026-08-22",
   categoryId: "other",
   title: "Countdown",
   description: "Square New Year's Eve invite built around a midnight clock face",
@@ -8487,6 +8516,7 @@ const SPRING: Palette = {
  */
 const otherSpringTable: InvitationTemplate = {
   id: "other-spring-table",
+  addedOn: "2026-08-22",
   categoryId: "other",
   title: "Spring Table",
   description: "Easter lunch as a pinned scrapbook of eggs, tulips and long tables",
@@ -8787,6 +8817,7 @@ const BIG_NEWS: Palette = {
  */
 const otherBigNews: InvitationTemplate = {
   id: "other-big-news",
+  addedOn: "2026-08-22",
   categoryId: "other",
   title: "Big News",
   description: "Promotion drinks set as a newspaper front page with a two-column story",
@@ -9091,6 +9122,7 @@ const VOYAGE: Palette = {
  */
 const otherBonVoyage: InvitationTemplate = {
   id: "other-bon-voyage",
+  addedOn: "2026-08-22",
   categoryId: "other",
   title: "Bon Voyage",
   description: "Farewell drinks issued as a boarding pass with a tear-off stub",
@@ -9485,6 +9517,7 @@ const RUBY_GOLD = "#B4894F";
  */
 const weddingRubyYears: InvitationTemplate = {
   id: "wedding-ruby-years",
+  addedOn: "2026-08-22",
   categoryId: "wedding",
   title: "Ruby Years",
   description: "Square engraved anniversary card with a then-and-now diptych",
@@ -9793,6 +9826,7 @@ const SEAL_GOLD = "#C09A5E";
  */
 const weddingSayYes: InvitationTemplate = {
   id: "wedding-say-yes",
+  addedOn: "2026-08-22",
   categoryId: "wedding",
   title: "Say Yes",
   description: "Square engagement announcement with a wax seal and a ring-set details page",
@@ -10083,6 +10117,7 @@ const PEONY_SAGE = "#8F9E86";
  */
 const weddingHensPeonies: InvitationTemplate = {
   id: "wedding-hens-peonies",
+  addedOn: "2026-08-22",
   categoryId: "wedding",
   title: "Hens & Peonies",
   description: "Square bridal shower invite with an arch window and a quadrant board",
@@ -10355,6 +10390,7 @@ const NEON_LIME = "#C6FF4F";
  */
 const birthdayDiscoBall: InvitationTemplate = {
   id: "birthday-disco-ball",
+  addedOn: "2026-08-22",
   categoryId: "birthday",
   title: "Disco Ball",
   description: "Square club flyer with a festival line-up and neon RSVP",
@@ -10647,6 +10683,7 @@ const Y2K_SUN = "#FFC93C";
  */
 const birthdayMainCharacter: InvitationTemplate = {
   id: "birthday-main-character",
+  addedOn: "2026-08-22",
   categoryId: "birthday",
   title: "Main Character",
   description: "Square Y2K poster with a photobooth strip run sheet",
@@ -10952,6 +10989,7 @@ const CLAY: Palette = {
  */
 const babyPartyOfThree: InvitationTemplate = {
   id: "baby-party-of-three",
+  addedOn: "2026-08-22",
   categoryId: "baby",
   title: "Party of Three",
   description: "Square baby shower for the parents-to-be, with a handwritten letter page",
@@ -11261,6 +11299,7 @@ const PINE_LIGHT = "#9DB3A5";
  */
 const corporateOffsite: InvitationTemplate = {
   id: "corporate-offsite-landscape",
+  addedOn: "2026-08-22",
   categoryId: "corporate",
   title: "Offsite",
   description: "Landscape team offsite with a split cover and a two-day agenda",
@@ -11620,6 +11659,7 @@ const GALA: Palette = {
  */
 const corporateYearsEnd: InvitationTemplate = {
   id: "corporate-years-end",
+  addedOn: "2026-08-22",
   categoryId: "corporate",
   title: "Year's End",
   description: "Black-tie end-of-year party with a year-in-numbers page",
@@ -11899,6 +11939,7 @@ const DOORWAY_CORAL = "#E4643C";
  */
 const corporateHelloGoodbye: InvitationTemplate = {
   id: "corporate-hello-goodbye",
+  addedOn: "2026-08-22",
   categoryId: "corporate",
   title: "Hello & Goodbye",
   description: "Square split-screen invite for a joint welcome and farewell",
@@ -12166,6 +12207,7 @@ const HEARTH_OLIVE = "#5C6B4A";
  */
 const dinnerLongTable: InvitationTemplate = {
   id: "dinner-long-table",
+  addedOn: "2026-08-22",
   categoryId: "dinner",
   title: "Long Table",
   description: "Square family reunion invite with a three-column potluck board",
@@ -12477,6 +12519,7 @@ const RACE: Palette = {
  */
 const otherRaceDay: InvitationTemplate = {
   id: "other-race-day",
+  addedOn: "2026-08-22",
   categoryId: "other",
   title: "Race Day",
   description: "Square marathon confirmation built as a race bib and course rail",
@@ -12797,6 +12840,7 @@ const otherRaceDay: InvitationTemplate = {
 
 const weddingVelvetVows: InvitationTemplate = {
   id: "wedding-velvet-vows",
+  addedOn: "2026-08-02",
   categoryId: "wedding",
   title: "Velvet Vows",
   description:
@@ -12807,6 +12851,7 @@ const weddingVelvetVows: InvitationTemplate = {
 
 const birthdayAfterFive: InvitationTemplate = {
   id: "birthday-after-five",
+  addedOn: "2026-08-02",
   categoryId: "birthday",
   title: "After Five",
   description:
@@ -13234,48 +13279,48 @@ const birthdayAfterFive: InvitationTemplate = {
 /** Catalog - multi-page templates with interactive venue + RSVP pages. */
 export const INVITATION_TEMPLATES: InvitationTemplate[] = [
   weddingVelvetVows,
+  weddingRubyYears,
+  weddingSayYes,
+  weddingHensPeonies,
   weddingPhotoSuite,
   weddingArchModern,
   weddingWineryClassic,
   weddingCoastalEditorial,
-  weddingRubyYears,
-  weddingSayYes,
-  weddingHensPeonies,
   birthdayAfterFive,
+  birthdayDiscoBall,
+  birthdayMainCharacter,
   birthdayMilestoneSeventy,
   birthdayBigOne,
   birthdayTwentyOneGold,
   birthdayRooftopAfterglow,
-  birthdayDiscoBall,
-  birthdayMainCharacter,
   graduationCapAndGown,
   graduationClassOf,
   graduationNextChapter,
   graduationAoDai,
+  babyPartyOfThree,
   babySoftClouds,
   babyNeutralNursery,
   babyPinkBlueReveal,
   babyLittleWildflower,
-  babyPartyOfThree,
+  corporateOffsite,
+  corporateYearsEnd,
+  corporateHelloGoodbye,
   corporateProductLaunch,
   corporateTeamDinner,
   corporateConference,
   corporateFutureForum,
-  corporateOffsite,
-  corporateYearsEnd,
-  corporateHelloGoodbye,
+  dinnerLongTable,
   dinnerIntimateSupper,
   dinnerGardenParty,
   dinnerCocktailHour,
   dinnerMediterraneanTable,
-  dinnerLongTable,
+  otherRaceDay,
   otherNewKeys,
   otherEvergreen,
   otherCountdown,
   otherSpringTable,
   otherBigNews,
   otherBonVoyage,
-  otherRaceDay,
 ];
 
 export function getTemplateById(
@@ -13284,12 +13329,17 @@ export function getTemplateById(
   return INVITATION_TEMPLATES.find((template) => template.id === id);
 }
 
+/**
+ * Templates in a category, newest first. Designs added later surface at the
+ * front of the gallery without anyone having to reorder the catalogue by hand;
+ * same-day additions keep their catalogue order, since the sort is stable.
+ */
 export function getTemplatesByCategory(
   categoryId: TemplateCategoryId,
 ): InvitationTemplate[] {
   return INVITATION_TEMPLATES.filter(
     (template) => template.categoryId === categoryId,
-  );
+  ).sort((a, b) => (b.addedOn ?? "").localeCompare(a.addedOn ?? ""));
 }
 
 /** Search catalog templates by title, description, or category name. */
