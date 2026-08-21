@@ -62,6 +62,12 @@ async function loadOwnedEvent(
   if (!event || event.id !== eventId) {
     return { ok: false, error: "Event not found." };
   }
+  if (event.status === "completed") {
+    return {
+      ok: false,
+      error: "This event is completed. Reopen it before editing or sending email.",
+    };
+  }
 
   return {
     ok: true,

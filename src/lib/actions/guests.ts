@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { eventPath } from "@/lib/data/event-workspaces";
+import {
+  eventPath,
+  getEventWorkspaceForUser,
+} from "@/lib/data/event-workspaces";
 import {
   replaceGuestsForEvent,
   type GuestDraft,
@@ -24,6 +27,17 @@ export async function saveEventGuestsAndContinueAction(input: {
     return {
       error:
         "Confirm you have permission to use these guest contact details.",
+    };
+  }
+
+  const event = await getEventWorkspaceForUser(
+    session.user.id,
+    input.eventId,
+  );
+  if (!event) return { error: "Event not found." };
+  if (event.status === "completed") {
+    return {
+      error: "This event is completed. Reopen it before editing the guest list.",
     };
   }
 

@@ -1,6 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import { InvitationEditor } from "@/components/editor/InvitationEditor";
 import { getInvitationByRouteKeyForUser } from "@/lib/data/invitations";
+import {
+  eventPath,
+  getEventRouteStateByInvitationIdForUser,
+} from "@/lib/data/event-workspaces";
 import { getCurrentUser } from "@/lib/data/user";
 import { invitationEditPath } from "@/lib/invitation-paths";
 
@@ -20,6 +24,14 @@ export default async function EditInvitationPage({
 
   if (!invitation) {
     notFound();
+  }
+
+  const linkedEvent = await getEventRouteStateByInvitationIdForUser(
+    user.id,
+    invitation.id,
+  );
+  if (linkedEvent?.status === "completed") {
+    redirect(`${eventPath(linkedEvent)}?reopen=1#event-details`);
   }
 
   if (routeKey !== invitation.slug) {

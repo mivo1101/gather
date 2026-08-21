@@ -6,6 +6,7 @@ import {
   type EmailCampaignDraft,
 } from "@/lib/data/email-campaigns";
 import {
+  eventPath,
   getEventByInvitationId,
   getLinkableEventsForInvitation,
 } from "@/lib/data/event-workspaces";
@@ -82,6 +83,10 @@ export default async function InvitationContinuePage({
     getEventByInvitationId(user.id, invitation.id),
     getLinkableEventsForInvitation(user.id, invitation.id),
   ]);
+
+  if (linkedEvent?.status === "completed") {
+    redirect(`${eventPath(linkedEvent)}?reopen=1#event-details`);
+  }
 
   const requestedStep =
     rawStep === "email"

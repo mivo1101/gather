@@ -62,6 +62,34 @@ interface EventListRow extends EventRow {
 const EVENT_COLUMNS =
   "id, user_id, name, slug, status, event_date, timezone, venue, address, invitation_id, created_at, updated_at";
 
+/** Keep events active for their full local calendar day, then complete them. */
+function currentEventStatus(
+  status: EventStatus,
+  eventDate: string | null,
+  timezone: string,
+  now = Date.now(),
+): EventStatus {
+  if (status !== "active" || !eventDate) return status;
+  const scheduledAt = Date.parse(eventDate);
+  if (!Number.isFinite(scheduledAt)) return status;
+  try {
+    const dayKey = (value: number) => {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(value);
+      const part = (type: "year" | "month" | "day") =>
+        parts.find((item) => item.type === type)?.value ?? "";
+      return `${part("year")}-${part("month")}-${part("day")}`;
+    };
+    return dayKey(now) > dayKey(scheduledAt) ? "completed" : status;
+  } catch {
+    return scheduledAt < now ? "completed" : status;
+  }
+}
+
 function hasDesignedPage(invitation: Invitation | null): boolean {
   return Boolean(
     invitation?.content.pages.some(
@@ -87,7 +115,8 @@ async function mapEvent(row: EventRow): Promise<EventWorkspace> {
   );
   const guestCount = await countGuestsForEvent(row.id);
   const guests = guestCount > 0;
-  const send = row.status === "active" || row.status === "completed";
+  const status = currentEventStatus(row.status, row.event_date, row.timezone);
+  const send = status === "active" || status === "completed";
   const values = [design, details, guests, send];
 
   return {
@@ -95,7 +124,7 @@ async function mapEvent(row: EventRow): Promise<EventWorkspace> {
     userId: row.user_id,
     name: row.name,
     slug: row.slug,
-    status: row.status,
+    status,
     eventDate: row.event_date,
     timezone: row.timezone,
     venue: row.venue,
@@ -128,7 +157,8 @@ async function mapEventListRow(row: EventListRow): Promise<EventWorkspace> {
       row.address?.trim(),
   );
   const guests = (row.event_guests?.length ?? 0) > 0;
-  const send = row.status === "active" || row.status === "completed";
+  const status = currentEventStatus(row.status, row.event_date, row.timezone);
+  const send = status === "active" || status === "completed";
   const values = [design, details, guests, send];
 
   return {
@@ -136,7 +166,7 @@ async function mapEventListRow(row: EventListRow): Promise<EventWorkspace> {
     userId: row.user_id,
     name: row.name,
     slug: row.slug,
-    status: row.status,
+    status,
     eventDate: row.event_date,
     timezone: row.timezone,
     venue: row.venue,
@@ -277,6 +307,31 @@ export async function getEventByInvitationId(
   return data ? mapEvent(data as EventRow) : null;
 }
 
+/** Lightweight route/access lookup used before opening the invitation editor. */
+export async function getEventRouteStateByInvitationIdForUser(
+  userId: string,
+  invitationId: string,
+): Promise<Pick<EventWorkspace, "slug" | "status"> | null> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("events")
+    .select("slug, status, event_date, timezone")
+    .eq("user_id", userId)
+    .eq("invitation_id", invitationId)
+    .maybeSingle();
+
+  if (error) throw new Error(formatEventDbError(error.message));
+  if (!data) return null;
+  return {
+    slug: data.slug as string,
+    status: currentEventStatus(
+      data.status as EventStatus,
+      data.event_date as string | null,
+      data.timezone as string,
+    ),
+  };
+}
+
 /** Events that can still accept a design (or already hold this one). */
 export async function getLinkableEventsForInvitation(
   userId: string,
@@ -285,7 +340,7 @@ export async function getLinkableEventsForInvitation(
   const events = await getEventWorkspacesForUser(userId);
   return events.filter(
     (event) =>
-      event.status !== "archived" &&
+      (event.status === "draft" || event.status === "active") &&
       (!event.invitationId || event.invitationId === invitationId),
   );
 }
@@ -479,6 +534,9 @@ export async function linkInvitationToEvent(input: {
     getInvitationForUser(input.userId, input.invitationId),
   ]);
   if (!event) throw new Error("Event not found.");
+  if (event.status === "completed") {
+    throw new Error("Reopen the completed event before changing its design.");
+  }
   if (!invitation) throw new Error("Invitation design not found.");
 
   const designLocation = designLocationFromInvitation(invitation);
