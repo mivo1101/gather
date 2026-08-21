@@ -15,6 +15,7 @@ import {
   type EventWorkspace,
 } from "@/lib/data/event-workspace-utils";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 import { RequiredMark } from "@/components/ui/RequiredMark";
 import { Select } from "@/components/ui/Select";
 
@@ -156,97 +157,94 @@ export function EventDetailsForm({
     submitDetails(false);
   };
 
-  const dialogUi = dialog ? (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 p-4 backdrop-blur-[2px]"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="event-details-dialog-title"
+  const dialogUi = (
+    <Modal
+      open={dialog !== null}
+      onDismiss={isPending ? undefined : () => setDialog(null)}
+      labelledBy="event-details-dialog-title"
     >
-      <div className="w-full max-w-md rounded-[24px] bg-white p-6 shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
-        <h3
-          id="event-details-dialog-title"
-          className="text-xl font-semibold tracking-tight text-black"
-        >
-          {dialog === "reopen"
-            ? "Reopen This Event?"
-            : "Notify Guests About These Changes?"}
-        </h3>
-        {dialog === "reopen" ? (
+      <h3
+        id="event-details-dialog-title"
+        className="text-xl font-semibold tracking-tight text-black"
+      >
+        {dialog === "reopen"
+          ? "Reopen This Event?"
+          : "Notify Guests About These Changes?"}
+      </h3>
+      {dialog === "reopen" ? (
+        <p className="mt-3 text-sm leading-6 text-grey">
+          This event is completed. You can reopen it to correct or reschedule
+          the details.
+          {sentRecipientCount > 0
+            ? ` ${sentRecipientCount} ${sentRecipientCount === 1 ? "guest has" : "guests have"} already received the invitation.`
+            : ""}
+        </p>
+      ) : (
+        <>
           <p className="mt-3 text-sm leading-6 text-grey">
-            This event is completed. You can reopen it to correct or reschedule
-            the details.
-            {sentRecipientCount > 0
-              ? ` ${sentRecipientCount} ${sentRecipientCount === 1 ? "guest has" : "guests have"} already received the invitation.`
-              : ""}
+            {sentRecipientCount} {sentRecipientCount === 1 ? "guest has" : "guests have"}
+            {" "}already received the previous details. You changed:
           </p>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {changedFields.map((field) => (
+              <li
+                key={field}
+                className="rounded-full bg-soft-grey px-3 py-1 text-xs font-semibold text-black"
+              >
+                {field}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 text-xs leading-5 text-grey">
+            Guest updates will be linked to the original email thread when
+            their email provider supports it.
+          </p>
+        </>
+      )}
+      <div className="mt-6 flex flex-wrap justify-end gap-2">
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() => setDialog(null)}
+          className="rounded-full px-4 py-2 text-sm font-semibold text-grey hover:bg-soft-grey hover:text-black disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        {dialog === "reopen" ? (
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              setDialog(null);
+              setEditing(true);
+            }}
+          >
+            Reopen &amp; Edit
+          </Button>
         ) : (
           <>
-            <p className="mt-3 text-sm leading-6 text-grey">
-              {sentRecipientCount} {sentRecipientCount === 1 ? "guest has" : "guests have"}
-              {" "}already received the previous details. You changed:
-            </p>
-            <ul className="mt-3 flex flex-wrap gap-2">
-              {changedFields.map((field) => (
-                <li
-                  key={field}
-                  className="rounded-full bg-soft-grey px-3 py-1 text-xs font-semibold text-black"
-                >
-                  {field}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-4 text-xs leading-5 text-grey">
-              Guest updates will be linked to the original email thread when
-              their email provider supports it.
-            </p>
-          </>
-        )}
-        <div className="mt-6 flex flex-wrap justify-end gap-2">
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={() => setDialog(null)}
-            className="rounded-full px-4 py-2 text-sm font-semibold text-grey hover:bg-soft-grey hover:text-black disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          {dialog === "reopen" ? (
             <Button
               type="button"
               size="sm"
-              onClick={() => {
-                setDialog(null);
-                setEditing(true);
-              }}
+              variant="secondary"
+              disabled={isPending}
+              onClick={() => submitDetails(false)}
             >
-              Reopen &amp; Edit
+              Save Without Notifying
             </Button>
-          ) : (
-            <>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                disabled={isPending}
-                onClick={() => submitDetails(false)}
-              >
-                Save Without Notifying
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                disabled={isPending}
-                onClick={() => submitDetails(true)}
-              >
-                Save &amp; Notify Guests
-              </Button>
-            </>
-          )}
-        </div>
+            <Button
+              type="button"
+              size="sm"
+              disabled={isPending}
+              onClick={() => submitDetails(true)}
+            >
+              Save &amp; Notify Guests
+            </Button>
+          </>
+        )}
       </div>
-    </div>
-  ) : null;
+    </Modal>
+  );
 
   if (!editing) {
     return (

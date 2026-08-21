@@ -9,6 +9,7 @@ import { signOutAction } from "@/lib/actions/auth";
 import type { User } from "@/lib/data/types";
 import { getDisplayName } from "@/lib/data/user-utils";
 import {
+  BellIcon,
   BrandKitIcon,
   CloseIcon,
   GuestsIcon,
@@ -192,14 +193,23 @@ export function AppSidebar({ user }: AppSidebarProps) {
 
       <div className="sticky top-0 z-40 flex items-center justify-between border-b border-black/5 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
         <Logo href="/home" />
-        <button
-          type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-black hover:bg-soft-grey"
-          onClick={() => setMobileOpen(true)}
-          aria-label="Open navigation"
-        >
-          <MenuIcon />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-grey transition-colors hover:bg-soft-grey hover:text-black"
+            aria-label="Notifications"
+          >
+            <BellIcon />
+          </button>
+          <button
+            type="button"
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-black hover:bg-soft-grey"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open navigation"
+          >
+            <MenuIcon />
+          </button>
+        </div>
       </div>
 
       {mobileOpen && (

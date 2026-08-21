@@ -52,6 +52,10 @@ import {
   squareElementSize,
 } from "./CanvasImageContent";
 import { ConfirmDialog } from "./ConfirmDialog";
+import {
+  CompletedEventNotice,
+  type CompletedEventInfo,
+} from "./CompletedEventNotice";
 import { EditorCanvas } from "./EditorCanvas";
 import { EditorLeftPanel } from "./EditorLeftPanel";
 import { EditorPageStrip } from "./EditorPageStrip";
@@ -88,6 +92,8 @@ interface InvitationEditorProps {
   invitation: Invitation;
   /** Open the custom size modal once on mount (e.g. from Home → Custom). */
   openCustomSize?: boolean;
+  /** Set when the linked event has finished, making this design view-only. */
+  completedEvent?: CompletedEventInfo | null;
 }
 
 type EditorSnapshot = {
@@ -237,6 +243,7 @@ function sizeNewShapeForCard(
 export function InvitationEditor({
   invitation,
   openCustomSize = false,
+  completedEvent = null,
 }: InvitationEditorProps) {
   const router = useRouter();
   const initialSnapshot = useMemo<EditorSnapshot>(
@@ -1816,6 +1823,8 @@ export function InvitationEditor({
           {toast}
         </div>
       )}
+
+      {completedEvent && <CompletedEventNotice event={completedEvent} />}
     </div>
     </DocumentColorsProvider>
   );

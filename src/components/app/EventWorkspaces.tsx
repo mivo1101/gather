@@ -18,6 +18,7 @@ import { formatEventDate, formatRelativeTime } from "@/lib/format";
 import { invitationEditPath } from "@/lib/invitation-paths";
 import { InvitationPagePreview } from "./InvitationPagePreview";
 import { ChevronDownIcon, MoreIcon, SearchIcon } from "./icons";
+import { StatusDot, type StatusTone } from "./StatusDot";
 import { Button, PlusIcon } from "@/components/ui/Button";
 
 interface EventWorkspacesProps {
@@ -38,11 +39,11 @@ const statusLabels: Record<EventStatus, string> = {
   archived: "Archived",
 };
 
-const statusStyles: Record<EventStatus, string> = {
-  draft: "bg-[#f1f1f3] text-[#66676d] ring-1 ring-black/[0.06]",
-  active: "bg-[#e2f5e9] text-[#267448] ring-1 ring-[#267448]/10",
-  completed: "bg-[#fff0c2] text-[#85620e] ring-1 ring-[#85620e]/10",
-  archived: "bg-[#e6e6e9] text-[#73747a] ring-1 ring-black/[0.06]",
+const statusTones: Record<EventStatus, StatusTone> = {
+  draft: "neutral",
+  active: "green",
+  completed: "gold",
+  archived: "muted",
 };
 
 type EventView = "all" | "current" | "completed" | "archived";
@@ -147,11 +148,11 @@ function EventWorkspaceCard({ workspace }: { workspace: EventWorkspace }) {
                 {location || "Location not confirmed"}
               </p>
             </div>
-            <span
-              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyles[workspace.status]}`}
-            >
-              {statusLabels[workspace.status]}
-            </span>
+            <StatusDot
+              tone={statusTones[workspace.status]}
+              label={statusLabels[workspace.status]}
+              className="mt-1"
+            />
           </div>
 
           <div className="mt-5">

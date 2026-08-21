@@ -302,11 +302,11 @@ export async function getEventByInvitationId(
 export async function getEventRouteStateByInvitationIdForUser(
   userId: string,
   invitationId: string,
-): Promise<Pick<EventWorkspace, "slug" | "status"> | null> {
+): Promise<Pick<EventWorkspace, "slug" | "status" | "name"> | null> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("events")
-    .select("slug, status, event_date, timezone")
+    .select("name, slug, status, event_date, timezone")
     .eq("user_id", userId)
     .eq("invitation_id", invitationId)
     .maybeSingle();
@@ -314,6 +314,7 @@ export async function getEventRouteStateByInvitationIdForUser(
   if (error) throw new Error(formatEventDbError(error.message));
   if (!data) return null;
   return {
+    name: data.name as string,
     slug: data.slug as string,
     status: currentEventStatus(
       data.status as EventStatus,
