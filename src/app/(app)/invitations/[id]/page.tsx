@@ -19,6 +19,7 @@ import {
   eventPath,
   getEventWorkspaceForUser,
   getUnlinkedInvitationsForUser,
+  type EventStatus,
 } from "@/lib/data/event-workspaces";
 import { getGuestsForEvent, type EventGuest } from "@/lib/data/guests";
 import {
@@ -37,15 +38,34 @@ import Link from "next/link";
 
 export const metadata = { title: "Event · Gather" };
 
+const eventStatusLabels: Record<EventStatus, string> = {
+  draft: "Draft",
+  active: "Active",
+  completed: "Completed",
+  archived: "Archived",
+};
+
+const eventStatusStyles: Record<EventStatus, string> = {
+  draft: "bg-[#f1f1f3] text-[#66676d] ring-1 ring-black/[0.06]",
+  active: "bg-[#e2f5e9] text-[#267448] ring-1 ring-[#267448]/10",
+  completed: "bg-[#fff0c2] text-[#85620e] ring-1 ring-[#85620e]/10",
+  archived: "bg-[#e6e6e9] text-[#73747a] ring-1 ring-black/[0.06]",
+};
+
 export default async function EventDetailPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ setup?: string; error?: string; tab?: string }>;
+  searchParams: Promise<{
+    setup?: string;
+    error?: string;
+    tab?: string;
+    reopen?: string;
+  }>;
 }) {
   const { id: routeKey } = await params;
-  const { setup, error, tab: rawTab } = await searchParams;
+  const { setup, error, tab: rawTab, reopen } = await searchParams;
   const tab = parseEventHubTab(rawTab);
   const user = await getCurrentUser();
   const workspace = await getEventWorkspaceForUser(user.id, routeKey);
@@ -60,6 +80,7 @@ export default async function EventDetailPage({
   }
 
   const invitation = workspace.invitation;
+  const completed = workspace.status === "completed";
   const location = eventLocation(workspace);
   const progress = Math.round(
     (workspace.progress.completed / workspace.progress.total) * 100,
@@ -103,6 +124,11 @@ export default async function EventDetailPage({
   } else {
     throw emailResult.reason;
   }
+  const sentRecipientCount = new Set(
+    deliveries
+      .filter((delivery) => delivery.status === "sent")
+      .map((delivery) => delivery.guestId),
+  ).size;
 
   let rsvpResponses: RsvpResponse[] = [];
   let missingRsvpTable = false;
@@ -114,7 +140,7 @@ export default async function EventDetailPage({
     throw rsvpResult.reason;
   }
 
-  const continueHref = invitation
+  const continueHref = invitation && !completed
     ? !workspace.progress.details
       ? `${invitationContinuePath(invitation)}?step=details`
       : !workspace.progress.guests
@@ -148,16 +174,20 @@ export default async function EventDetailPage({
           {error}
         </div>
       ) : null}
+      {completed ? (
+        <div className="mt-5 rounded-2xl border border-black/10 bg-[#f1f1f3] px-4 py-3 text-sm text-[#5f6067]">
+          This event is completed and currently view-only. Reopen it to correct
+          the details or schedule a new date.
+        </div>
+      ) : null}
 
       <header className="mt-5 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-[#fde8d8] px-2.5 py-1 text-[11px] font-semibold text-[#9a5a2a]">
-              {workspace.status === "active"
-                ? "Active"
-                : workspace.status === "completed"
-                  ? "Completed"
-                  : "Draft"}
+            <span
+              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${eventStatusStyles[workspace.status]}`}
+            >
+              {eventStatusLabels[workspace.status]}
             </span>
             <span className="text-xs text-grey">
               Updated {formatRelativeTime(workspace.updatedAt)}
@@ -175,7 +205,14 @@ export default async function EventDetailPage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-          {invitation ? (
+          {completed ? (
+            <Button
+              href={`${eventPath(workspace)}?reopen=1#event-details`}
+              size="md"
+            >
+              Reopen Event
+            </Button>
+          ) : invitation ? (
             <>
               <Button
                 href={invitationEditPath(invitation)}
@@ -216,7 +253,7 @@ export default async function EventDetailPage({
                       : "No design connected"}
                   </p>
                 </div>
-                {invitation ? (
+                {invitation && !completed ? (
                   <Button
                     href={invitationEditPath(invitation)}
                     variant="secondary"
@@ -224,6 +261,10 @@ export default async function EventDetailPage({
                   >
                     Continue editing
                   </Button>
+                ) : completed ? (
+                  <span className="rounded-full bg-[#f1f1f3] px-3 py-1.5 text-xs font-semibold text-[#67676d]">
+                    View Only
+                  </span>
                 ) : null}
               </div>
 
@@ -326,8 +367,9 @@ export default async function EventDetailPage({
                     ] as const
                   ).map(([key, title, description], index) => {
                     const complete = workspace.progress[key];
-                    const href =
-                      key === "design" && invitation
+                    const href = completed
+                      ? null
+                      : key === "design" && invitation
                         ? invitationEditPath(invitation)
                         : key === "details" && invitation
                           ? `${invitationContinuePath(invitation)}?step=details`
@@ -377,8 +419,15 @@ export default async function EventDetailPage({
                 </ol>
               </section>
 
-              <section className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-[0_2px_4px_rgba(0,0,0,0.03)]">
-                <EventDetailsForm workspace={workspace} />
+              <section
+                id="event-details"
+                className="scroll-mt-6 rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-[0_2px_4px_rgba(0,0,0,0.03)]"
+              >
+                <EventDetailsForm
+                  workspace={workspace}
+                  sentRecipientCount={sentRecipientCount}
+                  promptReopen={completed && reopen === "1"}
+                />
               </section>
             </aside>
           </div>
@@ -399,7 +448,7 @@ export default async function EventDetailPage({
                       : `${guests.length} ${guests.length === 1 ? "recipient" : "recipients"}`}
                 </p>
               </div>
-              {invitation ? (
+              {invitation && !completed ? (
                 <Button
                   href={`${invitationContinuePath(invitation)}?step=guests`}
                   variant="secondary"
@@ -441,6 +490,7 @@ export default async function EventDetailPage({
               deliveries={deliveries}
               campaignSubject={campaignSubject}
               missingEmailTable={missingEmailTable}
+              readOnly={completed}
             />
           ) : (
             <p className="rounded-[28px] border border-dashed border-black/10 bg-white px-4 py-10 text-center text-sm text-grey">

@@ -14,6 +14,7 @@ interface EmailSendSummaryProps {
   deliveries: EmailDelivery[];
   campaignSubject: string | null;
   missingEmailTable?: boolean;
+  readOnly?: boolean;
 }
 
 export function EmailSendSummary({
@@ -22,6 +23,7 @@ export function EmailSendSummary({
   deliveries,
   campaignSubject,
   missingEmailTable = false,
+  readOnly = false,
 }: EmailSendSummaryProps) {
   const sentCount = deliveries.filter((d) => d.status === "sent").length;
   const failedCount = deliveries.filter(
@@ -38,13 +40,22 @@ export function EmailSendSummary({
         <div>
           <h2 className="text-lg font-semibold text-black">Email and Send</h2>
           <p className="mt-1 text-sm text-grey">
-            Review every guest’s email status here, or edit and send invitation
-            emails.
+            {readOnly
+              ? "Review the email delivery history for this completed event."
+              : "Review every guest’s email status here, or edit and send invitation emails."}
           </p>
         </div>
-        <Button href={emailHref} size="sm">
-          {campaignSubject || guests.length > 0 ? "Edit email" : "Compose email"}
-        </Button>
+        {!readOnly ? (
+          <Button href={emailHref} size="sm">
+            {campaignSubject || guests.length > 0
+              ? "Edit email"
+              : "Compose email"}
+          </Button>
+        ) : (
+          <span className="rounded-full bg-[#f1f1f3] px-3 py-1.5 text-xs font-semibold text-[#67676d]">
+            View Only
+          </span>
+        )}
       </div>
 
       {missingEmailTable ? (

@@ -1,7 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
+import {
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { updateEventDetailsFromHubAction } from "@/lib/actions/events";
 import {
   designLocationFromInvitation,
@@ -40,20 +47,20 @@ function toTimeInputValue(iso: string | null | undefined) {
   return `${h}:${min}`;
 }
 
-function SaveDetailsButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="sm" disabled={pending}>
-      {pending ? "Saving…" : "Save details"}
-    </Button>
-  );
-}
-
 interface EventDetailsFormProps {
   workspace: EventWorkspace;
+  sentRecipientCount: number;
+  promptReopen?: boolean;
 }
 
-export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
+export function EventDetailsForm({
+  workspace,
+  sentRecipientCount,
+  promptReopen = false,
+}: EventDetailsFormProps) {
+  const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
+  const [isPending, startTransition] = useTransition();
   const design = useMemo(
     () => designLocationFromInvitation(workspace.invitation),
     [workspace.invitation],
@@ -73,6 +80,36 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
   const [address, setAddress] = useState(
     workspace.address?.trim() || designAddress,
   );
+  const [dialog, setDialog] = useState<"reopen" | "changes" | null>(
+    promptReopen ? "reopen" : null,
+  );
+  const [feedback, setFeedback] = useState<{
+    tone: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (promptReopen && workspace.status === "completed") {
+      setDialog("reopen");
+    }
+  }, [promptReopen, workspace.status]);
+
+  const changedFields = useMemo(() => {
+    const fields: string[] = [];
+    const changed = (a: string, b: string) =>
+      a.trim().toLowerCase() !== b.trim().toLowerCase();
+    if (changed(workspace.name, name)) fields.push("Event name");
+    if (
+      changed(toDateInputValue(workspace.eventDate), date) ||
+      changed(toTimeInputValue(workspace.eventDate), time) ||
+      changed(workspace.timezone, timezone)
+    ) {
+      fields.push("Date & Time");
+    }
+    if (changed(workspace.venue ?? "", venue)) fields.push("Venue");
+    if (changed(workspace.address ?? "", address)) fields.push("Address");
+    return fields;
+  }, [address, date, name, time, timezone, venue, workspace]);
 
   const notifyIfDifferent = (
     field: "venue" | "address",
@@ -88,7 +125,128 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
     );
   };
 
-  const saveAction = updateEventDetailsFromHubAction.bind(null, workspace.id);
+  const submitDetails = (notifyGuests: boolean) => {
+    const form = formRef.current;
+    if (!form) return;
+    const formData = new FormData(form);
+    formData.set("notifyGuests", String(notifyGuests));
+    setDialog(null);
+    setFeedback(null);
+    startTransition(async () => {
+      const result = await updateEventDetailsFromHubAction(
+        workspace.id,
+        formData,
+      );
+      if ("error" in result) {
+        setFeedback({ tone: "error", message: result.error });
+        return;
+      }
+      setFeedback({ tone: "success", message: result.message });
+      setEditing(false);
+      router.refresh();
+    });
+  };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (sentRecipientCount > 0 && changedFields.length > 0) {
+      setDialog("changes");
+      return;
+    }
+    submitDetails(false);
+  };
+
+  const dialogUi = dialog ? (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 p-4 backdrop-blur-[2px]"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="event-details-dialog-title"
+    >
+      <div className="w-full max-w-md rounded-[24px] bg-white p-6 shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
+        <h3
+          id="event-details-dialog-title"
+          className="text-xl font-semibold tracking-tight text-black"
+        >
+          {dialog === "reopen"
+            ? "Reopen This Event?"
+            : "Notify Guests About These Changes?"}
+        </h3>
+        {dialog === "reopen" ? (
+          <p className="mt-3 text-sm leading-6 text-grey">
+            This event is completed. You can reopen it to correct or reschedule
+            the details.
+            {sentRecipientCount > 0
+              ? ` ${sentRecipientCount} ${sentRecipientCount === 1 ? "guest has" : "guests have"} already received the invitation.`
+              : ""}
+          </p>
+        ) : (
+          <>
+            <p className="mt-3 text-sm leading-6 text-grey">
+              {sentRecipientCount} {sentRecipientCount === 1 ? "guest has" : "guests have"}
+              {" "}already received the previous details. You changed:
+            </p>
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {changedFields.map((field) => (
+                <li
+                  key={field}
+                  className="rounded-full bg-soft-grey px-3 py-1 text-xs font-semibold text-black"
+                >
+                  {field}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 text-xs leading-5 text-grey">
+              Guest updates will be linked to the original email thread when
+              their email provider supports it.
+            </p>
+          </>
+        )}
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => setDialog(null)}
+            className="rounded-full px-4 py-2 text-sm font-semibold text-grey hover:bg-soft-grey hover:text-black disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          {dialog === "reopen" ? (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                setDialog(null);
+                setEditing(true);
+              }}
+            >
+              Reopen &amp; Edit
+            </Button>
+          ) : (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={isPending}
+                onClick={() => submitDetails(false)}
+              >
+                Save Without Notifying
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={isPending}
+                onClick={() => submitDetails(true)}
+              >
+                Save &amp; Notify Guests
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   if (!editing) {
     return (
@@ -97,12 +255,21 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
           <h2 className="text-base font-semibold text-black">Event Details</h2>
           <button
             type="button"
-            onClick={() => setEditing(true)}
+            onClick={() =>
+              workspace.status === "completed"
+                ? setDialog("reopen")
+                : setEditing(true)
+            }
             className="text-xs font-semibold text-grey transition-colors hover:text-black"
           >
-            Edit
+            {workspace.status === "completed" ? "Reopen & Edit" : "Edit"}
           </button>
         </div>
+        {workspace.status === "completed" ? (
+          <p className="mt-3 rounded-xl bg-[#f3f5f9] px-3 py-2.5 text-xs leading-5 text-[#50617d]">
+            This event is complete. Details are view-only until you reopen it.
+          </p>
+        ) : null}
         <dl className="mt-4 space-y-4 text-sm">
           <div>
             <dt className="text-xs font-medium uppercase tracking-[0.08em] text-grey">
@@ -135,6 +302,15 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
             </dd>
           </div>
         </dl>
+        {feedback ? (
+          <p
+            className={`mt-4 text-xs font-semibold ${feedback.tone === "error" ? "text-[#b42318]" : "text-signature"}`}
+            role={feedback.tone === "error" ? "alert" : "status"}
+          >
+            {feedback.message}
+          </p>
+        ) : null}
+        {dialogUi}
       </div>
     );
   }
@@ -142,7 +318,7 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
   return (
     <div>
       <h2 className="text-base font-semibold text-black">Event Details</h2>
-      <form action={saveAction} className="mt-4 space-y-3">
+      <form ref={formRef} onSubmit={handleSubmit} className="mt-4 space-y-3">
         <label className="block">
           <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grey">
             Name
@@ -252,9 +428,20 @@ export function EventDetailsForm({ workspace }: EventDetailsFormProps) {
               Cancel
             </button>
           ) : null}
-          <SaveDetailsButton />
+          <Button type="submit" size="sm" disabled={isPending}>
+            {isPending ? "Saving…" : "Save Details"}
+          </Button>
         </div>
+        {feedback ? (
+          <p
+            className={`text-right text-xs font-semibold ${feedback.tone === "error" ? "text-[#b42318]" : "text-signature"}`}
+            role={feedback.tone === "error" ? "alert" : "status"}
+          >
+            {feedback.message}
+          </p>
+        ) : null}
       </form>
+      {dialogUi}
     </div>
   );
 }

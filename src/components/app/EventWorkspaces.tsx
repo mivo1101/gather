@@ -11,6 +11,7 @@ import {
 import {
   eventLocation,
   eventPath,
+  type EventStatus,
   type EventWorkspace,
 } from "@/lib/data/event-workspaces";
 import { formatEventDate, formatRelativeTime } from "@/lib/format";
@@ -29,6 +30,22 @@ const stepLabels = [
   ["guests", "Guests"],
   ["send", "Send"],
 ] as const;
+
+const statusLabels: Record<EventStatus, string> = {
+  draft: "Draft",
+  active: "Active",
+  completed: "Completed",
+  archived: "Archived",
+};
+
+const statusStyles: Record<EventStatus, string> = {
+  draft: "bg-[#f1f1f3] text-[#66676d] ring-1 ring-black/[0.06]",
+  active: "bg-[#e2f5e9] text-[#267448] ring-1 ring-[#267448]/10",
+  completed: "bg-[#fff0c2] text-[#85620e] ring-1 ring-[#85620e]/10",
+  archived: "bg-[#e6e6e9] text-[#73747a] ring-1 ring-black/[0.06]",
+};
+
+type EventView = "all" | "current" | "completed" | "archived";
 
 function EventWorkspaceCard({ workspace }: { workspace: EventWorkspace }) {
   const router = useRouter();
@@ -130,14 +147,10 @@ function EventWorkspaceCard({ workspace }: { workspace: EventWorkspace }) {
                 {location || "Location not confirmed"}
               </p>
             </div>
-            <span className="shrink-0 rounded-full bg-[#fde8d8] px-2.5 py-1 text-[11px] font-semibold text-[#9a5a2a]">
-              {workspace.status === "active"
-                ? "Active"
-                : workspace.status === "completed"
-                  ? "Completed"
-                  : workspace.status === "archived"
-                    ? "Archived"
-                    : "Draft"}
+            <span
+              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyles[workspace.status]}`}
+            >
+              {statusLabels[workspace.status]}
             </span>
           </div>
 
@@ -240,15 +253,18 @@ function EventWorkspaceCard({ workspace }: { workspace: EventWorkspace }) {
 
 export function EventWorkspaces({ workspaces }: EventWorkspacesProps) {
   const [query, setQuery] = useState("");
-  const [view, setView] = useState<"current" | "archived">("current");
+  const [view, setView] = useState<EventView>("all");
   const search = query.trim().toLowerCase();
   const visible = useMemo(
     () => {
-      const byView = workspaces.filter((workspace) =>
-        view === "archived"
-          ? workspace.status === "archived"
-          : workspace.status !== "archived",
-      );
+      const byView = workspaces.filter((workspace) => {
+        if (view === "archived") return workspace.status === "archived";
+        if (view === "completed") return workspace.status === "completed";
+        if (view === "current") {
+          return workspace.status === "draft" || workspace.status === "active";
+        }
+        return workspace.status !== "archived";
+      });
       return search
         ? byView.filter((workspace) =>
             [workspace.name, eventLocation(workspace), workspace.status]
@@ -293,11 +309,13 @@ export function EventWorkspaces({ workspaces }: EventWorkspacesProps) {
             <select
               value={view}
               onChange={(event) =>
-                setView(event.target.value as "current" | "archived")
+                setView(event.target.value as EventView)
               }
               className="w-full appearance-none rounded-full border border-black/8 bg-white py-2.5 pl-4 pr-10 text-sm font-medium text-black outline-none focus:border-signature/40 focus:ring-2 focus:ring-signature/15 sm:w-auto"
             >
-              <option value="current">Current events</option>
+              <option value="all">All events</option>
+              <option value="current">Active &amp; Draft</option>
+              <option value="completed">Completed</option>
               <option value="archived">Archived</option>
             </select>
             <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-grey">
@@ -334,6 +352,8 @@ export function EventWorkspaces({ workspaces }: EventWorkspacesProps) {
               ? `Nothing matched “${query.trim()}”.`
               : view === "archived"
                 ? "Archived events will appear here."
+                : view === "completed"
+                  ? "Events will appear here after their scheduled time has passed."
                 : "Create an event to get started."}
           </p>
         </div>

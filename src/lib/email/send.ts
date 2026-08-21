@@ -38,6 +38,7 @@ export async function sendTransactionalEmail(input: {
   text: string;
   replyTo: string;
   fromName: string;
+  headers?: Record<string, string>;
 }): Promise<{ id: string }> {
   const resend = getResend();
 
@@ -48,6 +49,7 @@ export async function sendTransactionalEmail(input: {
     html: input.html,
     text: input.text,
     replyTo: input.replyTo,
+    headers: input.headers,
   });
 
   if (error) {
@@ -57,4 +59,13 @@ export async function sendTransactionalEmail(input: {
     throw new Error("Email provider did not return a message id.");
   }
   return { id: data.id };
+}
+
+/** Resolve Resend's provider id to the RFC Message-ID used for threading. */
+export async function getTransactionalEmailMessageId(
+  providerMessageId: string,
+): Promise<string | null> {
+  const { data, error } = await getResend().emails.get(providerMessageId);
+  if (error || !data?.message_id) return null;
+  return data.message_id.trim() || null;
 }
