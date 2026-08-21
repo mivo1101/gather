@@ -97,7 +97,9 @@ export async function createInvitationFromTemplateAction(
 
   const invitation = await createInvitation({
     userId: session.user.id,
-    title: template.title,
+    // The gallery name ("Class Of") is a design name; the invitation gets the
+    // event name a host would actually recognise.
+    title: template.eventTitle || template.title,
     content: contentFromTemplate(template),
   });
 

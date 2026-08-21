@@ -9,6 +9,7 @@ import {
   type InvitationTemplate,
   type TemplateCategory,
 } from "@/lib/data/invitation-templates";
+import { cardAspectRatio } from "@/components/editor/canvas-metrics";
 import { useHubSearch } from "./HubSearchContext";
 import { InvitationPagePreview } from "./InvitationPagePreview";
 import { TemplatePreviewModal } from "./TemplatePreviewModal";
@@ -42,6 +43,20 @@ function BirthdayIcon({ className = "h-6 w-6" }: CategoryIconProps) {
       <path
         d="M9 5.5c0-1 1-1.7 1-2.5 1.2.8 1.5 1.7 1.1 2.5A1.1 1.1 0 019 5.5zm6 0c0-1 1-1.7 1-2.5 1.2.8 1.5 1.7 1.1 2.5A1.1 1.1 0 0115 5.5z"
         fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function GraduationIcon({ className = "h-6 w-6" }: CategoryIconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 4 2.5 8.5 12 13l9.5-4.5L12 4zM6 10.8v4.4c0 1.6 2.7 2.8 6 2.8s6-1.2 6-2.8v-4.4M21.5 8.5v6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -120,6 +135,7 @@ const categoryIcons: Record<
 > = {
   wedding: WeddingIcon,
   birthday: BirthdayIcon,
+  graduation: GraduationIcon,
   baby: BabyIcon,
   corporate: CorporateIcon,
   dinner: DinnerIcon,
@@ -131,17 +147,30 @@ function TemplateCard({ template }: { template: InvitationTemplate }) {
   const preview = templatePreviewPage(template);
   const isLandscape = template.shape === "landscape";
   const isSquare = template.shape === "square";
+  const isCustom = template.shape === "custom";
   const aspectClass = isLandscape
     ? "aspect-video"
     : isSquare
       ? "aspect-square"
-      : "aspect-[9/16]";
+      : isCustom
+        ? ""
+        : "aspect-[9/16]";
 
   return (
     <>
       <article
         data-template-card={template.id}
         className={`group h-40 shrink-0 sm:h-[17.75rem] ${aspectClass}`}
+        style={
+          isCustom
+            ? {
+                aspectRatio: cardAspectRatio(
+                  "custom",
+                  template.customSize,
+                ),
+              }
+            : undefined
+        }
       >
         <button
           type="button"
@@ -152,6 +181,7 @@ function TemplateCard({ template }: { template: InvitationTemplate }) {
           <InvitationPagePreview
             page={preview}
             shape={template.shape ?? "portrait"}
+            customSize={template.customSize}
             className="h-full w-full transition-transform duration-500 group-hover:scale-[1.015]"
           />
           <span className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-black/70 via-black/25 to-transparent px-4 pb-3 pt-12 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
@@ -212,7 +242,7 @@ function CategorySection({
 
   if (templates.length === 0) return null;
 
-  if (category.id === "other") {
+  if (category.id === "other" && templates.length === 0) {
     return (
       <section
         id={`category-${category.id}`}
@@ -228,7 +258,7 @@ function CategorySection({
           </h2>
           <p className="mt-1 max-w-lg text-sm text-grey">
             {category.description}. Templates for this category are coming
-            soon — start blank for now if you need something custom.
+            soon - start blank for now if you need something custom.
           </p>
           <Link
             href="/invitations/new"
