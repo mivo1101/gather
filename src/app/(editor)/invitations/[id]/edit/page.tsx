@@ -26,23 +26,28 @@ export default async function EditInvitationPage({
     notFound();
   }
 
-  const linkedEvent = await getEventRouteStateByInvitationIdForUser(
-    user.id,
-    invitation.id,
-  );
-  if (linkedEvent?.status === "completed") {
-    redirect(`${eventPath(linkedEvent)}?reopen=1#event-details`);
-  }
-
   if (routeKey !== invitation.slug) {
     const qs = customizeSize === "1" ? "?customizeSize=1" : "";
     redirect(`${invitationEditPath(invitation)}${qs}`);
   }
 
+  const linkedEvent = await getEventRouteStateByInvitationIdForUser(
+    user.id,
+    invitation.id,
+  );
+
   return (
     <InvitationEditor
       invitation={invitation}
       openCustomSize={customizeSize === "1"}
+      completedEvent={
+        linkedEvent?.status === "completed"
+          ? {
+              name: linkedEvent.name,
+              reopenHref: `${eventPath(linkedEvent)}?reopen=1#event-details`,
+            }
+          : null
+      }
     />
   );
 }
