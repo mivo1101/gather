@@ -247,12 +247,30 @@ export async function getDeliveriesForCampaign(
   return ((data ?? []) as DeliveryRow[]).map(mapDelivery);
 }
 
-export async function getDeliveriesForEvent(
-  eventId: string,
-): Promise<EmailDelivery[]> {
-  const campaign = await getEmailCampaignForEvent(eventId);
-  if (!campaign) return [];
-  return getDeliveriesForCampaign(campaign.id);
+/** Load the event campaign and its deliveries in one database round trip. */
+export async function getEmailSummaryForEvent(eventId: string): Promise<{
+  campaign: EmailCampaign | null;
+  deliveries: EmailDelivery[];
+}> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("event_email_campaigns")
+    .select(`${CAMPAIGN_COLUMNS}, event_email_deliveries (${DELIVERY_COLUMNS})`)
+    .eq("event_id", eventId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(formatCampaignDbError(error.message));
+  }
+  if (!data) return { campaign: null, deliveries: [] };
+
+  const row = data as unknown as CampaignRow & {
+    event_email_deliveries: DeliveryRow[] | null;
+  };
+  return {
+    campaign: mapCampaign(row),
+    deliveries: (row.event_email_deliveries ?? []).map(mapDelivery),
+  };
 }
 
 /** Stable key so a guest cannot be emailed twice for the same campaign. */

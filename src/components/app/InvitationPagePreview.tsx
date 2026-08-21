@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CanvasElement } from "@/lib/data/canvas-elements";
 import type {
   InvitationCustomSize,
   InvitationPage,

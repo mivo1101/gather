@@ -127,10 +127,12 @@ export default async function InvitationContinuePage({
     linkedEvent
   ) {
     try {
-      initialGuests = await getGuestsForEvent(linkedEvent.id);
-      sentGuestIds = Array.from(
-        await getSentGuestIdsForEvent(linkedEvent.id),
-      );
+      const [guests, sentIds] = await Promise.all([
+        getGuestsForEvent(linkedEvent.id),
+        getSentGuestIdsForEvent(linkedEvent.id),
+      ]);
+      initialGuests = guests;
+      sentGuestIds = Array.from(sentIds);
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
       if (message.includes("Missing guests table")) {

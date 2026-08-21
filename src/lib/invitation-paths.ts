@@ -43,12 +43,6 @@ export function invitationEditPath(
   return `/invitations/${invitation.slug}/edit`;
 }
 
-export function invitationViewPath(
-  invitation: Pick<Invitation, "slug">,
-): string {
-  return `/invitations/${invitation.slug}`;
-}
-
 /** Post-design setup: connect event → confirm details → guests. */
 export function invitationContinuePath(
   invitation: Pick<Invitation, "slug">,

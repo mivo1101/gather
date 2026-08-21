@@ -56,17 +56,6 @@ export function listInvitationImageCandidates(
   return urls;
 }
 
-/** Saved campaign hero, else first design image. */
-export function resolveEmailHeroImageUrl(input: {
-  heroImageUrl?: string | null;
-  invitation?: Invitation | null;
-  base?: string;
-}): string | null {
-  const chosen = input.heroImageUrl?.trim();
-  if (chosen) return absoluteUrl(chosen, input.base);
-  return invitationHeroImageUrl(input.invitation, input.base);
-}
-
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
