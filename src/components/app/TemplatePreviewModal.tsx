@@ -8,6 +8,8 @@ import {
   elementsFromLocationPage,
   elementsFromRsvpPage,
 } from "@/lib/data/invitation-content";
+import { cardAspectRatio } from "@/components/editor/canvas-metrics";
+import { formatCustomSize } from "@/components/editor/editor-types";
 import { CloseIcon } from "./icons";
 import { InvitationPagePreview } from "./InvitationPagePreview";
 
@@ -16,7 +18,7 @@ interface TemplatePreviewModalProps {
   onClose: () => void;
 }
 
-/** Full-size quick preview with page flip — design + placeable interactive widgets. */
+/** Full-size quick preview with page flip - design + placeable interactive widgets. */
 export function TemplatePreviewModal({
   template,
   onClose,
@@ -31,16 +33,23 @@ export function TemplatePreviewModal({
   const templateShape = template.shape ?? "portrait";
   const isLandscape = templateShape === "landscape";
   const isSquare = templateShape === "square";
+  const isCustom = templateShape === "custom";
+  const customSize = template.customSize;
+  const customAspect = cardAspectRatio("custom", customSize);
   const shapeLabel = isLandscape
     ? "Landscape"
     : isSquare
       ? "Square"
-      : "Portrait";
+      : isCustom
+        ? "Custom size"
+        : "Portrait";
   const formatLabel = isLandscape
     ? "16:9 format"
     : isSquare
       ? "1:1 format"
-      : "9:16 format";
+      : isCustom && customSize
+        ? formatCustomSize(customSize)
+        : "9:16 format";
 
   const previewPages = useMemo(
     () =>
@@ -151,13 +160,17 @@ export function TemplatePreviewModal({
                     ? "aspect-video w-full max-w-[760px]"
                     : isSquare
                       ? "aspect-square h-[min(64vh,560px)] max-h-[560px]"
-                      : "aspect-[9/16] h-[min(64vh,560px)] max-h-[560px]"
+                      : isCustom
+                        ? "h-[min(64vh,560px)] max-h-[560px]"
+                        : "aspect-[9/16] h-[min(64vh,560px)] max-h-[560px]"
                 }`}
+                style={isCustom ? { aspectRatio: customAspect } : undefined}
             >
               <InvitationPagePreview
                 key={`${template.id}-page-${pageIndex}`}
                 page={previewPage}
                 shape={template.shape ?? "portrait"}
+                customSize={customSize}
                 className="h-full w-full"
               />
             </div>
@@ -222,7 +235,7 @@ export function TemplatePreviewModal({
                   onClick={() => setPageIndex(index)}
                   aria-label={`Page ${index + 1}: ${pages[index]?.name}`}
                   aria-current={index === pageIndex}
-                  className={`group/thumb shrink-0 rounded-lg border-2 bg-white p-1.5 text-left transition-all ${
+                  className={`group/thumb shrink-0 rounded-lg border-2 bg-white p-1.5 transition-all ${
                     index === pageIndex
                       ? "border-signature shadow-sm"
                       : "border-transparent hover:border-black/15"
@@ -234,21 +247,30 @@ export function TemplatePreviewModal({
                         ? "aspect-video w-28"
                         : isSquare
                           ? "aspect-square h-16"
-                          : "aspect-[9/16] h-16"
+                          : isCustom
+                            ? "h-16"
+                            : "aspect-[9/16] h-16"
                     }`}
+                    style={
+                      isCustom ? { aspectRatio: customAspect } : undefined
+                    }
                   >
                     <InvitationPagePreview
                       page={page}
                       shape={template.shape ?? "portrait"}
+                      customSize={customSize}
                       className="h-full w-full"
                     />
                   </span>
+                  {/* w-0 + min-w-full keeps the caption out of the button's
+                      intrinsic width, so a long page name can't stretch the
+                      tile past its thumbnail and leave a white gap beside it. */}
                   <span
-                    className={`mt-1.5 block max-w-28 truncate px-0.5 text-[11px] font-medium ${
+                    className={`mt-1.5 block w-0 min-w-full text-center text-[11px] font-medium tabular-nums ${
                       index === pageIndex ? "text-black" : "text-grey"
                     }`}
                   >
-                    {pages[index]?.name}
+                    {index + 1}
                   </span>
               </button>
               ))}

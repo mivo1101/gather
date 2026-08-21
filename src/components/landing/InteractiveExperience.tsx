@@ -359,7 +359,7 @@ function RsvpCard() {
             Will you be joining us?
           </h4>
           <p className="mt-2 text-[10px] leading-relaxed text-black/65">
-            Choose a response below — we&apos;ll save it instantly.
+            Choose a response below - we&apos;ll save it instantly.
           </p>
         </div>
 

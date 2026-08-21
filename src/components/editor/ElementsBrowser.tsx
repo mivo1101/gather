@@ -123,7 +123,7 @@ function ElementTile({
       }}
       onDragEnd={() => clearInsertDragData()}
       className="group flex h-full w-full cursor-grab flex-col overflow-hidden rounded-xl border border-black/8 bg-white text-left transition-[border-color,transform] hover:-translate-y-0.5 hover:border-signature/35 active:cursor-grabbing"
-      title={`${item.name} — click or drag onto the canvas`}
+      title={`${item.name} - click or drag onto the canvas`}
     >
       <div
         className={`relative flex shrink-0 items-center justify-center bg-soft-grey/60 ${previewBox}`}

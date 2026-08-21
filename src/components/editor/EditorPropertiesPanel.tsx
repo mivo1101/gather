@@ -64,7 +64,7 @@ interface EditorPropertiesPanelProps {
   }) => void;
 }
 
-/** Idle state for the right panel when nothing is selected — never duplicate left add UIs. */
+/** Idle state for the right panel when nothing is selected - never duplicate left add UIs. */
 function ToolIdle({ activeTool }: { activeTool: EditorToolId }) {
   switch (activeTool) {
     case "text":

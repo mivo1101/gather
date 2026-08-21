@@ -73,7 +73,7 @@ export function designLocationFromInvitation(
     venue = invitation.location.trim();
   }
 
-  // Map search text often looks like "Venue, suburb" — split into fields.
+  // Map search text often looks like "Venue, suburb" - split into fields.
   if (mapsQuery && (!venue || !address)) {
     const parts = mapsQuery
       .split(",")

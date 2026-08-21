@@ -69,7 +69,7 @@ interface InteractiveRsvpPanelProps {
   alreadySubmitted?: boolean;
 }
 
-/** Themed, multi-question RSVP card — style follows each template. */
+/** Themed, multi-question RSVP card - style follows each template. */
 export function InteractiveRsvpPanel({
   config,
   prompt,

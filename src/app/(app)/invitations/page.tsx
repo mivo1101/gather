@@ -77,7 +77,7 @@ export default async function InvitationsPage() {
       <EventWorkspaces
         workspaces={workspaces.map((workspace) => ({
           ...workspace,
-          // Each card previews the cover page only — trim the rest of the canvas.
+          // Each card previews the cover page only - trim the rest of the canvas.
           invitation: workspace.invitation
             ? {
                 ...workspace.invitation,

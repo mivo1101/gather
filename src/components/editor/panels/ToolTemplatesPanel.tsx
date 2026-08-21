@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { InvitationPagePreview } from "@/components/app/InvitationPagePreview";
+import { cardAspectRatio } from "@/components/editor/canvas-metrics";
 import {
   INVITATION_TEMPLATES,
   TEMPLATE_CATEGORIES,
@@ -11,6 +12,7 @@ import {
   type InvitationTemplate,
   type TemplateCategoryId,
 } from "@/lib/data/invitation-templates";
+import { formatCustomSize } from "@/components/editor/editor-types";
 
 interface ToolTemplatesPanelProps {
   onApplyTemplate: (template: InvitationTemplate) => void;
@@ -34,7 +36,9 @@ export function ToolTemplatesPanel({ onApplyTemplate }: ToolTemplatesPanelProps)
     return searched;
   }, [query, categoryId]);
 
-  const categories = TEMPLATE_CATEGORIES.filter((c) => c.id !== "other");
+  const categories = TEMPLATE_CATEGORIES.filter(
+    (c) => getTemplatesByCategory(c.id).length > 0,
+  );
 
   return (
     <div className="space-y-4">
@@ -111,6 +115,21 @@ function TemplateTile({
   onApply: () => void;
 }) {
   const preview = templatePreviewPage(template);
+  const shape = template.shape ?? "portrait";
+  // Match the thumbnail to the template's own canvas so landscape, square and
+  // custom-size suites aren't squeezed into a portrait frame.
+  const cardClass =
+    shape === "landscape"
+      ? "aspect-[16/9] w-full"
+      : shape === "square"
+        ? "aspect-square h-full"
+        : "h-full";
+  const cardAspect =
+    shape === "portrait"
+      ? 9 / 16
+      : shape === "custom"
+        ? cardAspectRatio("custom", template.customSize)
+        : undefined;
 
   return (
     <button
@@ -121,8 +140,16 @@ function TemplateTile({
     >
       <div className="relative aspect-[3/4] overflow-hidden bg-[#f3f1ef]">
         <div className="absolute inset-0 flex items-center justify-center p-2.5">
-          <div className="relative aspect-[9/16] h-full overflow-hidden rounded-sm shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-transform duration-300 group-hover:scale-[1.03]">
-            <InvitationPagePreview page={preview} className="h-full w-full" />
+          <div
+            className={`relative overflow-hidden rounded-sm shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-transform duration-300 group-hover:scale-[1.03] ${cardClass}`}
+            style={cardAspect ? { aspectRatio: cardAspect } : undefined}
+          >
+            <InvitationPagePreview
+              page={preview}
+              shape={shape}
+              customSize={template.customSize}
+              className="h-full w-full"
+            />
           </div>
         </div>
       </div>
@@ -132,6 +159,11 @@ function TemplateTile({
         </p>
         <p className="truncate text-[10px] text-grey">
           {template.pages.length} pages
+          {shape === "portrait"
+            ? ""
+            : shape === "custom" && template.customSize
+              ? ` · ${formatCustomSize(template.customSize)}`
+              : ` · ${shape}`}
         </p>
       </div>
     </button>

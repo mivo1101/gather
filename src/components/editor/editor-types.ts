@@ -37,8 +37,8 @@ export const DEFAULT_CUSTOM_SIZE: CustomCanvasSize = {
 };
 
 export function formatCustomSize(size: CustomCanvasSize): string {
-  const w = Number.isFinite(size.width) ? trimNum(size.width) : "—";
-  const h = Number.isFinite(size.height) ? trimNum(size.height) : "—";
+  const w = Number.isFinite(size.width) ? trimNum(size.width) : "-";
+  const h = Number.isFinite(size.height) ? trimNum(size.height) : "-";
   return `${w} × ${h} ${size.unit}`;
 }
 

@@ -62,7 +62,7 @@ export function CustomSizeModal({
       return;
     }
     if (unit !== "px" && (w > 500 || h > 500)) {
-      setError("That size looks too large — check the unit.");
+      setError("That size looks too large - check the unit.");
       return;
     }
     onApply({

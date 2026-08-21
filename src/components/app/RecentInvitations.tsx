@@ -37,7 +37,7 @@ const statusOptions: { value: InvitationStatusFilter; label: string }[] = [
 const sortOptions: { value: InvitationSort; label: string }[] = [
   { value: "updated_desc", label: "Last edited" },
   { value: "updated_asc", label: "Oldest edited" },
-  { value: "title_asc", label: "Title A–Z" },
+  { value: "title_asc", label: "Title A-Z" },
   { value: "event_asc", label: "Event date" },
 ];
 

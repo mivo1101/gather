@@ -70,7 +70,7 @@ export function parseCssColor(
   return { ...rgb, a: 1 };
 }
 
-/** WCAG relative luminance for RGB channels (0–1). */
+/** WCAG relative luminance for RGB channels (0-1). */
 function luminanceFromRgb(r: number, g: number, b: number): number {
   const channel = (c: number) => {
     const s = c / 255;
@@ -79,7 +79,7 @@ function luminanceFromRgb(r: number, g: number, b: number): number {
   return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
 }
 
-/** WCAG relative luminance for a solid hex colour (0–1). */
+/** WCAG relative luminance for a solid hex colour (0-1). */
 export function relativeLuminance(hex: string): number {
   const rgb = hexToRgb(hex);
   if (!rgb) return 0.5;
@@ -140,7 +140,7 @@ export function rgbToHex(r: number, g: number, b: number): string {
   return `#${to(r)}${to(g)}${to(b)}`.toUpperCase();
 }
 
-/** Blend two hex colours. `amount` is how much of `toward` to mix in (0–1). */
+/** Blend two hex colours. `amount` is how much of `toward` to mix in (0-1). */
 export function mixHex(
   from: string,
   toward: string,

@@ -15,7 +15,7 @@ export type EditorInsertPayload =
     }
   | { type: "widget"; kind: WidgetKind };
 
-/** In-memory payload — custom MIME types are often unavailable during dragover. */
+/** In-memory payload - custom MIME types are often unavailable during dragover. */
 let activeInsertPayload: EditorInsertPayload | null = null;
 
 export function setInsertDragData(

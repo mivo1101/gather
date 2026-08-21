@@ -23,7 +23,7 @@ export type ImageFrame =
 export type EffectKind = "none" | "drop" | "glow" | "echo";
 
 export interface ElementEffects {
-  /** Active effect preset — preferred over legacy booleans. */
+  /** Active effect preset - preferred over legacy booleans. */
   kind?: EffectKind;
   /** Shadow angle in degrees (Canva-style; 0 = right, -90 = up). */
   direction?: number;
@@ -122,7 +122,7 @@ export interface GuestNameWidgetConfig {
 
 export interface MapWidgetConfig {
   kind: "map";
-  /** Search query for the embed only — venue/address are separate text elements */
+  /** Search query for the embed only - venue/address are separate text elements */
   mapsQuery: string;
   /** Corner radius of the map frame in px */
   radius: number;
@@ -271,7 +271,7 @@ export interface CanvasElement {
   style: ElementStyle;
   /** Present when type is widget */
   widget?: WidgetConfig | null;
-  /** Optional hyperlink for text (and other) elements — Canva-style Link */
+  /** Optional hyperlink for text (and other) elements - Canva-style Link */
   href?: string | null;
 }
 

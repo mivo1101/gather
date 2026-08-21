@@ -717,7 +717,7 @@ export function InvitationEditor({
             if ("error" in result) {
               setSaveLabel("Retry");
               if (!quiet) showToast(result.error);
-              else showToast("Autosave failed — click Save to retry");
+              else showToast("Autosave failed - click Save to retry");
               resolve(null);
               return;
             }
@@ -756,7 +756,7 @@ export function InvitationEditor({
             showToast(
               error instanceof Error
                 ? error.message
-                : "Autosave failed — click Save to retry",
+                : "Autosave failed - click Save to retry",
             );
             resolve(null);
           } finally {
@@ -1322,6 +1322,10 @@ export function InvitationEditor({
     const content = contentFromTemplate(template);
     commit((current) => ({
       ...current,
+      // Templates are laid out for one canvas shape - a landscape suite dropped
+      // into a portrait card would crop every page.
+      shape: content.shape,
+      customSize: { ...content.customSize },
       pages: clonePages(content.pages),
       activePageId: content.activePageId,
     }));
@@ -1367,10 +1371,10 @@ export function InvitationEditor({
     setActiveTool("interactive");
     showToast(
       kind === "guest_name"
-        ? "Guest name added — place and style it"
+        ? "Guest name added - place and style it"
         : kind === "map"
-        ? "Map added — drag to place"
-        : "Interactive block added — drag to place",
+        ? "Map added - drag to place"
+        : "Interactive block added - drag to place",
     );
   };
 
