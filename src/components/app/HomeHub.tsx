@@ -34,7 +34,7 @@ const copy: Record<
     searchPlaceholder: "Search invitations...",
   },
   templates: {
-    subtitle: "Browse designs by event — weddings, birthdays, and more.",
+    subtitle: "Browse designs by event - weddings, birthdays, and more.",
     searchPlaceholder: "Search templates...",
   },
 };

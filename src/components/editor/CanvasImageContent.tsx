@@ -79,7 +79,7 @@ export function normalizeImageScale(scale?: number) {
 }
 
 /**
- * Pan uses CSS object-position, whose full 0–100% range always keeps a
+ * Pan uses CSS object-position, whose full 0-100% range always keeps a
  * cover-fitted photo inside its frame without exposing empty space.
  */
 export function maxImageOffset(_scale?: number) {
@@ -351,7 +351,7 @@ export function CanvasImageContent({
             })
           }
         />
-        {/* Bright photo inside the frame — effects follow this shape */}
+        {/* Bright photo inside the frame - effects follow this shape */}
         <div className="absolute inset-0" style={outerEffect}>
           <div
             className="h-full w-full overflow-hidden"
@@ -383,7 +383,7 @@ export function CanvasImageContent({
         className="h-full w-full overflow-hidden"
         style={{ clipPath: clip }}
       >
-        {/* Blob / data URLs from uploads — next/image is not suitable */}
+        {/* Blob / data URLs from uploads - next/image is not suitable */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={src}

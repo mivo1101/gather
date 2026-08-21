@@ -91,7 +91,7 @@ export interface InvitationPage {
   backgroundPattern?: "none" | "dots" | "grid" | "stripes" | "waves";
   /** Optional realistic paper surface layered above the card colour. */
   backgroundTexture?: PaperTexture;
-  /** Paper texture strength from 0–100. */
+  /** Paper texture strength from 0-100. */
   backgroundTextureOpacity?: number;
   /** Optional colour wash applied to the paper fibers. */
   backgroundTextureTint?: string;
@@ -232,7 +232,7 @@ export function createDefaultContent(input?: {
 }): InvitationContent {
   const title = input?.title?.trim() || "a special gathering";
   const location = input?.location?.trim() || "The Grand Pavilion";
-  // New invitations start blank — templates apply premade layouts later
+  // New invitations start blank - templates apply premade layouts later
   const elements: CanvasElement[] = [];
   const page = createPage("Cover", elements, "#ffffff", "cover");
 
@@ -948,7 +948,7 @@ export function googleMapsOpenUrl(query: string): string {
  * Strip element data from every page except the cover.
  *
  * List screens (`/home`, `/invitations`) only ever render `pages[0]`, but the
- * full canvas JSON of every page was being serialised into the RSC payload —
+ * full canvas JSON of every page was being serialised into the RSC payload -
  * tens of kB per invitation for content nothing on screen reads. Page objects
  * are kept so `pages.length` (the "N pages" badge) stays correct.
  *

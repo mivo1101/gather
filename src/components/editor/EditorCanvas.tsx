@@ -639,7 +639,7 @@ export function EditorCanvas({
     const isTall = aspect < 0.95; // portrait / tall custom
     const isSquarish = aspect >= 0.95 && aspect <= 1.05; // square-ish cards are height-limited too
     const padX = isTall ? 112 : 120;
-    // Tall cards are height-limited — leave clearer top/bottom margin
+    // Tall cards are height-limited - leave clearer top/bottom margin
     const padY = isTall || isSquarish ? 140 : 88;
     const availW = Math.max(160, viewportSize.width - padX);
     const availH = Math.max(160, viewportSize.height - padY);

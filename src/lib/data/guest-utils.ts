@@ -2,7 +2,7 @@
  * Pure guest helpers and types shared by the browser and the server.
  *
  * Kept apart from `guests.ts` so client components never pull in Supabase or
- * node:crypto — importing those from a client component made webpack ship a
+ * node:crypto - importing those from a client component made webpack ship a
  * ~318 kB Node crypto polyfill to the browser.
  */
 

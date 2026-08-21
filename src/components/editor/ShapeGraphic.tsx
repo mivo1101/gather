@@ -137,7 +137,7 @@ function SvgFill({
   );
 }
 
-/** Shared shape graphics — library tiles and canvas use the same paths. */
+/** Shared shape graphics - library tiles and canvas use the same paths. */
 export function ShapeGraphic({
   kind,
   color,

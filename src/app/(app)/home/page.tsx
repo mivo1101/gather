@@ -15,7 +15,7 @@ export default async function HomePage() {
   const stored = await getInvitationsForUser(user.id, {
     sort: "updated_desc",
   });
-  // The cards only render the cover page — don't ship the rest of the canvas.
+  // The cards only render the cover page - don't ship the rest of the canvas.
   const invitations = stored.map((invitation) => ({
     ...invitation,
     content: coverPageOnly(invitation.content),

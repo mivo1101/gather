@@ -46,7 +46,7 @@ export interface LibraryElement {
 }
 
 export const LIBRARY_ELEMENTS: LibraryElement[] = [
-  // Patterns — Flowers
+  // Patterns - Flowers
   {
     id: "floral-corner-bloom",
     name: "Corner bloom",
@@ -119,7 +119,7 @@ export const LIBRARY_ELEMENTS: LibraryElement[] = [
     kind: "pattern",
     tags: ["flower", "pattern"],
   },
-  // Patterns — Birthday graphics
+  // Patterns - Birthday graphics
   {
     id: "birthday-01",
     name: "Celebration cake",
@@ -391,7 +391,7 @@ export const LIBRARY_ELEMENTS: LibraryElement[] = [
     tags: ["birthday", "graphic", "sticker", "party", "celebration"],
   },
 
-  // Patterns — Wedding
+  // Patterns - Wedding
   {
     id: "wedding-romantic-botanical",
     name: "Romantic botanical arrangement",
@@ -446,7 +446,7 @@ export const LIBRARY_ELEMENTS: LibraryElement[] = [
     kind: "pattern",
     tags: ["wedding", "cake", "gold", "pearls", "patisserie", "celebration"],
   },
-  // Patterns — Wedding stickers
+  // Patterns - Wedding stickers
   ...[
     ["blush-floral-cake", "Blush floral cake", ["cake", "blush", "flowers"]],
     ["silver-floral-cake", "Silver floral cake", ["cake", "silver", "flowers"]],
@@ -494,7 +494,7 @@ export const LIBRARY_ELEMENTS: LibraryElement[] = [
     tags: ["wedding", "couple", "silhouette", "editorial", "recolourable"],
   })),
 
-  // Patterns — Wedding watercolours
+  // Patterns - Wedding watercolours
   ...[
     ["back-view-couple", "Watercolour back-view couple", ["couple", "bride", "groom", "back view"]],
     ["first-dance-couple", "Watercolour first dance", ["couple", "dance", "bride", "groom"]],
@@ -516,7 +516,7 @@ export const LIBRARY_ELEMENTS: LibraryElement[] = [
     tags: ["wedding", "watercolour", "watercolor", "painted", "brush", "fine art", ...(tags as string[])],
   })),
 
-  // Patterns — Graduation
+  // Patterns - Graduation
   ...[
     ["watercolour-cap-toss", "Watercolour cap toss", ["graduate", "jump", "cap", "movement", "painted"]],
     ["leather-diploma-folio", "Leather diploma folio", ["diploma", "leather", "ribbon", "wax seal", "tactile"]],
@@ -555,7 +555,7 @@ export const LIBRARY_ELEMENTS: LibraryElement[] = [
     tags: ["graduation", "editorial", "celebration", ...(tags as string[])],
   })),
 
-  // Patterns — Graduation stickers
+  // Patterns - Graduation stickers
   ...[
     ["confetti-mortarboard", "Confetti mortarboard", ["mortarboard", "cap", "confetti", "ribbon"]],
     ["study-stack", "Graduation study stack", ["books", "diploma", "glasses", "study"]],
@@ -573,7 +573,7 @@ export const LIBRARY_ELEMENTS: LibraryElement[] = [
     tags: ["graduation", "sticker", "shiny", "white border", ...(tags as string[])],
   })),
 
-  // Patterns — Monogram
+  // Patterns - Monogram
   {
     id: "mono-circle",
     name: "Circle mark",
@@ -601,7 +601,7 @@ export const LIBRARY_ELEMENTS: LibraryElement[] = [
     kind: "monogram",
     tags: ["monogram", "initials", "pattern"],
   },
-  // Patterns — Icons (placed as shapes so tile + canvas match)
+  // Patterns - Icons (placed as shapes so tile + canvas match)
   {
     id: "icon-heart",
     name: "Heart",
@@ -772,7 +772,7 @@ export const LIBRARY_ELEMENTS: LibraryElement[] = [
     shapeKind: "icon_candle",
     tags: ["icon", "candle", "light", "dinner", "birthday"],
   },
-  // Patterns — Animated emoji (system emoji + CSS motion)
+  // Patterns - Animated emoji (system emoji + CSS motion)
   {
     id: "emoji-wave",
     name: "Wave",
@@ -933,7 +933,7 @@ export const LIBRARY_ELEMENTS: LibraryElement[] = [
     shapeKind: "emoji_raised_hands",
     tags: ["icon", "emoji", "hands", "celebrate", "animated"],
   },
-  // Patterns — Coloured icons (shown in Icons)
+  // Patterns - Coloured icons (shown in Icons)
   {
     id: "colour-heart",
     name: "Heart",
@@ -1024,7 +1024,7 @@ export const LIBRARY_ELEMENTS: LibraryElement[] = [
     shapeKind: "icon_colour_envelope",
     tags: ["icon", "coloured", "envelope", "mail", "invitation"],
   },
-  // Patterns — Social (placeholders)
+  // Patterns - Social (placeholders)
   {
     id: "social-web",
     name: "Website",
@@ -1043,7 +1043,7 @@ export const LIBRARY_ELEMENTS: LibraryElement[] = [
     kind: "monogram",
     tags: ["social", "handle", "pattern"],
   },
-  // Shapes — Lines
+  // Shapes - Lines
   {
     id: "shape-line",
     name: "Line",
@@ -1094,7 +1094,7 @@ export const LIBRARY_ELEMENTS: LibraryElement[] = [
     shapeKind: "arrow_thin",
     tags: ["shape", "arrow", "line"],
   },
-  // Shapes — Basic
+  // Shapes - Basic
   {
     id: "shape-square",
     name: "Square",
@@ -1225,7 +1225,7 @@ export const LIBRARY_ELEMENTS: LibraryElement[] = [
     shapeKind: "heart",
     tags: ["shape", "heart", "basic"],
   },
-  // Shapes — Polygons
+  // Shapes - Polygons
   {
     id: "shape-pentagon",
     name: "Pentagon",
@@ -1266,7 +1266,7 @@ export const LIBRARY_ELEMENTS: LibraryElement[] = [
     shapeKind: "octagon",
     tags: ["shape", "octagon", "polygon"],
   },
-  // Shapes — Stars
+  // Shapes - Stars
   {
     id: "shape-star-4",
     name: "4-point star",
@@ -1412,7 +1412,7 @@ export function isWeddingSilhouetteSrc(src: string): boolean {
   );
 }
 
-/** Full-colour library stickers/graphics — render as images, not tint masks. */
+/** Full-colour library stickers/graphics - render as images, not tint masks. */
 export function isLibraryGraphicSrc(src: string): boolean {
   return src.startsWith("/images/graphics/");
 }
