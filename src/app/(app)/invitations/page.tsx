@@ -2,6 +2,7 @@ import Link from "next/link";
 import { EventWorkspaces } from "@/components/app/EventWorkspaces";
 import { Button, PlusIcon } from "@/components/ui/Button";
 import { getEventWorkspacesForUser } from "@/lib/data/event-workspaces";
+import { coverPageOnly } from "@/lib/data/invitation-content";
 import { getCurrentUser } from "@/lib/data/user";
 
 export const metadata = { title: "Invitations · Gather" };
@@ -73,7 +74,18 @@ export default async function InvitationsPage() {
         </Button>
       </header>
 
-      <EventWorkspaces workspaces={workspaces} />
+      <EventWorkspaces
+        workspaces={workspaces.map((workspace) => ({
+          ...workspace,
+          // Each card previews the cover page only — trim the rest of the canvas.
+          invitation: workspace.invitation
+            ? {
+                ...workspace.invitation,
+                content: coverPageOnly(workspace.invitation.content),
+              }
+            : null,
+        }))}
+      />
     </div>
   );
 }

@@ -13,7 +13,7 @@ import {
   eventPath,
   type EventStatus,
   type EventWorkspace,
-} from "@/lib/data/event-workspaces";
+} from "@/lib/data/event-workspace-utils";
 import { formatEventDate, formatRelativeTime } from "@/lib/format";
 import { invitationEditPath } from "@/lib/invitation-paths";
 import { InvitationPagePreview } from "./InvitationPagePreview";

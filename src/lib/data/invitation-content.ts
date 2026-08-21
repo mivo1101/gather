@@ -943,3 +943,25 @@ export function googleMapsEmbedUrl(query: string): string {
 export function googleMapsOpenUrl(query: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
+
+/**
+ * Strip element data from every page except the cover.
+ *
+ * List screens (`/home`, `/invitations`) only ever render `pages[0]`, but the
+ * full canvas JSON of every page was being serialised into the RSC payload —
+ * tens of kB per invitation for content nothing on screen reads. Page objects
+ * are kept so `pages.length` (the "N pages" badge) stays correct.
+ *
+ * Do NOT use this for screens that read the whole design, e.g. the event detail
+ * page, which scans every page for map widgets to prefill the location.
+ */
+export function coverPageOnly(content: InvitationContent): InvitationContent {
+  const pages = content.pages;
+  if (!pages || pages.length < 2) return content;
+  return {
+    ...content,
+    pages: pages.map((page, index) =>
+      index === 0 ? page : { ...page, elements: [] },
+    ),
+  };
+}

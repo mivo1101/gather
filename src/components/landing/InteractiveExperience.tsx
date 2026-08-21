@@ -289,6 +289,7 @@ function DetailsCard() {
         alt=""
         width={1200}
         height={1200}
+        sizes="176px"
         className="pointer-events-none absolute -bottom-12 -left-14 w-44 select-none opacity-70"
         aria-hidden="true"
       />
@@ -341,6 +342,7 @@ function RsvpCard() {
         alt=""
         width={1200}
         height={1200}
+        sizes="176px"
         className="pointer-events-none absolute -right-16 -top-16 w-44 rotate-180 select-none opacity-45"
         aria-hidden="true"
       />
@@ -400,6 +402,7 @@ function ThanksCard() {
         alt=""
         width={1100}
         height={1100}
+        sizes="208px"
         className="pointer-events-none absolute -bottom-20 left-1/2 w-52 -translate-x-1/2 select-none opacity-90 drop-shadow-[0_8px_18px_rgba(0,0,0,0.2)]"
         aria-hidden="true"
       />

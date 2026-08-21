@@ -1,7 +1,7 @@
 import {
   createEmptyGuestDraft,
   type GuestDraft,
-} from "@/lib/data/guests";
+} from "@/lib/data/guest-utils";
 
 /** Built-in guest import template (Prefix | Display name | Email). */
 export const GUEST_CSV_HEADERS = ["Prefix", "Display name", "Email"] as const;

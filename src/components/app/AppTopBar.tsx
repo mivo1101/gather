@@ -19,8 +19,10 @@ export function AppTopBar({
   const { query, setQuery } = useHubSearch();
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <label className="relative block w-full max-w-md">
+    <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* min-w-0 lets the search shrink past the input's intrinsic width
+          so the actions beside it never wrap to a second line. */}
+      <label className="relative block w-full min-w-0 sm:max-w-md sm:flex-1">
         <span className="sr-only">{searchPlaceholder}</span>
         <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-signature">
           <SearchIcon className="h-4 w-4" />
@@ -31,20 +33,24 @@ export function AppTopBar({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder={searchPlaceholder}
-          className="w-full rounded-full border border-black/8 bg-white/75 py-2.5 pl-10 pr-4 text-sm text-black shadow-[0_1px_2px_rgba(0,0,0,0.03)] outline-none backdrop-blur-md transition-colors placeholder:text-grey focus:border-signature/40 focus:bg-white/90 focus:ring-2 focus:ring-signature/20"
+          className="w-full min-w-0 rounded-full border border-black/8 bg-white/75 py-2.5 pl-10 pr-4 text-sm text-black shadow-[0_1px_2px_rgba(0,0,0,0.03)] outline-none backdrop-blur-md transition-colors placeholder:text-grey focus:border-signature/40 focus:bg-white/90 focus:ring-2 focus:ring-signature/20"
           aria-label={searchPlaceholder}
         />
       </label>
 
-      <div className="flex items-center gap-2 self-end sm:self-auto">
+      <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full text-grey transition-colors hover:bg-white hover:text-black"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-grey transition-colors hover:bg-white hover:text-black"
           aria-label="Notifications"
         >
           <BellIcon />
         </button>
-        <Button href="/invitations/new" size="sm">
+        <Button
+          href="/invitations/new"
+          size="sm"
+          className="whitespace-nowrap"
+        >
           <PlusIcon />
           Create Invitation
         </Button>

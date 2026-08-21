@@ -14,7 +14,7 @@ import {
   validateGuestDrafts,
   type EventGuest,
   type GuestDraft,
-} from "@/lib/data/guests";
+} from "@/lib/data/guest-utils";
 import { Button, PlusIcon } from "@/components/ui/Button";
 import { RequiredMark } from "@/components/ui/RequiredMark";
 import { Select } from "@/components/ui/Select";
