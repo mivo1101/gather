@@ -25,12 +25,15 @@ const tabs: {
   },
 ];
 
+// Home drops the subtitle: a signed-in host already knows what the app does,
+// and the line pushed the first real content below the fold. Templates keeps
+// one, because "browse by event" is genuinely a hint about the page.
 const copy: Record<
   HubTab,
-  { subtitle: string; searchPlaceholder: string }
+  { subtitle: string | null; searchPlaceholder: string }
 > = {
   home: {
-    subtitle: "Create, manage and share beautiful invitations.",
+    subtitle: null,
     searchPlaceholder: "Search invitations...",
   },
   templates: {
@@ -60,19 +63,25 @@ export function HomeHub({ user, greeting, active, children }: HomeHubProps) {
 
   return (
     <HubSearchProvider>
-      <div className="flex flex-col gap-8">
-        <header className="animate-fade-up">
+      <div className="flex flex-col gap-7">
+        {/* animate-fade-up ends on a transform, so the header and the content
+            below are each their own stacking context. Without an explicit
+            order the later sibling wins and the top bar's menus paint behind
+            the page. */}
+        <header className="relative z-20 animate-fade-up">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between xl:gap-6">
             {/* Greeting holds its width; the search bar beside it absorbs
                 the squeeze so the heading stays on one line. */}
             <div className="min-w-0 xl:shrink-0">
-              <h1 className="text-3xl font-bold tracking-tight text-black md:text-4xl xl:whitespace-nowrap">
+              <h1 className="text-2xl font-bold tracking-tight text-black md:text-3xl xl:whitespace-nowrap">
                 {localGreeting}, {user.firstName}{" "}
                 <span aria-hidden="true">👋</span>
               </h1>
-              <p className="mt-2 text-base text-grey xl:max-w-md">
-                {subtitle}
-              </p>
+              {subtitle ? (
+                <p className="mt-2 text-base text-grey xl:max-w-md">
+                  {subtitle}
+                </p>
+              ) : null}
             </div>
 
             <div className="w-full min-w-0 xl:max-w-[42rem] xl:flex-1 xl:pt-0.5">
@@ -84,7 +93,7 @@ export function HomeHub({ user, greeting, active, children }: HomeHubProps) {
           </div>
 
           <nav
-            className="mt-6 flex items-end gap-1 border-b border-black/8"
+            className="mt-5 flex items-end gap-1 border-b border-black/8"
             aria-label="Browse"
           >
             {tabs.map((tab) => {
@@ -119,7 +128,10 @@ export function HomeHub({ user, greeting, active, children }: HomeHubProps) {
           </nav>
         </header>
 
-        <div className="animate-fade-up" style={{ animationDelay: "100ms" }}>
+        <div
+          className="relative z-0 animate-fade-up"
+          style={{ animationDelay: "100ms" }}
+        >
           {children}
         </div>
       </div>
