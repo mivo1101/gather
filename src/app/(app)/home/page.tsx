@@ -38,7 +38,7 @@ export default async function HomePage() {
 
   return (
     <HomeHub user={user} greeting={getGreeting()} active="home">
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-10">
         <UpNext event={upNextEvent} />
         <RecentInvitations invitations={invitations} />
       </div>

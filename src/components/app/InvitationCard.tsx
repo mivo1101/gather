@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   moveInvitationToTrashAction,
   permanentlyDeleteInvitationsAction,
@@ -152,7 +152,7 @@ export function InvitationCard({
   const [isPending, startTransition] = useTransition();
   const menuRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const menuId = useId();
+  const menuId = `invitation-menu-${invitation.id}`;
   const inTrash = invitation.status === "archived";
   const displayStatus = invitationDisplayStatus(invitation);
   const editHref = invitationEditPath({ slug: displaySlug });
@@ -285,7 +285,7 @@ export function InvitationCard({
 
   return (
     <article
-      className={`group relative flex rounded-2xl border bg-white/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] backdrop-blur-md transition-[box-shadow,border-color,background-color] hover:bg-white/90 hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] ${
+      className={`group relative flex flex-col rounded-2xl border bg-white/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] backdrop-blur-md transition-[box-shadow,border-color,background-color] hover:bg-white/90 hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] ${
         selected
           ? "border-black/25 ring-2 ring-black/10"
           : "border-black/8 hover:border-signature/35"
@@ -293,32 +293,32 @@ export function InvitationCard({
     >
       <Link
         href={editHref}
-        className="flex min-w-0 flex-1 outline-none focus-visible:ring-2 focus-visible:ring-signature/40 focus-visible:ring-inset"
+        className="flex flex-1 flex-col outline-none focus-visible:ring-2 focus-visible:ring-signature/40 focus-visible:ring-inset"
         aria-label={`Edit ${displayTitle}`}
       >
-        <div className="relative flex h-[9.5rem] w-[6.5rem] shrink-0 items-center justify-center overflow-hidden rounded-l-2xl bg-[#f3f1ef] p-2.5 sm:h-[10.5rem] sm:w-28">
-          <div className="flex h-full w-full min-w-0 items-center justify-center overflow-hidden">
-            <div
-              className="relative isolate min-h-0 min-w-0 overflow-hidden rounded-md bg-[#f3f1ef] shadow-[0_4px_14px_rgba(0,0,0,0.1)] transition-transform duration-500 group-hover:scale-[1.02]"
-              style={{
-                aspectRatio: String(previewAspect),
-                height: previewAspect <= 1 ? "100%" : "auto",
-                width: previewAspect > 1 ? "100%" : "auto",
-                maxHeight: "100%",
-                maxWidth: "100%",
-              }}
-            >
-              <InvitationPagePreview
-                page={firstPage}
-                shape={cardShape}
-                customSize={customSize}
-                className="h-full w-full"
-              />
-            </div>
+        {/* The design is the subject of the card, so it gets the top and its
+            own aspect. The mat only fills whatever the artwork does not. */}
+        <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-t-2xl border-b border-black/[0.04] bg-[#f3f1ef] p-4">
+          <div
+            className="relative isolate overflow-hidden rounded-md shadow-[0_6px_20px_rgba(0,0,0,0.14)] transition-transform duration-500 group-hover:scale-[1.03]"
+            style={{
+              aspectRatio: String(previewAspect),
+              height: previewAspect <= 1 ? "100%" : "auto",
+              width: previewAspect > 1 ? "100%" : "auto",
+              maxHeight: "100%",
+              maxWidth: "100%",
+            }}
+          >
+            <InvitationPagePreview
+              page={firstPage}
+              shape={cardShape}
+              customSize={customSize}
+              className="h-full w-full"
+            />
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 px-4 py-3.5">
+        <div className="flex min-w-0 flex-1 flex-col gap-1 px-4 pb-3 pt-3.5">
           <h3 className="truncate text-base font-semibold leading-tight text-black">
             {displayTitle}
           </h3>
@@ -336,12 +336,12 @@ export function InvitationCard({
         </div>
       </Link>
 
-      <div className="flex shrink-0 flex-col items-end justify-center gap-1.5 py-3.5 pl-2 pr-11">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-black/[0.04] px-4 py-2.5">
         <StatusDot
           tone={statusTones[displayStatus]}
           label={invitationDisplayStatusLabels[displayStatus]}
         />
-        <p className="inline-flex items-center gap-1.5 text-right text-[11px] text-grey">
+        <p className="inline-flex items-center gap-1.5 text-[11px] text-grey">
           <ShapeGlyph shape={cardShape} className="h-3 w-3 shrink-0" />
           <span>{shapeLabels[cardShape]}</span>
           <span aria-hidden="true" className="text-black/20">
@@ -351,12 +351,15 @@ export function InvitationCard({
             {pageCount} {pageCount === 1 ? "page" : "pages"}
           </span>
         </p>
-        <p className="text-right text-[11px] text-grey">
+      </div>
+
+      <div className="flex items-center justify-between gap-3 px-4 pb-3">
+        <p className="truncate text-[11px] text-grey">
           Edited {formatRelativeTime(invitation.updatedAt)}
         </p>
         <Link
           href={editHref}
-          className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-signature transition-opacity hover:opacity-70"
+          className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-signature transition-opacity hover:opacity-70"
         >
           {invitation.status === "published" ? "View / edit" : "Continue editing"}
           <span aria-hidden="true">→</span>

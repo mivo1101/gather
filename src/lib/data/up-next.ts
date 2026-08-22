@@ -57,6 +57,23 @@ export function nextSetupStep(event: EventWorkspace): SetupStep | null {
   return setupSteps.find((step) => !event.progress[step.key]) ?? null;
 }
 
+/**
+ * A step opens only once everything before it is done. Jumping ahead would skip
+ * the information the later step is built from - guests cannot be invited before
+ * the date and venue exist. A finished step stays open so it can be revisited.
+ */
+export function isStepReachable(
+  event: EventWorkspace,
+  step: EventSetupStep,
+): boolean {
+  const index = setupSteps.findIndex((entry) => entry.key === step);
+  if (index < 0) return false;
+  if (event.progress[step]) return true;
+  return setupSteps
+    .slice(0, index)
+    .every((earlier) => event.progress[earlier.key]);
+}
+
 /** Where a step is completed. The event hub covers designs not yet connected. */
 export function setupStepHref(
   event: EventWorkspace,
