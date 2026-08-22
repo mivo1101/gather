@@ -26,3 +26,22 @@ export function formatEventDate(iso: string): string {
     year: "numeric",
   });
 }
+
+/** Countdown to an event, e.g. "Today", "Tomorrow", "in 12 days" */
+export function formatCountdown(iso: string, now = new Date()): string | null {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return null;
+
+  const startOfDay = (value: Date) =>
+    new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+  const days = Math.round(
+    (startOfDay(then) - startOfDay(now)) / 86_400_000,
+  );
+
+  if (days < 0) return null;
+  if (days === 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  if (days < 14) return `in ${days} days`;
+  if (days < 60) return `in ${Math.round(days / 7)} weeks`;
+  return `in ${Math.round(days / 30)} months`;
+}

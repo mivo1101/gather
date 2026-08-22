@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Button, PlusIcon } from "@/components/ui/Button";
+import { CreateInvitationMenu } from "./CreateInvitationMenu";
 import type { User } from "@/lib/data/types";
 import { useHubSearch } from "./HubSearchContext";
 import { BellIcon, SearchIcon } from "./icons";
@@ -46,14 +46,7 @@ export function AppTopBar({
         >
           <BellIcon />
         </button>
-        <Button
-          href="/invitations/new"
-          size="sm"
-          className="whitespace-nowrap"
-        >
-          <PlusIcon />
-          Create Invitation
-        </Button>
+        <CreateInvitationMenu />
         <span className="sr-only">Signed in as {user.firstName}</span>
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SetupSteps } from "./SetupSteps";
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -106,51 +107,11 @@ function StepRail({
     },
   ];
 
-  const pillClass = (active: boolean, done: boolean) =>
-    `inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-      active
-        ? "bg-black text-white"
-        : done
-          ? "bg-signature/10 text-signature hover:bg-signature/20"
-          : "bg-soft-grey text-grey hover:bg-black/[0.08] hover:text-black"
-    }`;
-
   return (
-    <ol className="flex flex-wrap items-center gap-2">
-      {items.map((item, index) => {
-        const active = item.id === step;
-        const content = (
-          <>
-            <span aria-hidden="true">
-              {item.done && !active ? "✓" : index + 1}
-            </span>
-            {item.label}
-          </>
-        );
-        return (
-          <li key={item.id} className="flex items-center gap-2">
-            {index > 0 ? (
-              <span className="text-black/20" aria-hidden="true">
-                →
-              </span>
-            ) : null}
-            {item.href ? (
-              <Link
-                href={item.href}
-                aria-current={active ? "step" : undefined}
-                className={pillClass(active, item.done)}
-              >
-                {content}
-              </Link>
-            ) : (
-              <span className={`${pillClass(active, item.done)} opacity-60`}>
-                {content}
-              </span>
-            )}
-          </li>
-        );
-      })}
-    </ol>
+    <SetupSteps
+      steps={items.map((item) => ({ ...item, id: item.id }))}
+      activeId={step}
+    />
   );
 }
 
