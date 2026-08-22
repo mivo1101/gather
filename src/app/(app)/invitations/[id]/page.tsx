@@ -49,7 +49,7 @@ const eventStatusLabels: Record<EventStatus, string> = {
 const eventStatusTones: Record<EventStatus, StatusTone> = {
   draft: "neutral",
   active: "green",
-  completed: "gold",
+  completed: "blue",
   archived: "muted",
 };
 
@@ -175,13 +175,6 @@ export default async function EventDetailPage({
           {error}
         </div>
       ) : null}
-      {completed ? (
-        <div className="mt-5 rounded-2xl border border-black/10 bg-[#f1f1f3] px-4 py-3 text-sm text-[#5f6067]">
-          This event is completed and currently view-only. Reopen it to correct
-          the details or schedule a new date.
-        </div>
-      ) : null}
-
       <header className="mt-5 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">

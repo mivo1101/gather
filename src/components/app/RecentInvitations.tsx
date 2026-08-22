@@ -12,13 +12,13 @@ import {
   clearTrashAction,
   permanentlyDeleteInvitationsAction,
 } from "@/lib/actions/invitations";
-import type {
-  Invitation,
-  InvitationSort,
-  InvitationStatusFilter,
-} from "@/lib/data/types";
+import {
+  invitationDisplayStatus,
+  type InvitationDisplayFilter,
+} from "@/lib/data/invitation-status";
+import type { Invitation, InvitationSort } from "@/lib/data/types";
 import { BrandCheckbox } from "./BrandCheckbox";
-import { Button, PlusIcon } from "@/components/ui/Button";
+import { CreateShortcuts } from "./CreateShortcuts";
 import { useHubSearch } from "./HubSearchContext";
 import { ChevronDownIcon } from "./icons";
 import { InvitationCard } from "./InvitationCard";
@@ -27,11 +27,15 @@ interface RecentInvitationsProps {
   invitations: Invitation[];
 }
 
-const statusOptions: { value: InvitationStatusFilter; label: string }[] = [
+// Mirrors what the cards print, so filtering by a label always finds the
+// cards wearing it - including the states an invitation inherits from its event.
+const statusOptions: { value: InvitationDisplayFilter; label: string }[] = [
   { value: "all", label: "All statuses" },
   { value: "draft", label: "Draft" },
   { value: "published", label: "Published" },
-  { value: "archived", label: "Trash" },
+  { value: "active", label: "Active" },
+  { value: "completed", label: "Completed" },
+  { value: "trash", label: "Trash" },
 ];
 
 const sortOptions: { value: InvitationSort; label: string }[] = [
@@ -73,14 +77,14 @@ function sortList(list: Invitation[], sort: InvitationSort): Invitation[] {
 export function RecentInvitations({ invitations }: RecentInvitationsProps) {
   const router = useRouter();
   const { query } = useHubSearch();
-  const [status, setStatus] = useState<InvitationStatusFilter>("all");
+  const [status, setStatus] = useState<InvitationDisplayFilter>("all");
   const [sort, setSort] = useState<InvitationSort>("updated_desc");
   const [trashedIds, setTrashedIds] = useState<Set<string>>(() => new Set());
   const [deletedIds, setDeletedIds] = useState<Set<string>>(() => new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [actionError, setActionError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const inTrashView = status === "archived";
+  const inTrashView = status === "trash";
   const search = query.trim().toLowerCase();
 
   useEffect(() => {
@@ -131,7 +135,7 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
             (invitation) => invitation.status !== "archived",
           )
         : withOptimisticTrash.filter(
-            (invitation) => invitation.status === status,
+            (invitation) => invitationDisplayStatus(invitation) === status,
           );
     const searched = search
       ? filtered.filter((invitation) => {
@@ -227,7 +231,7 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
         <div>
           <h2
             id="recent-invitations-heading"
-            className="text-2xl font-semibold tracking-tight text-black"
+            className="text-xl font-semibold tracking-tight text-black"
           >
             {inTrashView ? "Trash" : "Recent Invitations"}
           </h2>
@@ -244,7 +248,7 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
             <select
               value={status}
               onChange={(event) =>
-                setStatus(event.target.value as InvitationStatusFilter)
+                setStatus(event.target.value as InvitationDisplayFilter)
               }
               className="appearance-none rounded-full border border-black/10 bg-white/90 py-2 pl-3.5 pr-10 text-sm font-medium text-black shadow-[0_1px_2px_rgba(0,0,0,0.03)] outline-none transition-colors hover:border-black/20 focus-visible:ring-2 focus-visible:ring-signature/40"
             >
@@ -344,14 +348,9 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
                 : "Create your first invitation to see it here."}
           </p>
           {!inTrashView && (
-            <Button
-              href="/invitations/new"
-              size="md"
-              className="mt-6"
-            >
-              <PlusIcon />
-              Create Invitation
-            </Button>
+            <div className="mt-6 flex justify-center">
+              <CreateShortcuts />
+            </div>
           )}
         </div>
       ) : (

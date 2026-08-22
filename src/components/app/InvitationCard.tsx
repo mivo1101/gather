@@ -11,23 +11,24 @@ import {
 import type { Invitation } from "@/lib/data/types";
 import { formatEventDate, formatRelativeTime } from "@/lib/format";
 import { invitationEditPath } from "@/lib/invitation-paths";
-import { cardAspectRatio } from "@/components/editor/CanvasImageContent";
+import { cardAspectRatio } from "@/components/editor/canvas-metrics";
 import { BrandCheckbox } from "./BrandCheckbox";
 import { MoreIcon, PencilIcon } from "./icons";
 import { InvitationPagePreview } from "./InvitationPagePreview";
 import { StatusDot, type StatusTone } from "./StatusDot";
+import {
+  invitationDisplayStatus,
+  invitationDisplayStatusLabels,
+  type InvitationDisplayStatus,
+} from "@/lib/data/invitation-status";
 
 const statusTones = {
-  draft: "amber",
+  draft: "neutral",
   published: "green",
-  archived: "muted",
-} as const satisfies Record<string, StatusTone>;
-
-const statusLabels = {
-  draft: "Draft",
-  published: "Published",
-  archived: "Trash",
-} as const;
+  active: "green",
+  completed: "blue",
+  trash: "muted",
+} as const satisfies Record<InvitationDisplayStatus, StatusTone>;
 
 const shapeLabels = {
   portrait: "Portrait",
@@ -153,6 +154,7 @@ export function InvitationCard({
   const titleInputRef = useRef<HTMLInputElement>(null);
   const menuId = useId();
   const inTrash = invitation.status === "archived";
+  const displayStatus = invitationDisplayStatus(invitation);
   const editHref = invitationEditPath({ slug: displaySlug });
 
   const firstPage = useMemo(() => {
@@ -283,8 +285,10 @@ export function InvitationCard({
 
   return (
     <article
-      className={`group relative flex rounded-2xl border bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-shadow hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] ${
-        selected ? "border-black/25 ring-2 ring-black/10" : "border-black/8"
+      className={`group relative flex rounded-2xl border bg-white/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] backdrop-blur-md transition-[box-shadow,border-color,background-color] hover:bg-white/90 hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] ${
+        selected
+          ? "border-black/25 ring-2 ring-black/10"
+          : "border-black/8 hover:border-signature/35"
       } ${menuOpen ? "z-30" : "z-0"}`}
     >
       <Link
@@ -314,11 +318,11 @@ export function InvitationCard({
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 px-3.5 py-3">
-          <h3 className="truncate text-base font-semibold text-black">
+        <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 px-4 py-3.5">
+          <h3 className="truncate text-base font-semibold leading-tight text-black">
             {displayTitle}
           </h3>
-          <p className="truncate text-[11px] text-grey">
+          <p className="mt-0.5 truncate text-xs font-medium text-black/70">
             {invitation.eventDate
               ? formatEventDate(invitation.eventDate)
               : "Event date not set"}
@@ -332,10 +336,10 @@ export function InvitationCard({
         </div>
       </Link>
 
-      <div className="flex w-[14.5rem] shrink-0 flex-col items-end justify-center gap-1 border-l border-black/[0.06] px-4 py-3 pr-11">
+      <div className="flex shrink-0 flex-col items-end justify-center gap-1.5 py-3.5 pl-2 pr-11">
         <StatusDot
-          tone={statusTones[invitation.status]}
-          label={statusLabels[invitation.status]}
+          tone={statusTones[displayStatus]}
+          label={invitationDisplayStatusLabels[displayStatus]}
         />
         <p className="inline-flex items-center gap-1.5 text-right text-[11px] text-grey">
           <ShapeGlyph shape={cardShape} className="h-3 w-3 shrink-0" />
@@ -352,7 +356,7 @@ export function InvitationCard({
         </p>
         <Link
           href={editHref}
-          className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-signature/10 px-3 py-1.5 text-xs font-semibold text-signature transition-colors hover:bg-signature/15"
+          className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-signature transition-opacity hover:opacity-70"
         >
           {invitation.status === "published" ? "View / edit" : "Continue editing"}
           <span aria-hidden="true">→</span>
@@ -449,7 +453,8 @@ export function InvitationCard({
                 )}
               </div>
               <p className="mt-1 text-[11px] leading-relaxed text-grey">
-                Invitation · {statusLabels[invitation.status]} · Edited{" "}
+                Invitation · {invitationDisplayStatusLabels[displayStatus]} ·
+                Edited{" "}
                 {formatRelativeTime(invitation.updatedAt)}
               </p>
               <p className="mt-0.5 text-[11px] text-grey">

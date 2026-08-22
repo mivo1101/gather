@@ -22,6 +22,13 @@ export interface Invitation {
   location: string | null;
   /** Card copy and details edited in the invitation editor */
   content: import("./invitation-content").InvitationContent;
+  /**
+   * Status of the event this design is connected to, when a list resolved it.
+   * Undefined means "not looked up", null means "not connected to an event".
+   */
+  linkedEventStatus?:
+    | import("./event-workspace-utils").EventStatus
+    | null;
   updatedAt: string;
   createdAt: string;
 }
