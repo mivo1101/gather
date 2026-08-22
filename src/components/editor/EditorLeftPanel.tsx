@@ -138,7 +138,7 @@ function LayoutPanel({
               <p className="mt-1 text-sm font-semibold text-black">
                 {shape.label}
               </p>
-              <p className="text-[11px] text-grey">{sizeLabel}</p>
+              <p className="text-xs text-grey">{sizeLabel}</p>
             </button>
           );
         })}
@@ -251,7 +251,7 @@ function BackgroundSummaryPanel({ pages }: { pages: InvitationPage[] }) {
           {colours.map((color) => (
             <span
               key={color}
-              className="flex items-center gap-1.5 rounded-full border border-black/10 px-2 py-1 text-[11px] font-semibold text-grey"
+              className="flex items-center gap-1.5 rounded-full border border-black/10 px-2 py-1 text-xs font-semibold text-grey"
             >
               <span
                 className="h-3.5 w-3.5 rounded-full border border-black/10"
@@ -264,14 +264,14 @@ function BackgroundSummaryPanel({ pages }: { pages: InvitationPage[] }) {
       </div>
 
       <div>
-        <p className="mb-2 text-[11px] font-medium tracking-wide text-grey">
+        <p className="mb-2 text-xs font-medium tracking-wide text-grey">
           Background patterns
         </p>
         <div className="flex flex-wrap gap-1.5">
           {patterns.map((pattern) => (
             <span
               key={pattern}
-              className="rounded-full bg-soft-grey px-2.5 py-1 text-[11px] font-semibold capitalize text-grey"
+              className="rounded-full bg-soft-grey px-2.5 py-1 text-xs font-semibold capitalize text-grey"
             >
               {pattern}
             </span>
@@ -280,14 +280,14 @@ function BackgroundSummaryPanel({ pages }: { pages: InvitationPage[] }) {
       </div>
 
       <div>
-        <p className="mb-2 text-[11px] font-medium tracking-wide text-grey">
+        <p className="mb-2 text-xs font-medium tracking-wide text-grey">
           Paper textures
         </p>
         <div className="flex flex-wrap gap-1.5">
           {textures.map((texture) => (
             <span
               key={texture}
-              className="rounded-full bg-soft-grey px-2.5 py-1 text-[11px] font-semibold capitalize text-grey"
+              className="rounded-full bg-soft-grey px-2.5 py-1 text-xs font-semibold capitalize text-grey"
             >
               {texture}
             </span>

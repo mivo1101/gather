@@ -5,6 +5,8 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type ReactNode,
+  type Ref,
 } from "react";
 import {
   isLibraryGraphicSrc,
@@ -18,9 +20,12 @@ import type {
 import { effectsToCss } from "@/lib/element-effects";
 import {
   EMPTY_IMAGE_FRAME_SRC,
+  decorativeFrameSpec,
   imageFrameClipPath,
+  imageFrameInset,
   isSquareImageFrame,
 } from "./image-frames";
+import { FrameOrnament } from "./FrameOrnament";
 
 /** Frames that should stay visually square on the card. */
 export function isSquareFrame(frame?: ImageFrame | null): boolean {
@@ -166,6 +171,7 @@ export function CanvasImageContent({
   src,
   color,
   frame,
+  frameColor,
   effects,
   imageScale = 1,
   imageOffsetX = 0,
@@ -176,6 +182,8 @@ export function CanvasImageContent({
   src: string;
   color?: string;
   frame?: ImageFrame;
+  /** Ink for a decorative frame's ornament. */
+  frameColor?: string;
   effects?: ElementEffects | null;
   imageScale?: number;
   imageOffsetX?: number;
@@ -232,22 +240,44 @@ export function CanvasImageContent({
   const effectCss = effectsToCss(effects, color);
   const outerEffect: CSSProperties = { filter: effectCss.filter };
 
+  const decorative = decorativeFrameSpec(frame);
+  const insetCss = imageFrameInset(frame);
+  const ornament = decorative ? (
+    <FrameOrnament frame={frame} color={frameColor} />
+  ) : null;
+  /**
+   * The photo lives in the aperture the ornament leaves free. A plain function
+   * (not a nested component) keeps the element types stable across renders, so
+   * the photo is never remounted mid-drag.
+   */
+  const aperture = (children: ReactNode, ref?: Ref<HTMLDivElement>) => (
+    <div ref={ref} className="absolute" style={{ inset: insetCss }}>
+      {children}
+    </div>
+  );
+
   if (src === EMPTY_IMAGE_FRAME_SRC) {
     return (
       <div className={className} style={outerEffect}>
-        <div
-          className="relative flex h-full w-full items-center justify-center overflow-hidden"
-          style={{
-            clipPath: clip,
-            background:
-              "linear-gradient(180deg, #e6f5ff 0%, #e6f5ff 62%, #c7dfa0 62%, #8fba4e 100%)",
-          }}
-        >
-          <div className="absolute left-[24%] top-[22%] h-[13%] w-[52%] rounded-full bg-white/90" />
-          <div className="relative rounded-full bg-white/90 px-3 py-1.5 text-[10px] font-semibold text-black/55 shadow-sm">
-            Add image
-          </div>
-        </div>
+        {aperture(
+          <div
+            className="relative flex h-full w-full items-center justify-center overflow-hidden"
+            style={{
+              clipPath: clip,
+              background: decorative
+                ? "rgba(31, 45, 34, 0.08)"
+                : "linear-gradient(180deg, #e6f5ff 0%, #e6f5ff 62%, #c7dfa0 62%, #8fba4e 100%)",
+            }}
+          >
+            {!decorative && (
+              <div className="absolute left-[24%] top-[22%] h-[13%] w-[52%] rounded-full bg-white/90" />
+            )}
+            <div className="relative rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-black/55 shadow-sm">
+              Add image
+            </div>
+          </div>,
+        )}
+        {ornament}
       </div>
     );
   }
@@ -268,7 +298,8 @@ export function CanvasImageContent({
     // Outer filter so drop-shadow isn't clipped by the frame
     return (
       <div className={className} style={outerEffect} aria-hidden="true">
-        <div className="h-full w-full" style={style} />
+        {aperture(<div className="h-full w-full" style={style} />)}
+        {ornament}
       </div>
     );
   }
@@ -288,16 +319,24 @@ export function CanvasImageContent({
     };
     return (
       <div className={className} style={outerEffect}>
-        <div className="relative h-full w-full overflow-hidden" style={{ clipPath: clip }}>
-          {color !== "transparent" && <div className="absolute inset-0" style={maskStyle} />}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`${base}-outline.png`}
-            alt=""
-            draggable={false}
-            className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
-          />
-        </div>
+        {aperture(
+          <div
+            className="relative h-full w-full overflow-hidden"
+            style={{ clipPath: clip }}
+          >
+            {color !== "transparent" && (
+              <div className="absolute inset-0" style={maskStyle} />
+            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`${base}-outline.png`}
+              alt=""
+              draggable={false}
+              className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
+            />
+          </div>,
+        )}
+        {ornament}
       </div>
     );
   }
@@ -305,18 +344,21 @@ export function CanvasImageContent({
   if (isLibraryGraphic) {
     return (
       <div className={className} style={outerEffect}>
-        <div
-          className="flex h-full w-full items-center justify-center overflow-hidden"
-          style={{ clipPath: clip }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={src}
-            alt=""
-            draggable={false}
-            className="pointer-events-none h-full w-full select-none object-contain"
-          />
-        </div>
+        {aperture(
+          <div
+            className="flex h-full w-full items-center justify-center overflow-hidden"
+            style={{ clipPath: clip }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={src}
+              alt=""
+              draggable={false}
+              className="pointer-events-none h-full w-full select-none object-contain"
+            />
+          </div>,
+        )}
+        {ornament}
       </div>
     );
   }
@@ -330,38 +372,16 @@ export function CanvasImageContent({
       naturalSize,
     );
     return (
-      <div
-        ref={frameRef}
-        className={`${className} overflow-visible`}
-        style={{ zIndex: 5 }}
-      >
-        {/* Soft overflow preview makes the crop available outside the frame. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt=""
-          draggable={false}
-          className="pointer-events-none select-none opacity-25 blur-[2px] saturate-75"
-          style={exactPhotoStyle}
-          onLoad={(event) =>
-            setNaturalSize({
-              width: event.currentTarget.naturalWidth,
-              height: event.currentTarget.naturalHeight,
-            })
-          }
-        />
-        {/* Bright photo inside the frame - effects follow this shape */}
-        <div className="absolute inset-0" style={outerEffect}>
-          <div
-            className="h-full w-full overflow-hidden"
-            style={{ clipPath: clip }}
-          >
+      <div className={`${className} overflow-visible`} style={{ zIndex: 5 }}>
+        {aperture(
+          <>
+            {/* Soft overflow preview makes the crop available outside the frame. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={src}
               alt=""
               draggable={false}
-              className="pointer-events-none select-none"
+              className="pointer-events-none select-none opacity-25 blur-[2px] saturate-75"
               style={exactPhotoStyle}
               onLoad={(event) =>
                 setNaturalSize({
@@ -370,40 +390,59 @@ export function CanvasImageContent({
                 })
               }
             />
-          </div>
-        </div>
+            {/* Bright photo inside the frame - effects follow this shape */}
+            <div className="absolute inset-0" style={outerEffect}>
+              <div
+                className="h-full w-full overflow-hidden"
+                style={{ clipPath: clip }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={src}
+                  alt=""
+                  draggable={false}
+                  className="pointer-events-none select-none"
+                  style={exactPhotoStyle}
+                  onLoad={(event) =>
+                    setNaturalSize({
+                      width: event.currentTarget.naturalWidth,
+                      height: event.currentTarget.naturalHeight,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          </>,
+          frameRef,
+        )}
+        {ornament}
       </div>
     );
   }
 
   return (
-    <div ref={frameRef} className={className} style={outerEffect}>
-      <div
-        className="h-full w-full overflow-hidden"
-        style={{ clipPath: clip }}
-      >
-        {/* Blob / data URLs from uploads - next/image is not suitable */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt=""
-          draggable={false}
-          className="pointer-events-none select-none"
-          style={photoLayerStyle(
-            scale,
-            ox,
-            oy,
-            frameSize,
-            naturalSize,
-          )}
-          onLoad={(event) =>
-            setNaturalSize({
-              width: event.currentTarget.naturalWidth,
-              height: event.currentTarget.naturalHeight,
-            })
-          }
-        />
-      </div>
+    <div className={className} style={outerEffect}>
+      {aperture(
+        <div className="h-full w-full overflow-hidden" style={{ clipPath: clip }}>
+          {/* Blob / data URLs from uploads - next/image is not suitable */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt=""
+            draggable={false}
+            className="pointer-events-none select-none"
+            style={photoLayerStyle(scale, ox, oy, frameSize, naturalSize)}
+            onLoad={(event) =>
+              setNaturalSize({
+                width: event.currentTarget.naturalWidth,
+                height: event.currentTarget.naturalHeight,
+              })
+            }
+          />
+        </div>,
+        frameRef,
+      )}
+      {ornament}
     </div>
   );
 }

@@ -17,7 +17,7 @@ interface SelectedWidgetStylesProps {
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
+    <span className="mb-1.5 block text-xs font-medium tracking-wide text-grey">
       {children}
     </span>
   );

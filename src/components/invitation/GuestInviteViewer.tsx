@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { InvitationPagePreview } from "@/components/app/InvitationPagePreview";
+import { InvitationStage } from "@/components/invitation/InvitationStage";
 import { GuestInviteOpening } from "@/components/invitation/GuestInviteOpening";
 import { InteractiveRsvpPanel } from "@/components/invitation/InteractiveRsvpPanel";
 import { LocationMapPanel } from "@/components/invitation/LocationMapPanel";
@@ -191,151 +192,40 @@ export function GuestInviteViewer({
     page.kind === "design" &&
     (pageHasAnswers || Object.keys(answers).length > 0);
 
-  const pager = pages.length > 1 ? (
-    <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-full bg-black/50 px-3 py-1.5 opacity-100 backdrop-blur-sm transition-opacity lg:opacity-0 lg:group-hover:opacity-100">
-      <button
-        type="button"
-        onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
-        disabled={safePageIndex === 0}
-        className="text-xs font-semibold text-white disabled:opacity-30"
-      >
-        Previous
-      </button>
-      <div className="flex items-center gap-1.5">
-        {pages.map((item, index) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setPageIndex(index)}
-            className={`h-1.5 w-1.5 rounded-full transition-colors ${
-              index === safePageIndex
-                ? "bg-white"
-                : "bg-white/35 hover:bg-white/60"
-            }`}
-            aria-label={`Page ${index + 1}`}
-          />
-        ))}
-      </div>
-      <button
-        type="button"
-        onClick={() => setPageIndex((i) => Math.min(pages.length - 1, i + 1))}
-        disabled={safePageIndex >= pages.length - 1}
-        className="text-xs font-semibold text-white disabled:opacity-30"
-      >
-        Next
-      </button>
-    </div>
-  ) : null;
-
   return (
-    <div className="relative flex min-h-dvh flex-col bg-[#121214]">
-      <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(255,96,170,0.1),_transparent_50%)]"
-        aria-hidden="true"
-      />
-
-      <header className="relative z-20 flex shrink-0 items-start justify-between gap-4 px-4 py-3 sm:px-6">
-        <Logo href="/" light className="origin-left scale-90" />
-        <div className="min-w-0 text-right">
-          <p className="truncate text-sm font-semibold text-white">{eventName}</p>
-          {headerMeta.map((line) => (
-            <p key={line} className="mt-0.5 truncate text-xs text-white/45">
-              {line}
-            </p>
-          ))}
-        </div>
-      </header>
-
-      {organiserNotice}
-
-      <main className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-3 pb-4 sm:px-6">
-        <div
-          className={`group relative w-full ${
-            page.kind === "design" ? "max-w-full" : "max-w-xl"
-          }`}
-        >
-          {page.kind === "rsvp" ? (
-            <div className="relative overflow-hidden rounded-[28px] bg-white shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
-              <InteractiveRsvpPanel
-                config={page.rsvpConfig}
-                interactive={!organiserPreview}
-                className="min-h-[28rem]"
-                initialAnswers={rsvpResponse?.answers ?? {}}
-                alreadySubmitted={Boolean(rsvpResponse)}
-                onSubmit={organiserPreview ? undefined : submitRsvp}
-              />
-              {pager}
-            </div>
-          ) : page.kind === "location" && page.location ? (
-            <div className="relative overflow-hidden rounded-[28px] bg-white shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
-              <LocationMapPanel
-                location={page.location}
-                interactive
-                className="min-h-[28rem]"
-              />
-              {pager}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-2">
-              {/*
-                Fit inside the viewport while keeping the invitation aspect.
-                Using w-full + max-height alone letterboxes (solid side bands
-                without page texture). Cap width from max height × aspect.
-              */}
-              <div
-                className="relative mx-auto overflow-hidden rounded-[22px] shadow-[0_24px_60px_rgba(0,0,0,0.4)]"
-                style={{
-                  aspectRatio: String(aspectRatio),
-                  width: `min(100%, calc(min(82dvh, 900px) * ${aspectRatio}))`,
-                  maxHeight: "min(82dvh, 900px)",
-                }}
-              >
-                <InvitationPagePreview
-                  page={page}
-                  shape={shape}
-                  customSize={customSize}
-                  personalizedName={personalizedName}
-                  interactive={!organiserPreview}
-                  answers={answers}
-                  onAnswerChange={
-                    organiserPreview
-                      ? undefined
-                      : (questionId, value) => {
-                          setAnswers((prev) => ({
-                            ...prev,
-                            [questionId]: value,
-                          }));
-                          setError(null);
-                        }
-                  }
-                  className="h-full w-full"
-                />
-                {pager}
-              </div>
-
-              {showSubmit ? (
-                <div className="flex flex-col items-center gap-1 pt-1">
-                  {error ? (
-                    <p className="text-xs text-[#ff8f8f]">{error}</p>
-                  ) : null}
-                  <button
-                    type="button"
-                    disabled={pending || Object.keys(answers).length === 0}
-                    onClick={submitCanvasAnswers}
-                    className="text-sm font-semibold text-white/90 underline decoration-white/35 underline-offset-4 transition-colors hover:text-white hover:decoration-white disabled:opacity-40"
-                  >
-                    {pending
-                      ? "Saving..."
-                      : submitted
-                        ? "Update RSVP"
-                        : "Submit RSVP"}
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
+    <InvitationStage
+      pages={pages}
+      pageIndex={safePageIndex}
+      onPageIndexChange={setPageIndex}
+      eventName={eventName}
+      headerMeta={headerMeta}
+      shape={shape}
+      customSize={customSize}
+      personalizedName={personalizedName}
+      interactive={!organiserPreview}
+      answers={answers}
+      onAnswerChange={(questionId, value) => {
+        setAnswers((prev) => ({ ...prev, [questionId]: value }));
+        setError(null);
+      }}
+      rsvpResponse={rsvpResponse}
+      onSubmitRsvp={submitRsvp}
+      notice={organiserNotice}
+      footer={
+        showSubmit ? (
+          <div className="flex flex-col items-center gap-1 pt-1">
+            {error ? <p className="text-xs text-[#ff8f8f]">{error}</p> : null}
+            <button
+              type="button"
+              disabled={pending || Object.keys(answers).length === 0}
+              onClick={submitCanvasAnswers}
+              className="text-sm font-semibold text-white/90 underline decoration-white/35 underline-offset-4 transition-colors hover:text-white hover:decoration-white disabled:opacity-40"
+            >
+              {pending ? "Saving..." : submitted ? "Update RSVP" : "Submit RSVP"}
+            </button>
+          </div>
+        ) : null
+      }
+    />
   );
 }

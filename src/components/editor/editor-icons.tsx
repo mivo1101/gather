@@ -35,24 +35,6 @@ export function RedoIcon({ className = "h-4 w-4" }: IconProps) {
   );
 }
 
-export function DesktopIcon({ className = "h-4 w-4" }: IconProps) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <rect x="3" y="4" width="18" height="12" rx="2" />
-      <path strokeLinecap="round" d="M8 20h8M12 16v4" />
-    </svg>
-  );
-}
-
-export function MobileIcon({ className = "h-4 w-4" }: IconProps) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <rect x="7" y="2" width="10" height="20" rx="2" />
-      <path strokeLinecap="round" d="M11 18h2" />
-    </svg>
-  );
-}
-
 export function CloseIcon({ className = "h-4 w-4" }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
@@ -294,6 +276,48 @@ export function InteractiveToolIcon({ className = "h-5 w-5" }: IconProps) {
       <rect x="4" y="4" width="16" height="16" rx="3" />
       <path strokeLinecap="round" d="M8 10h8M8 14h5" />
       <circle cx="16.5" cy="14" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+/** Checkerboard, the usual mark for transparency. */
+export function TransparencyIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <rect
+        x="3.5"
+        y="3.5"
+        width="17"
+        height="17"
+        rx="3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M3.5 7.75h4.25V3.5h4.25v4.25h4.25V12h4.25v4.25h-4.25v4.25H12v-4.25H7.75V12H3.5Z"
+        fill="currentColor"
+        opacity="0.55"
+      />
+    </svg>
+  );
+}
+
+/** Preview: see what a guest sees. */
+export function EyeIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="3.2" />
     </svg>
   );
 }

@@ -252,7 +252,7 @@ export function CanvasWidgetView({
                 onStopEdit={onStopEdit}
                 autoFocus
                 placeholder="Venue name, city"
-                className="rounded-lg bg-white/95 px-2 py-1.5 text-[11px] font-medium text-black shadow"
+                className="rounded-lg bg-white/95 px-2 py-1.5 text-xs font-medium text-black shadow"
               />
             </div>
           ) : null}
@@ -264,7 +264,7 @@ export function CanvasWidgetView({
               onChange={(buttonLabel) => patch({ buttonLabel })}
               onStopEdit={onStopEdit}
               placeholder="Open in Google Maps"
-              className="shrink-0 px-3 py-2 text-center text-[11px] font-semibold placeholder:opacity-55"
+              className="shrink-0 px-3 py-2 text-center text-xs font-semibold placeholder:opacity-55"
               style={buttonStyle}
             />
           ) : interactive ? (
@@ -272,14 +272,14 @@ export function CanvasWidgetView({
               href={openUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 px-3 py-2 text-center text-[11px] font-semibold"
+              className="shrink-0 px-3 py-2 text-center text-xs font-semibold"
               style={buttonStyle}
             >
               {buttonLabel}
             </a>
           ) : (
             <span
-              className="shrink-0 px-3 py-2 text-center text-[11px] font-semibold"
+              className="shrink-0 px-3 py-2 text-center text-xs font-semibold"
               style={buttonStyle}
             >
               {buttonLabel}
@@ -292,7 +292,7 @@ export function CanvasWidgetView({
 
   if (widget.kind === "attend") {
     const buttonStyle = chromeBoxStyle(widget.buttonStyle, chromeSurface);
-    const btnClass = "block w-full px-3 py-2 text-center text-[11px] font-semibold";
+    const btnClass = "block w-full px-3 py-2 text-center text-xs font-semibold";
     return (
       <div
         className={`flex h-full w-full flex-col justify-center gap-2 ${className}`}
@@ -304,12 +304,12 @@ export function CanvasWidgetView({
             onStopEdit={onStopEdit}
             autoFocus
             placeholder="Add question…"
-            className="text-center text-[12px] font-semibold"
+            className="text-center text-xs font-semibold"
             style={{ color: widget.labelStyle.color }}
           />
         ) : widget.label ? (
           <p
-            className="text-center text-[12px] font-semibold"
+            className="text-center text-xs font-semibold"
             style={{ color: widget.labelStyle.color }}
           >
             {widget.label}
@@ -387,12 +387,12 @@ export function CanvasWidgetView({
             onStopEdit={onStopEdit}
             autoFocus
             placeholder="Add question…"
-            className="text-[12px] font-semibold"
+            className="text-xs font-semibold"
             style={{ color: widget.labelStyle.color }}
           />
         ) : widget.label ? (
           <p
-            className="text-[12px] font-semibold"
+            className="text-xs font-semibold"
             style={{ color: widget.labelStyle.color }}
           >
             {widget.label}
@@ -404,7 +404,7 @@ export function CanvasWidgetView({
             onChange={(placeholder) => patch({ placeholder })}
             onStopEdit={onStopEdit}
             placeholder="Placeholder…"
-            className="w-full px-3 py-2 text-[11px] placeholder:opacity-55"
+            className="w-full px-3 py-2 text-xs placeholder:opacity-55"
             style={fieldStyle}
           />
         ) : interactive ? (
@@ -413,14 +413,14 @@ export function CanvasWidgetView({
             value={typeof answer === "string" ? answer : ""}
             onChange={(e) => onAnswerChange?.(qid, e.target.value)}
             placeholder={widget.placeholder || "Type here…"}
-            className="w-full px-3 py-2 text-[11px] outline-none [&::placeholder]:text-[var(--widget-placeholder)]"
+            className="w-full px-3 py-2 text-xs outline-none [&::placeholder]:text-[var(--widget-placeholder)]"
             style={{
               ...fieldStyle,
               ["--widget-placeholder" as string]: placeholderColor,
             }}
           />
         ) : (
-          <div className="w-full px-3 py-2 text-[11px]" style={fieldStyle}>
+          <div className="w-full px-3 py-2 text-xs" style={fieldStyle}>
             <span style={{ color: placeholderColor }}>
               {widget.placeholder || "Type here…"}
             </span>
@@ -451,12 +451,12 @@ export function CanvasWidgetView({
           onStopEdit={onStopEdit}
           autoFocus
           placeholder="Add question…"
-          className="text-[12px] font-semibold"
+          className="text-xs font-semibold"
           style={{ color: widget.labelStyle.color }}
         />
       ) : widget.label ? (
         <p
-          className="text-[12px] font-semibold"
+          className="text-xs font-semibold"
           style={{ color: widget.labelStyle.color }}
         >
           {widget.label}
@@ -477,7 +477,7 @@ export function CanvasWidgetView({
             return (
               <div
                 key={option.id}
-                className="flex items-center gap-2 px-2.5 py-1.5 text-[11px]"
+                className="flex items-center gap-2 px-2.5 py-1.5 text-xs"
                 style={optionStyle}
               >
                 <span
@@ -498,7 +498,7 @@ export function CanvasWidgetView({
                   }}
                   onStopEdit={onStopEdit}
                   placeholder="Option"
-                  className="flex-1 text-[11px] placeholder:opacity-55"
+                  className="flex-1 text-xs placeholder:opacity-55"
                   style={{ color: "inherit" }}
                 />
               </div>
@@ -509,7 +509,7 @@ export function CanvasWidgetView({
             return (
               <label
                 key={option.id}
-                className="flex items-center gap-2 px-2.5 py-1.5 text-[11px] transition-opacity"
+                className="flex items-center gap-2 px-2.5 py-1.5 text-xs transition-opacity"
                 style={{
                   ...optionStyle,
                   ...(hasChoiceAnswer && !selected
@@ -548,7 +548,7 @@ export function CanvasWidgetView({
           return (
             <div
               key={option.id}
-              className="flex items-center gap-2 px-2.5 py-1.5 text-[11px]"
+              className="flex items-center gap-2 px-2.5 py-1.5 text-xs"
               style={optionStyle}
             >
               <span

@@ -10,6 +10,9 @@ import {
 } from "@/lib/color-utils";
 import { ColouredIconGraphic } from "./ColouredIconGraphic";
 import { EmojiGraphic, isEmojiShapeKind } from "./EmojiGraphic";
+import { SocialLogoGraphic, isSocialLogoKind } from "./SocialLogoGraphic";
+import { ArtworkGraphic } from "./ArtworkGraphic";
+import { isArtworkKind } from "./artwork-catalog";
 
 /** Circular corner radius from the shorter side (stays round when stretched). */
 function RoundedSquareShape({
@@ -395,6 +398,14 @@ export function ShapeGraphic({
     return (
       <ColouredIconGraphic kind={kind} color={color} className={className} />
     );
+  }
+
+  if (isArtworkKind(kind)) {
+    return <ArtworkGraphic kind={kind} color={color} className={className} />;
+  }
+
+  if (isSocialLogoKind(kind)) {
+    return <SocialLogoGraphic kind={kind} color={color} className={className} />;
   }
 
   if (kind.startsWith("icon_")) {

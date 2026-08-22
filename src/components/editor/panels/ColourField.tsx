@@ -138,11 +138,15 @@ function SolidPane({
     }
     lastInternalValue.current = null;
     const parsed = hexToHsv(next);
+    // Only write state that actually differs. hex -> hsv -> hex is lossy, so
+    // an unguarded write here can bounce against the value coming back from
+    // the parent and run the update depth out.
+    const near = (a: number, b: number) => Math.abs(a - b) < 0.0005;
     // Hue is undefined for greys. Keep the user's last hue so moving back
     // into the saturation field does not jump to red.
-    if (parsed.s > 0.001) setHue(parsed.h);
-    setSat(parsed.s);
-    setVal(parsed.v);
+    if (parsed.s > 0.001) setHue((current) => (near(current, parsed.h) ? current : parsed.h));
+    setSat((current) => (near(current, parsed.s) ? current : parsed.s));
+    setVal((current) => (near(current, parsed.v) ? current : parsed.v));
     setHexInput(next);
   }, [value]);
 
@@ -156,15 +160,53 @@ function SolidPane({
     [onChange],
   );
 
+  /**
+   * A drag fires pointermove far faster than the canvas can re-render, and
+   * every commit round-trips through the document. Coalesce to one commit per
+   * frame: the handle still follows the pointer immediately.
+   */
+  const pendingCommit = useRef<{ h: number; s: number; v: number } | null>(null);
+  const commitFrame = useRef<number | null>(null);
+
+  const flushCommit = useCallback(() => {
+    if (commitFrame.current !== null) {
+      cancelAnimationFrame(commitFrame.current);
+      commitFrame.current = null;
+    }
+    const pending = pendingCommit.current;
+    pendingCommit.current = null;
+    if (pending) commitHsv(pending.h, pending.s, pending.v);
+  }, [commitHsv]);
+
+  const scheduleCommit = (h: number, s: number, v: number) => {
+    pendingCommit.current = { h, s, v };
+    if (commitFrame.current !== null) return;
+    commitFrame.current = requestAnimationFrame(() => {
+      commitFrame.current = null;
+      const pending = pendingCommit.current;
+      pendingCommit.current = null;
+      if (pending) commitHsv(pending.h, pending.s, pending.v);
+    });
+  };
+
+  useEffect(
+    () => () => {
+      if (commitFrame.current !== null) cancelAnimationFrame(commitFrame.current);
+    },
+    [],
+  );
+
   const setFromPointer = (clientX: number, clientY: number) => {
     const el = fieldRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
     const s = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
     const v = 1 - Math.min(1, Math.max(0, (clientY - rect.top) / rect.height));
+    if (Math.abs(s - sat) < 0.0005 && Math.abs(v - val) < 0.0005) return;
     setSat(s);
     setVal(v);
-    commitHsv(hue, s, v);
+    scheduleCommit(hue, s, v);
   };
 
   const hueColor = hsvToHex(hue, 1, 1);
@@ -191,6 +233,11 @@ function SolidPane({
         }}
         onPointerUp={() => {
           dragging.current = false;
+          flushCommit();
+        }}
+        onPointerCancel={() => {
+          dragging.current = false;
+          flushCommit();
         }}
       >
         <span
@@ -402,7 +449,7 @@ export function ColourField({
 
   return (
     <div ref={rootRef} className="relative">
-      <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
+      <span className="mb-1.5 block text-xs font-medium tracking-wide text-grey">
         {label}
       </span>
 

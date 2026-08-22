@@ -58,7 +58,7 @@ export function ToolInteractivePanel({ onAddWidget }: ToolInteractivePanelProps)
             }`}
           >
             <span className="text-sm font-semibold text-black">{item.label}</span>
-            <span className="mt-0.5 text-[11px] text-grey">{item.hint}</span>
+            <span className="mt-0.5 text-xs text-grey">{item.hint}</span>
           </button>
         ))}
       </div>

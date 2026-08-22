@@ -18,7 +18,23 @@ export type ImageFrame =
   | "octagon"
   | "star"
   | "badge"
-  | "scallop";
+  | "scallop"
+  // Decorative frames - an ornamental border drawn around the photo
+  | "lace-oval"
+  | "baroque-oval"
+  | "pearl-oval"
+  | "lace-arch"
+  | "deco-arch"
+  | "scallop-circle"
+  | "laurel-circle"
+  | "rope-circle"
+  | "filigree-rect"
+  | "botanical-rect"
+  | "ribbon-rect"
+  | "stamp-rect"
+  | "polaroid"
+  | "deco-diamond"
+  | "lace-heart";
 
 export type EffectKind = "none" | "drop" | "glow" | "echo";
 
@@ -57,6 +73,8 @@ export interface ElementStyle {
   strike: boolean;
   verticalAlign?: VerticalAlign;
   frame?: ImageFrame;
+  /** Ink of a decorative frame's ornament - falls back to the frame default. */
+  frameColor?: string;
   effects?: ElementEffects;
   /** Photo zoom inside the frame (1 = cover). */
   imageScale?: number;
@@ -226,6 +244,27 @@ export type ShapeKind =
   | "icon_colour_cake"
   | "icon_colour_rings"
   | "icon_colour_envelope"
+  // Illustrated artwork - envelopes, seals, papers, objects, numerals
+  | `art_${string}`
+  // Social channels
+  | "icon_social_facebook"
+  | "icon_social_instagram"
+  | "icon_social_x"
+  | "icon_social_tiktok"
+  | "icon_social_youtube"
+  | "icon_social_whatsapp"
+  | "icon_social_telegram"
+  | "icon_social_messenger"
+  | "icon_social_linkedin"
+  | "icon_social_pinterest"
+  | "icon_social_snapchat"
+  | "icon_social_threads"
+  | "icon_social_zalo"
+  | "icon_social_line"
+  | "icon_social_spotify"
+  | "icon_social_globe"
+  | "icon_social_mail"
+  | "icon_social_phone"
   | "emoji_wave"
   | "emoji_heart"
   | "emoji_party"
@@ -263,6 +302,8 @@ export interface CanvasElement {
   /** Optional height as % of canvas (images / shapes) */
   height?: number;
   rotation: number;
+  /** How solid the piece is, 0-100. Absent means fully opaque. */
+  opacity?: number;
   locked: boolean;
   /**
    * Text content, image src, shape kind, divider style, or widget kind.
@@ -273,6 +314,15 @@ export interface CanvasElement {
   widget?: WidgetConfig | null;
   /** Optional hyperlink for text (and other) elements - Canva-style Link */
   href?: string | null;
+}
+
+/** Element opacity as a CSS value; absent or out of range reads as solid. */
+export function elementOpacity(element: CanvasElement): number | undefined {
+  const value = element.opacity;
+  if (typeof value !== "number" || !Number.isFinite(value) || value >= 100) {
+    return undefined;
+  }
+  return Math.max(0, value) / 100;
 }
 
 /** Converts legacy radius keywords ("sm", "lg"…) and clamps numbers to px. */

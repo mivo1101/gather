@@ -58,6 +58,7 @@ import {
 } from "./CompletedEventNotice";
 import { EditorCanvas } from "./EditorCanvas";
 import { EditorLeftPanel } from "./EditorLeftPanel";
+import { ElementActionBar } from "./ElementActionBar";
 import { EditorPageStrip } from "./EditorPageStrip";
 import { EditorPreviewModal } from "./EditorPreviewModal";
 import { EditorPropertiesPanel } from "./EditorPropertiesPanel";
@@ -68,13 +69,13 @@ import { ChevronRightIcon } from "./editor-icons";
 import type {
   EditorToolId,
   InvitationShape,
-  PreviewDevice,
   CustomCanvasSize,
 } from "./editor-types";
 import { CANVAS_SELECTION_ID, DEFAULT_CUSTOM_SIZE } from "./editor-types";
 import { useHistory } from "./useHistory";
 import { saveElementRecent } from "./ElementsBrowser";
-import { EMPTY_IMAGE_FRAME_SRC } from "./image-frames";
+import { EMPTY_IMAGE_FRAME_SRC, frameElementSize } from "./image-frames";
+import { artworkElementSize } from "./artwork-catalog";
 import { designCanvasSize } from "./canvas-metrics";
 import {
   clientPointToCanvasPercent,
@@ -270,7 +271,6 @@ export function InvitationEditor({
   const [status, setStatus] = useState(invitation.status);
   const [savedAt, setSavedAt] = useState(invitation.updatedAt);
   const [activeTool, setActiveTool] = useState<EditorToolId>("layout");
-  const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop");
   const [showGrid, setShowGrid] = useState(false);
   const [pagesCollapsed, setPagesCollapsed] = useState(false);
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
@@ -1395,9 +1395,12 @@ export function InvitationEditor({
       cardAspectRatio(shape, customSize),
     );
     const colour =
-      item.shapeKind?.startsWith("icon_colour_")
-        ? "#FF60AA"
-        : defaultElementColor;
+      item.kind === "frame"
+        ? "#000000"
+        : (item.defaultColor ??
+          (item.shapeKind?.startsWith("icon_colour_")
+            ? "#FF60AA"
+            : defaultElementColor));
     const placeElement = (el: CanvasElement) => {
       const centred = position
         ? {
@@ -1416,6 +1419,25 @@ export function InvitationEditor({
         style: { ...el.style, color: colour },
       });
     };
+
+    if (item.kind === "artwork" && item.shapeKind && !item.preview) {
+      placeElement({
+        ...baseElement,
+        ...artworkElementSize(
+          item.shapeKind,
+          cardAspectRatio(shape, customSize),
+        ),
+      });
+      return;
+    }
+
+    if (item.kind === "frame") {
+      placeElement({
+        ...baseElement,
+        ...frameElementSize(item.frame, cardAspectRatio(shape, customSize)),
+      });
+      return;
+    }
 
     if (baseElement.type === "image" && isLibraryGraphicSrc(item.preview)) {
       const probe = new window.Image();
@@ -1542,12 +1564,12 @@ export function InvitationEditor({
         }
         status={status}
         savedAt={savedAt}
-        previewDevice={previewDevice}
         previewOpen={previewOpen}
-        onOpenDevicePreview={(device) => {
-          setPreviewDevice(device);
+        onOpenPreview={() => {
           setPreviewOpen(true);
         }}
+        zoom={zoom}
+        onZoomChange={setZoom}
         canUndo={history.canUndo}
         canRedo={history.canRedo}
         onUndo={handleUndo}
@@ -1631,6 +1653,38 @@ export function InvitationEditor({
         )}
 
         <div className="relative flex min-w-0 flex-1 flex-col">
+          <ElementActionBar
+            element={
+              canvasSelected || !selectedId
+                ? null
+                : (elements.find((item) => item.id === selectedId) ?? null)
+            }
+            selectionCount={canvasSelected ? 0 : Math.max(selectedIds.length, selectedId ? 1 : 0)}
+            showGrid={showGrid}
+            onToggleGrid={() => setShowGrid((v) => !v)}
+            onEdit={(id) => {
+              snapshotBeforeChange();
+              setEditingId(id);
+            }}
+            onSetLink={(id, href) => {
+              snapshotBeforeChange();
+              updateElement(id, { href }, false);
+            }}
+            onDuplicate={duplicateElement}
+            onDelete={(id) =>
+              selectedIds.length > 1 ? deleteElements(selectedIds) : deleteElement(id)
+            }
+            onToggleLock={(id) => {
+              const el = elements.find((item) => item.id === id);
+              if (!el) return;
+              snapshotBeforeChange();
+              updateElement(id, { locked: !el.locked }, false);
+            }}
+            onChangeOpacity={(id, opacity) => {
+              snapshotBeforeChange();
+              updateElement(id, { opacity }, false);
+            }}
+          />
           <EditorCanvas
             shape={shape}
             customSize={customSize}
@@ -1654,7 +1708,6 @@ export function InvitationEditor({
             }
             border={activePage.border ?? null}
             canvasSelected={canvasSelected}
-            onToggleGrid={() => setShowGrid((v) => !v)}
             onSelect={setSelectedId}
             onToggleSelect={(id) => {
               setSelectedIds((current) => {
@@ -1700,30 +1753,12 @@ export function InvitationEditor({
             onDuplicate={duplicateElement}
             onDelete={deleteElement}
             onDeleteMany={deleteElements}
-            onToggleLock={(id) => {
-              const el = elements.find((item) => item.id === id);
-              if (!el) return;
-              snapshotBeforeChange();
-              updateElement(id, { locked: !el.locked }, false);
-            }}
-            onRotate={(id) => {
-              const el = elements.find((item) => item.id === id);
-              if (!el) return;
-              snapshotBeforeChange();
-              updateElement(id, { rotation: (el.rotation + 15) % 360 }, false);
-            }}
             onBeforeChange={snapshotBeforeChange}
             onInsertDrop={onInsertDrop}
           />
           <EditorPageStrip
             collapsed={pagesCollapsed}
             onToggleCollapse={() => setPagesCollapsed((v) => !v)}
-            zoom={zoom}
-            onZoomChange={setZoom}
-            onFullscreenPreview={() => {
-              setPreviewDevice("fullscreen");
-              setPreviewOpen(true);
-            }}
             pages={pages}
             activePageId={activePageId}
             shape={shape}
@@ -1793,8 +1828,6 @@ export function InvitationEditor({
 
       <EditorPreviewModal
         open={previewOpen}
-        device={previewDevice}
-        onDeviceChange={setPreviewDevice}
         pages={pages}
         activePageId={activePageId}
         title={title}

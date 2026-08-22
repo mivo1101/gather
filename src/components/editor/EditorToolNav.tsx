@@ -44,7 +44,7 @@ export function EditorToolNav({
 }: EditorToolNavProps) {
   return (
     <nav
-      className="flex w-[72px] shrink-0 flex-col overflow-hidden rounded-2xl border border-black/[0.04] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)]"
+      className="flex w-[88px] shrink-0 flex-col overflow-hidden rounded-2xl border border-black/[0.04] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)]"
       aria-label="Editor tools"
     >
       <ul className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-1.5 py-3">
@@ -64,7 +64,7 @@ export function EditorToolNav({
                 aria-current={active ? "page" : undefined}
               >
                 <Icon className="h-5 w-5" />
-                <span className="text-[9px] font-semibold leading-tight">
+                <span className="text-xs font-semibold leading-tight">
                   {tool.label}
                 </span>
               </button>
@@ -81,7 +81,7 @@ export function EditorToolNav({
           aria-label="Help"
         >
           <HelpIcon />
-          <span className="text-[9px] font-semibold">Help</span>
+          <span className="text-xs font-semibold">Help</span>
         </button>
       </div>
     </nav>
