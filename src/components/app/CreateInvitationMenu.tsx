@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { PlusIcon } from "@/components/ui/Button";
 import { createInvitationWithShapeAction } from "@/lib/actions/invitations";
 import { shapeShortcuts } from "./CreateShortcuts";
@@ -12,12 +12,13 @@ import { TemplatesIcon } from "./icons";
  * Creating is the one action available from every page, so the layout choice
  * lives here rather than taking a panel on Home.
  */
+const MENU_ID = "create-invitation-menu";
+
 export function CreateInvitationMenu() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const menuRef = useRef<HTMLDivElement>(null);
-  const menuId = useId();
 
   useEffect(() => {
     if (!open) return;
@@ -44,7 +45,7 @@ export function CreateInvitationMenu() {
         disabled={isPending}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-controls={menuId}
+        aria-controls={MENU_ID}
         onClick={() => setOpen((value) => !value)}
         className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
       >
@@ -54,7 +55,7 @@ export function CreateInvitationMenu() {
 
       {open && (
         <div
-          id={menuId}
+          id={MENU_ID}
           role="menu"
           className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-black/5 bg-white p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.14)]"
         >
