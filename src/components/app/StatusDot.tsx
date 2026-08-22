@@ -1,9 +1,13 @@
+/**
+ * Grey means nothing is happening yet, green means it is live, blue means it
+ * is behind you. Muted is the same grey story as neutral but faded, so a
+ * trashed item never reads as an ordinary draft.
+ */
 const toneStyles = {
-  amber: { dot: "bg-[#d98a45]", text: "text-[#9a5a2a]" },
-  green: { dot: "bg-[#3f9c74]", text: "text-[#2f7a5b]" },
-  gold: { dot: "bg-[#c39a24]", text: "text-[#85620e]" },
-  neutral: { dot: "bg-[#a3a4aa]", text: "text-[#66676d]" },
-  muted: { dot: "bg-grey", text: "text-grey" },
+  neutral: { dot: "bg-[#a9aab1]", text: "text-[#6a6b72]" },
+  green: { dot: "bg-[#22c17b]", text: "text-[#0f8a55]" },
+  blue: { dot: "bg-[#3d9bf5]", text: "text-[#1f6fd0]" },
+  muted: { dot: "bg-black/15", text: "text-grey" },
 } as const;
 
 export type StatusTone = keyof typeof toneStyles;

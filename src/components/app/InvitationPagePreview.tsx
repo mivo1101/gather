@@ -6,7 +6,8 @@ import type {
   InvitationPage,
 } from "@/lib/data/invitation-content";
 import type { RsvpAnswerValue } from "@/lib/data/rsvp-responses";
-import { CanvasImageContent, cardAspectRatio } from "@/components/editor/CanvasImageContent";
+import { CanvasImageContent } from "@/components/editor/CanvasImageContent";
+import { cardAspectRatio } from "@/components/editor/canvas-metrics";
 import { CanvasWidgetView } from "@/components/editor/CanvasWidgetView";
 import type { InvitationShape } from "@/components/editor/editor-types";
 import { ShapeGraphic } from "@/components/editor/ShapeGraphic";

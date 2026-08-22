@@ -9,6 +9,8 @@ import {
   normalizeContent,
   type InvitationContent,
 } from "./invitation-content";
+import { currentEventStatus } from "./event-workspace-utils";
+import type { EventStatus } from "./event-workspace-utils";
 import type {
   Invitation,
   InvitationQuery,
@@ -197,19 +199,22 @@ export async function getInvitationsForUser(
 interface LinkedEventDetails {
   eventDate: string | null;
   location: string | null;
+  status: EventStatus;
 }
 
 interface LinkedEventRow {
   invitation_id: string | null;
+  status: EventStatus;
   event_date: string | null;
+  timezone: string;
   venue: string | null;
   address: string | null;
 }
 
 /**
- * Date and venue are usually filled in on the event, not the design, so a linked
- * invitation row keeps a null event_date/location. Look up what the events carry
- * so lists can fill those blanks instead of reading "not set".
+ * Date, venue and lifecycle all live on the event, not the design, so a linked
+ * invitation row keeps a null event_date/location and a draft status forever.
+ * Look up what the events carry so cards can report the same state as the hub.
  */
 async function linkedEventDetailsForUser(
   userId: string,
@@ -218,7 +223,7 @@ async function linkedEventDetailsForUser(
 
   const { data, error } = await supabase
     .from("events")
-    .select("invitation_id, event_date, venue, address")
+    .select("invitation_id, status, event_date, timezone, venue, address")
     .eq("user_id", userId)
     .not("invitation_id", "is", null);
 
@@ -236,6 +241,9 @@ async function linkedEventDetailsForUser(
     byInvitation.set(row.invitation_id, {
       eventDate: row.event_date,
       location: location || null,
+      // Events complete themselves once the date passes, so derive rather
+      // than trusting the stored column.
+      status: currentEventStatus(row.status, row.event_date, row.timezone),
     });
   }
 
@@ -243,8 +251,10 @@ async function linkedEventDetailsForUser(
 }
 
 /**
- * Invitations for card lists, with any missing date/location borrowed from the
- * event they are linked to. Values saved on the design always win.
+ * Invitations for card lists, resolved against the event each one is linked to:
+ * missing date/location are borrowed from it, and its lifecycle comes along so
+ * cards can show the same status as the event hub. Values saved on the design
+ * always win over borrowed ones.
  */
 export async function getInvitationsWithEventDetailsForUser(
   userId: string,
@@ -257,11 +267,12 @@ export async function getInvitationsWithEventDetailsForUser(
 
   const merged = invitations.map((invitation) => {
     const details = linked.get(invitation.id);
-    if (!details) return invitation;
+    if (!details) return { ...invitation, linkedEventStatus: null };
     return {
       ...invitation,
       eventDate: invitation.eventDate ?? details.eventDate,
       location: invitation.location ?? details.location,
+      linkedEventStatus: details.status,
     };
   });
 

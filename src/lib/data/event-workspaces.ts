@@ -23,6 +23,7 @@ export {
   eventPath,
 } from "./event-workspace-utils";
 import {
+  currentEventStatus,
   designLocationFromInvitation,
   type EventSetupProgress,
   type EventStatus,
@@ -52,34 +53,6 @@ interface EventListRow extends EventRow {
 
 const EVENT_COLUMNS =
   "id, user_id, name, slug, status, event_date, timezone, venue, address, invitation_id, created_at, updated_at";
-
-/** Keep events active for their full local calendar day, then complete them. */
-function currentEventStatus(
-  status: EventStatus,
-  eventDate: string | null,
-  timezone: string,
-  now = Date.now(),
-): EventStatus {
-  if (status !== "active" || !eventDate) return status;
-  const scheduledAt = Date.parse(eventDate);
-  if (!Number.isFinite(scheduledAt)) return status;
-  try {
-    const dayKey = (value: number) => {
-      const parts = new Intl.DateTimeFormat("en-CA", {
-        timeZone: timezone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      }).formatToParts(value);
-      const part = (type: "year" | "month" | "day") =>
-        parts.find((item) => item.type === type)?.value ?? "";
-      return `${part("year")}-${part("month")}-${part("day")}`;
-    };
-    return dayKey(now) > dayKey(scheduledAt) ? "completed" : status;
-  } catch {
-    return scheduledAt < now ? "completed" : status;
-  }
-}
 
 function hasDesignedPage(invitation: Invitation | null): boolean {
   return Boolean(

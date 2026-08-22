@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { cardAspectRatio } from "@/components/editor/CanvasImageContent";
+import { cardAspectRatio } from "@/components/editor/canvas-metrics";
 import {
   permanentlyDeleteEventAction,
   setEventArchivedAction,
@@ -42,7 +42,7 @@ const statusLabels: Record<EventStatus, string> = {
 const statusTones: Record<EventStatus, StatusTone> = {
   draft: "neutral",
   active: "green",
-  completed: "gold",
+  completed: "blue",
   archived: "muted",
 };
 

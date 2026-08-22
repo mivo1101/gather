@@ -6,7 +6,8 @@ import {
 } from "@/lib/data/invitation-content";
 import { canvasFontFamilyClass } from "@/lib/canvas-fonts";
 import { paperTextureLayerStyle } from "@/lib/paper-textures";
-import { CanvasImageContent, cardAspectRatio } from "./CanvasImageContent";
+import { CanvasImageContent } from "./CanvasImageContent";
+import { cardAspectRatio } from "./canvas-metrics";
 import { CanvasWidgetView } from "./CanvasWidgetView";
 import { ChevronLeftIcon, FitIcon, PlusIcon, TrashIcon } from "./editor-icons";
 import type { CustomCanvasSize, InvitationShape } from "./editor-types";

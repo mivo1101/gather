@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useId } from "react";
-import { Button } from "@/components/ui/Button";
+import { Button, PlusIcon } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 
 export interface CompletedEventInfo {
@@ -48,6 +48,7 @@ export function CompletedEventNotice({ event }: { event: CompletedEventInfo }) {
           Back to Home
         </button>
         <Button size="sm" onClick={() => router.push(event.reopenHref)}>
+          <PlusIcon />
           Reopen Event
         </Button>
       </div>

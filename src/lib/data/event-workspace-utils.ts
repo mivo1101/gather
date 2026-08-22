@@ -10,6 +10,34 @@ import type { Invitation } from "./types";
 export type EventStatus = "draft" | "active" | "completed" | "archived";
 export type EventSetupStep = "design" | "details" | "guests" | "send";
 
+/** Keep events active for their full local calendar day, then complete them. */
+export function currentEventStatus(
+  status: EventStatus,
+  eventDate: string | null,
+  timezone: string,
+  now = Date.now(),
+): EventStatus {
+  if (status !== "active" || !eventDate) return status;
+  const scheduledAt = Date.parse(eventDate);
+  if (!Number.isFinite(scheduledAt)) return status;
+  try {
+    const dayKey = (value: number) => {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(value);
+      const part = (type: "year" | "month" | "day") =>
+        parts.find((item) => item.type === type)?.value ?? "";
+      return `${part("year")}-${part("month")}-${part("day")}`;
+    };
+    return dayKey(now) > dayKey(scheduledAt) ? "completed" : status;
+  } catch {
+    return scheduledAt < now ? "completed" : status;
+  }
+}
+
 export interface EventSetupProgress {
   design: boolean;
   details: boolean;
