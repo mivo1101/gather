@@ -21,6 +21,7 @@ import { canvasFontFamilyClass } from "@/lib/canvas-fonts";
 import { effectsToCss } from "@/lib/element-effects";
 import { paperTextureLayerStyle } from "@/lib/paper-textures";
 import { designCanvasSize } from "@/components/editor/canvas-metrics";
+import { elementOpacity } from "@/lib/data/canvas-elements";
 
 function patternOverlay(
   pattern: InvitationPage["backgroundPattern"],
@@ -230,6 +231,7 @@ export function InvitationPagePreview({
                 width: `${el.width}%`,
                 height: el.height ? `${el.height}%` : undefined,
                 transform: `rotate(${el.rotation}deg)`,
+                opacity: elementOpacity(el),
                 ...(el.type === "image"
                   ? undefined
                   : effectsToCss(el.style.effects, el.style.color)),
@@ -277,6 +279,7 @@ export function InvitationPagePreview({
                   src={el.content}
                   color={el.style.color}
                   frame={el.style.frame}
+                  frameColor={el.style.frameColor}
                   effects={el.style.effects}
                   imageScale={el.style.imageScale}
                   imageOffsetX={el.style.imageOffsetX}

@@ -9,10 +9,11 @@ import { paperTextureLayerStyle } from "@/lib/paper-textures";
 import { CanvasImageContent } from "./CanvasImageContent";
 import { cardAspectRatio } from "./canvas-metrics";
 import { CanvasWidgetView } from "./CanvasWidgetView";
-import { ChevronLeftIcon, FitIcon, PlusIcon, TrashIcon } from "./editor-icons";
+import { ChevronLeftIcon, PlusIcon, TrashIcon } from "./editor-icons";
 import type { CustomCanvasSize, InvitationShape } from "./editor-types";
 import { ShapeGraphic } from "./ShapeGraphic";
 import { designCanvasSize } from "./canvas-metrics";
+import { elementOpacity } from "@/lib/data/canvas-elements";
 
 const THUMB_MAX_EDGE = 78;
 
@@ -94,6 +95,7 @@ function PageThumbnail({
               width: `${el.width}%`,
               height: el.height ? `${el.height}%` : undefined,
               transform: `rotate(${el.rotation}deg)`,
+              opacity: elementOpacity(el),
             }}
           >
             {el.type === "text" && (
@@ -124,6 +126,7 @@ function PageThumbnail({
                 src={el.content}
                 color={el.style.color}
                 frame={el.style.frame}
+                frameColor={el.style.frameColor}
                 effects={el.style.effects}
                 imageScale={el.style.imageScale}
                 imageOffsetX={el.style.imageOffsetX}
@@ -164,9 +167,6 @@ function PageThumbnail({
 interface EditorPageStripProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
-  zoom: number;
-  onZoomChange: (zoom: number) => void;
-  onFullscreenPreview: () => void;
   pages: InvitationPage[];
   activePageId: string;
   shape: InvitationShape;
@@ -179,9 +179,6 @@ interface EditorPageStripProps {
 export function EditorPageStrip({
   collapsed,
   onToggleCollapse,
-  zoom,
-  onZoomChange,
-  onFullscreenPreview,
   pages,
   activePageId,
   shape,
@@ -194,11 +191,11 @@ export function EditorPageStrip({
 
   if (collapsed) {
     return (
-      <div className="absolute inset-x-0 bottom-0 z-20 flex justify-center border-t border-black/5 bg-white/95 px-4 py-2 backdrop-blur">
+      <div className="absolute inset-x-0 bottom-3 z-20 flex justify-center px-4">
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-semibold text-black hover:bg-soft-grey"
+          className="rounded-xl px-3 py-2 text-xs font-semibold text-grey hover:bg-black/5 hover:text-black"
         >
           Show pages ({pages.length})
         </button>
@@ -207,8 +204,8 @@ export function EditorPageStrip({
   }
 
   return (
-    <div className="absolute inset-x-0 bottom-0 z-20 border-t border-black/5 bg-white/95 px-3 py-2.5 backdrop-blur">
-      <div className="flex items-center gap-3">
+    <div className="absolute inset-x-0 bottom-3 z-20 flex justify-center px-3">
+      <div className="flex max-w-full items-center gap-3">
         <button
           type="button"
           onClick={onToggleCollapse}
@@ -218,7 +215,7 @@ export function EditorPageStrip({
           <ChevronLeftIcon />
         </button>
 
-        <div className="flex flex-1 items-center gap-2 overflow-x-auto">
+        <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {pages.map((page) => {
             const active = page.id === activePageId;
             const roleLabel = invitationPageRoleLabel(page.role);
@@ -242,7 +239,7 @@ export function EditorPageStrip({
                   <PageThumbnail page={page} metrics={metrics} />
                 </button>
                 <span
-                  className={`max-w-[78px] truncate text-[10px] font-semibold leading-none ${
+                  className={`max-w-[78px] truncate text-xs font-semibold leading-none ${
                     active ? "text-signature" : "text-grey"
                   }`}
                 >
@@ -272,42 +269,12 @@ export function EditorPageStrip({
             >
               <PlusIcon />
             </button>
-            <span className="text-[10px] font-semibold leading-none text-grey">
+            <span className="text-xs font-semibold leading-none text-grey">
               Add page
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onZoomChange(Math.max(40, zoom - 10))}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-grey hover:bg-soft-grey hover:text-black"
-            aria-label="Zoom out"
-          >
-            −
-          </button>
-          <span className="min-w-[2.5rem] text-center text-xs font-semibold text-black">
-            {zoom}%
-          </span>
-          <button
-            type="button"
-            onClick={() => onZoomChange(Math.min(200, zoom + 10))}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-grey hover:bg-soft-grey hover:text-black"
-            aria-label="Zoom in"
-          >
-            +
-          </button>
-          <button
-            type="button"
-            onClick={onFullscreenPreview}
-            className="ml-1 flex h-8 w-8 items-center justify-center rounded-lg text-grey hover:bg-soft-grey hover:text-black"
-            aria-label="Full-screen preview"
-            title="Full-screen preview"
-          >
-            <FitIcon />
-          </button>
-        </div>
       </div>
     </div>
   );

@@ -30,6 +30,10 @@ import {
   AlignRightIcon,
 } from "../editor-icons";
 import { ImageFramePicker } from "../ImageFramePicker";
+import {
+  frameOrnamentColor,
+  isDecorativeFrame,
+} from "../image-frames";
 import { Select } from "@/components/ui/Select";
 import {
   ColourField,
@@ -66,7 +70,7 @@ export function SelectedGuestNameStyles({
   return (
     <div className="space-y-5">
       <label className="block">
-        <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
+        <span className="mb-1.5 block text-xs font-medium tracking-wide text-grey">
           Font
         </span>
         <Select
@@ -98,7 +102,7 @@ export function SelectedGuestNameStyles({
       </label>
 
       <label className="block">
-        <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
+        <span className="mb-1.5 block text-xs font-medium tracking-wide text-grey">
           Size
         </span>
         <div className="flex items-center rounded-xl border border-black/10 px-3 py-2">
@@ -138,7 +142,7 @@ export function SelectedTextStyles({
   return (
     <div className="space-y-5">
       <label className="block">
-        <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
+        <span className="mb-1.5 block text-xs font-medium tracking-wide text-grey">
           Font
         </span>
         <Select
@@ -171,7 +175,7 @@ export function SelectedTextStyles({
 
       <div className="grid grid-cols-2 gap-2">
         <label className="block">
-          <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
+          <span className="mb-1.5 block text-xs font-medium tracking-wide text-grey">
             Weight
           </span>
           <Select
@@ -191,7 +195,7 @@ export function SelectedTextStyles({
           </Select>
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
+          <span className="mb-1.5 block text-xs font-medium tracking-wide text-grey">
             Size
           </span>
           <div className="flex items-center rounded-xl border border-black/10 px-3 py-2">
@@ -323,7 +327,7 @@ export function SelectedTextStyles({
 
       {onChangeHref ? (
         <label className="block">
-          <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
+          <span className="mb-1.5 block text-xs font-medium tracking-wide text-grey">
             Link
           </span>
           <input
@@ -484,7 +488,7 @@ function EffectSlider({
   const step = 1;
   return (
     <div>
-      <span className="mb-1.5 block text-[11px] font-medium tracking-wide text-grey">
+      <span className="mb-1.5 block text-xs font-medium tracking-wide text-grey">
         {label}
       </span>
       <div className="flex items-center gap-2">
@@ -540,6 +544,7 @@ export function SelectedImageStyles({
   const isPattern = isPatternGraphicSrc(selected.content);
   const isWeddingSilhouette = isWeddingSilhouetteSrc(selected.content);
   const isDecorativeGraphic = isDecorativeGraphicSrc(selected.content);
+  const decorativeFrame = isDecorativeFrame(style.frame);
 
   return (
     <div className="space-y-5">
@@ -572,7 +577,21 @@ export function SelectedImageStyles({
           <ImageFramePicker
             value={style.frame ?? "none"}
             onChange={(frame) => onChangeStyle({ frame })}
+            frameColor={style.frameColor}
           />
+          {decorativeFrame && (
+            <div className="mt-4 space-y-2">
+              <ColourField
+                label="Frame colour"
+                value={frameOrnamentColor(style.frame, style.frameColor)}
+                onChange={(frameColor) => onChangeStyle({ frameColor })}
+              />
+              <p className="text-xs text-grey">
+                The ornament recolours on its own, so the frame can follow the
+                invitation rather than the photo.
+              </p>
+            </div>
+          )}
         </PanelSection>
       )}
 

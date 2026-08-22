@@ -8,22 +8,21 @@ import {
   BackIcon,
   ChevronRightIcon,
   CloseIcon,
-  DesktopIcon,
-  MobileIcon,
+  EyeIcon,
   PencilIcon,
   RedoIcon,
   UndoIcon,
 } from "./editor-icons";
-import type { PreviewDevice } from "./editor-types";
 
 interface EditorToolbarProps {
   title: string;
   onTitleChange: (value: string) => void;
   status: string;
   savedAt: string;
-  previewDevice: PreviewDevice;
   previewOpen: boolean;
-  onOpenDevicePreview: (device: PreviewDevice) => void;
+  onOpenPreview: () => void;
+  zoom: number;
+  onZoomChange: (zoom: number) => void;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -40,9 +39,10 @@ export function EditorToolbar({
   onTitleChange,
   status,
   savedAt,
-  previewDevice,
   previewOpen,
-  onOpenDevicePreview,
+  onOpenPreview,
+  zoom,
+  onZoomChange,
   canUndo,
   canRedo,
   onUndo,
@@ -91,7 +91,7 @@ export function EditorToolbar({
               <PencilIcon />
             </span>
           </div>
-          <p className="truncate text-[11px] capitalize text-grey">
+          <p className="truncate text-xs capitalize text-grey">
             {status} · Saved {savedLabel}
           </p>
         </div>
@@ -119,34 +119,51 @@ export function EditorToolbar({
           <RedoIcon />
         </button>
         <div className="mx-1 h-5 w-px bg-black/10" aria-hidden="true" />
-        <div className="flex rounded-xl bg-soft-grey p-1">
+        <button
+          type="button"
+          onClick={onOpenPreview}
+          className={`flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold transition-colors ${
+            previewOpen
+              ? "bg-black text-white"
+              : "text-grey hover:bg-soft-grey hover:text-black"
+          }`}
+          aria-label="Preview invitation"
+          title="See what guests will see"
+        >
+          <EyeIcon />
+          Preview
+        </button>
+
+        <div className="mx-1 h-5 w-px bg-black/10" aria-hidden="true" />
+
+        {/* Canvas zoom - it used to sit down among the page thumbnails. */}
+        <div className="flex items-center">
           <button
             type="button"
-            onClick={() => onOpenDevicePreview("desktop")}
-            className={`flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors ${
-              previewOpen && previewDevice === "desktop"
-                ? "bg-white text-black shadow-sm"
-                : "text-grey hover:text-black"
-            }`}
-            aria-label="Preview on desktop"
-            title="Preview on MacBook"
+            onClick={() => onZoomChange(Math.max(40, zoom - 10))}
+            className="flex h-9 w-8 items-center justify-center rounded-xl text-base text-grey transition-colors hover:bg-soft-grey hover:text-black"
+            aria-label="Zoom out"
+            title="Zoom out"
           >
-            <DesktopIcon />
-            Desktop
+            −
           </button>
           <button
             type="button"
-            onClick={() => onOpenDevicePreview("mobile")}
-            className={`flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors ${
-              previewOpen && previewDevice === "mobile"
-                ? "bg-white text-black shadow-sm"
-                : "text-grey hover:text-black"
-            }`}
-            aria-label="Preview on mobile"
-            title="Preview on iPhone"
+            onClick={() => onZoomChange(100)}
+            className="min-w-[3.25rem] rounded-xl px-1 py-1.5 text-center text-sm font-semibold text-black transition-colors hover:bg-soft-grey"
+            aria-label="Reset zoom to 100%"
+            title="Reset to 100%"
           >
-            <MobileIcon />
-            Mobile
+            {zoom}%
+          </button>
+          <button
+            type="button"
+            onClick={() => onZoomChange(Math.min(200, zoom + 10))}
+            className="flex h-9 w-8 items-center justify-center rounded-xl text-base text-grey transition-colors hover:bg-soft-grey hover:text-black"
+            aria-label="Zoom in"
+            title="Zoom in"
+          >
+            +
           </button>
         </div>
       </div>

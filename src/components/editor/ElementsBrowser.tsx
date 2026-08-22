@@ -2,16 +2,20 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { canvasFontFamilyClass } from "@/lib/canvas-fonts";
 import {
   LIBRARY_ELEMENTS,
-  patternMarkSpec,
+  libraryMarkSpec,
   searchLibraryElements,
   type LibraryElement,
+  type PatternSubcategoryId,
 } from "@/lib/data/element-library";
 import { setInsertDragData, clearInsertDragData } from "@/lib/editor-insert-dnd";
 import { ChevronLeftIcon } from "./editor-icons";
 import { ShapeGraphic } from "./ShapeGraphic";
 import { COLOURED_ICON_DEFAULT } from "./ColouredIconGraphic";
+import { FramePreview } from "./FramePreview";
+import { ArtworkGraphic } from "./ArtworkGraphic";
 
 
 const ELEMENT_RECENTS_KEY = "gather.editor.elementRecents";
@@ -19,12 +23,17 @@ const MAX_RECENTS = 12;
 
 type CollectionId =
   | "recent"
+  | "frames"
   | "icons"
   | "graphics"
   | "graphics-flowers"
   | "graphics-birthday"
   | "graphics-wedding"
   | "graphics-graduation"
+  | "envelopes"
+  | "numbers"
+  | "social"
+  | "others"
   | "shapes"
   | "dividers";
 
@@ -35,14 +44,18 @@ interface ElementCollection {
 }
 
 const GRAPHICS_SUBCOLLECTIONS: {
-  id: "graphics-flowers" | "graphics-birthday" | "graphics-wedding" | "graphics-graduation";
+  id: CollectionId;
   label: string;
-  subcategory: "flowers" | "birthday" | "wedding" | "graduation";
+  subcategory: Exclude<PatternSubcategoryId, "all">;
 }[] = [
   { id: "graphics-flowers", label: "Flowers", subcategory: "flowers" },
   { id: "graphics-birthday", label: "Birthday", subcategory: "birthday" },
   { id: "graphics-wedding", label: "Wedding", subcategory: "wedding" },
   { id: "graphics-graduation", label: "Graduation", subcategory: "graduation" },
+  { id: "envelopes", label: "Envelopes", subcategory: "envelopes" },
+  { id: "numbers", label: "Numbers", subcategory: "numbers" },
+  { id: "social", label: "Social media", subcategory: "social" },
+  { id: "others", label: "Others", subcategory: "others" },
 ];
 
 export function loadElementRecents(): string[] {
@@ -68,19 +81,14 @@ export function saveElementRecent(id: string) {
 }
 
 function PatternMarkPreview({
-  id,
+  item,
   compact = false,
 }: {
-  id: string;
+  item: LibraryElement;
   compact?: boolean;
 }) {
-  const mark = patternMarkSpec(id);
-  const fontClass =
-    mark.fontFamily === "caveat"
-      ? "font-[family-name:var(--font-cursive)]"
-      : mark.fontFamily === "urbanist"
-        ? "font-sans"
-        : "font-[family-name:var(--font-playfair)]";
+  const mark = libraryMarkSpec(item);
+  const fontClass = canvasFontFamilyClass(mark.fontFamily);
 
   return (
     <span
@@ -128,7 +136,32 @@ function ElementTile({
       <div
         className={`relative flex shrink-0 items-center justify-center bg-soft-grey/60 ${previewBox}`}
       >
-        {item.kind === "pattern" && item.preview ? (
+        {item.preview && item.kind === "artwork" ? (
+          <Image
+            src={item.preview}
+            alt=""
+            width={64}
+            height={64}
+            className={
+              size === "sm"
+                ? "max-h-11 max-w-11 object-contain"
+                : "max-h-14 max-w-14 object-contain"
+            }
+          />
+        ) : item.kind === "artwork" && item.shapeKind ? (
+          <ArtworkGraphic
+            kind={item.shapeKind}
+            color={item.defaultColor}
+            className={size === "sm" ? "h-11 w-11" : "h-14 w-14"}
+          />
+        ) : item.kind === "frame" && item.frame ? (
+          <FramePreview
+            frame={item.frame}
+            className={`relative block ${
+              size === "sm" ? "h-9 w-9" : "h-11 w-11"
+            }`}
+          />
+        ) : item.kind === "pattern" && item.preview ? (
           <Image
             src={item.preview}
             alt=""
@@ -150,19 +183,22 @@ function ElementTile({
             <ShapeGraphic
               kind={item.shapeKind}
               color={
-                item.shapeKind.startsWith("icon_colour_")
+                // Preview an element in the ink it will actually land in, so
+                // brand logos read as themselves in the panel.
+                item.defaultColor ??
+                (item.shapeKind.startsWith("icon_colour_")
                   ? COLOURED_ICON_DEFAULT
-                  : "#1F2D22"
+                  : "#1F2D22")
               }
             />
           </div>
         ) : item.kind === "divider" ? (
           <DividerPreview style={item.dividerStyle ?? "solid"} />
         ) : (
-          <PatternMarkPreview id={item.id} compact={size === "sm"} />
+          <PatternMarkPreview item={item} compact={size === "sm"} />
         )}
       </div>
-      <span className="truncate border-t border-black/5 px-1.5 py-1 text-center text-[10px] font-semibold leading-tight text-grey group-hover:text-black">
+      <span className="truncate border-t border-black/5 px-1.5 py-1 text-center text-xs font-semibold leading-tight text-grey group-hover:text-black">
         {item.name}
       </span>
     </button>
@@ -309,6 +345,11 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
   const collections = useMemo<ElementCollection[]>(
     () => [
       {
+        id: "frames",
+        label: "Frames",
+        items: LIBRARY_ELEMENTS.filter((item) => item.category === "frames"),
+      },
+      {
         id: "icons",
         label: "Icons",
         items: LIBRARY_ELEMENTS.filter(
@@ -322,12 +363,9 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
         items: LIBRARY_ELEMENTS.filter(
           (item) =>
             item.category === "patterns" &&
-            (item.subcategory === "flowers" ||
-              item.subcategory === "birthday" ||
-              item.subcategory === "wedding" ||
-              item.subcategory === "graduation" ||
-              item.subcategory === "monogram" ||
-              item.subcategory === "social"),
+            GRAPHICS_SUBCOLLECTIONS.some(
+              (group) => group.subcategory === item.subcategory,
+            ),
         ),
       },
       {
@@ -363,6 +401,38 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
         ),
       },
       {
+        id: "envelopes",
+        label: "Envelopes",
+        items: LIBRARY_ELEMENTS.filter(
+          (item) =>
+            item.category === "patterns" && item.subcategory === "envelopes",
+        ),
+      },
+      {
+        id: "numbers",
+        label: "Numbers",
+        items: LIBRARY_ELEMENTS.filter(
+          (item) =>
+            item.category === "patterns" && item.subcategory === "numbers",
+        ),
+      },
+      {
+        id: "social",
+        label: "Social media",
+        items: LIBRARY_ELEMENTS.filter(
+          (item) =>
+            item.category === "patterns" && item.subcategory === "social",
+        ),
+      },
+      {
+        id: "others",
+        label: "Others",
+        items: LIBRARY_ELEMENTS.filter(
+          (item) =>
+            item.category === "patterns" && item.subcategory === "others",
+        ),
+      },
+      {
         id: "shapes",
         label: "Shapes",
         items: LIBRARY_ELEMENTS.filter((item) => item.category === "shapes"),
@@ -379,7 +449,9 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
   const topCollections = useMemo(
     () =>
       collections.filter((collection) =>
-        ["icons", "graphics", "shapes", "dividers"].includes(collection.id),
+        ["frames", "icons", "graphics", "shapes", "dividers"].includes(
+          collection.id,
+        ),
       ),
     [collections],
   );
@@ -404,7 +476,9 @@ export function ElementsBrowser({ onSelect }: ElementsBrowserProps) {
       label: collection.label,
       items: collection.items,
       kind: "grid" as const,
-      parent: collection.id.startsWith("graphics-")
+      parent: GRAPHICS_SUBCOLLECTIONS.some(
+        (group) => group.id === collection.id,
+      )
         ? ("graphics" as const)
         : null,
     };

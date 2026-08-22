@@ -11,16 +11,13 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import type { CanvasElement } from "@/lib/data/canvas-elements";
-import { widgetKindLabel } from "@/lib/data/canvas-elements";
+import {
+  elementOpacity,
+  widgetKindLabel,
+} from "@/lib/data/canvas-elements";
 import type { InvitationPage } from "@/lib/data/invitation-content";
 import {
-  DuplicateIcon,
-  GridIcon,
-  LockIcon,
-  MoreIcon,
-  PencilIcon,
   RotateIcon,
-  TrashIcon,
 } from "./editor-icons";
 import type {
   CustomCanvasSize,
@@ -184,7 +181,6 @@ interface EditorCanvasProps {
   backgroundTextureBlend?: InvitationPage["backgroundTextureBlend"];
   border?: InvitationPage["border"];
   canvasSelected: boolean;
-  onToggleGrid: () => void;
   onSelect: (id: string | null) => void;
   onToggleSelect: (id: string) => void;
   onSelectMany: (ids: string[]) => void;
@@ -199,8 +195,6 @@ interface EditorCanvasProps {
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
   onDeleteMany: (ids: string[]) => void;
-  onToggleLock: (id: string) => void;
-  onRotate: (id: string) => void;
   /** Called before a mutating interaction so the parent can snapshot history */
   onBeforeChange?: () => void;
   /** Panel → canvas drag-and-drop insert. */
@@ -217,9 +211,76 @@ function fontWeightValue(style: CanvasElement["style"]) {
 }
 
 type ResizeHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
-type DragMode = "move" | "resize" | "pan-image" | "scale-image";
+
+/** Screen bearing of each handle on an unturned element, clockwise from east. */
+const HANDLE_BEARING: Record<ResizeHandle, number> = {
+  e: 0,
+  se: 45,
+  s: 90,
+  sw: 135,
+  w: 180,
+  nw: 225,
+  n: 270,
+  ne: 315,
+};
+
+const RESIZE_CURSORS = [
+  "ew-resize",
+  "nwse-resize",
+  "ns-resize",
+  "nesw-resize",
+] as const;
+
+function resizeCursor(handle: ResizeHandle, rotation = 0): string {
+  const bearing = (((HANDLE_BEARING[handle] + rotation) % 180) + 180) % 180;
+  return RESIZE_CURSORS[Math.round(bearing / 45) % 4];
+}
+type DragMode = "move" | "resize" | "rotate" | "pan-image" | "scale-image";
 
 type Point = { x: number; y: number };
+
+/**
+ * Turn a point about a centre the way CSS does - in pixels. Card percentages
+ * are not square, so `aspect` (card width / height in pixels) converts across
+ * and back. Without it a turned element's footprint comes out sheared, and the
+ * canvas clips artwork that is nowhere near an edge.
+ */
+function turnPercentPoint(
+  point: Point,
+  centre: Point,
+  rotation: number,
+  aspect = 1,
+): Point {
+  if (!rotation) return point;
+  const radians = (rotation * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const dx = point.x - centre.x;
+  const dy = point.y - centre.y;
+  return {
+    x: centre.x + dx * cos - (dy / aspect) * sin,
+    y: centre.y + dx * aspect * sin + dy * cos,
+  };
+}
+
+/** The inverse of turnPercentPoint - screen position back to element-local. */
+function unturnPercentPoint(
+  point: Point,
+  centre: Point,
+  rotation: number,
+  aspect = 1,
+): Point {
+  if (!rotation) return point;
+  const radians = (rotation * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const dx = point.x - centre.x;
+  const dy = point.y - centre.y;
+  return {
+    x: centre.x + dx * cos + (dy / aspect) * sin,
+    y: centre.y - dx * aspect * sin + dy * cos,
+  };
+}
 
 function rotatedBounds(
   x: number,
@@ -227,31 +288,58 @@ function rotatedBounds(
   width: number,
   height: number,
   rotation = 0,
+  aspect = 1,
 ) {
   const centerX = x + width / 2;
   const centerY = y + height / 2;
-  const radians = (rotation * Math.PI) / 180;
-  const cos = Math.cos(radians);
-  const sin = Math.sin(radians);
   const corners = [
     { x, y },
     { x: x + width, y },
     { x: x + width, y: y + height },
     { x, y: y + height },
-  ].map((point) => {
-    const dx = point.x - centerX;
-    const dy = point.y - centerY;
-    return {
-      x: centerX + dx * cos - dy * sin,
-      y: centerY + dx * sin + dy * cos,
-    };
-  });
+  ].map((point) =>
+    turnPercentPoint(point, { x: centerX, y: centerY }, rotation, aspect),
+  );
 
   const left = Math.min(...corners.map((point) => point.x));
   const right = Math.max(...corners.map((point) => point.x));
   const top = Math.min(...corners.map((point) => point.y));
   const bottom = Math.max(...corners.map((point) => point.y));
   return { left, right, top, bottom };
+}
+
+/**
+ * How far a piece may hang off the card. Art is allowed to bleed generously,
+ * but a fifth of it always stays on the card so it can never be dragged out of
+ * sight and lost.
+ */
+const MIN_ON_CARD = 0.2;
+
+/**
+ * Keeps a piece reachable using what is actually visible: a turned element's
+ * footprint is not its layout box, so clamping the box would let the artwork
+ * slide off the card while the frame still looked safely inside.
+ */
+function keepOnCard(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  rotation = 0,
+  aspect = 1,
+): { x: number; y: number } {
+  const bounds = rotatedBounds(x, y, width, height, rotation, aspect);
+  const spanX = Math.max(bounds.right - bounds.left, 4);
+  const spanY = Math.max(bounds.bottom - bounds.top, 4);
+  const keepX = Math.min(spanX * MIN_ON_CARD, 12);
+  const keepY = Math.min(spanY * MIN_ON_CARD, 12);
+  let dx = 0;
+  let dy = 0;
+  if (bounds.right < keepX) dx = keepX - bounds.right;
+  else if (bounds.left > 100 - keepX) dx = 100 - keepX - bounds.left;
+  if (bounds.bottom < keepY) dy = keepY - bounds.bottom;
+  else if (bounds.top > 100 - keepY) dy = 100 - keepY - bounds.top;
+  return { x: x + dx, y: y + dy };
 }
 
 const EDGE_SNAP_DISTANCE = 1.2;
@@ -263,10 +351,11 @@ function applyEdgeResistance(
   width: number,
   height: number,
   rotation = 0,
+  aspect = 1,
 ) {
   let nextX = x;
   let nextY = y;
-  let bounds = rotatedBounds(nextX, nextY, width, height, rotation);
+  let bounds = rotatedBounds(nextX, nextY, width, height, rotation, aspect);
   const horizontalCandidates = [
     bounds.left >= -EDGE_RELEASE_DISTANCE &&
     bounds.left <= EDGE_SNAP_DISTANCE
@@ -287,7 +376,7 @@ function applyEdgeResistance(
   )[0];
   if (horizontal) nextX += horizontal.correction;
 
-  bounds = rotatedBounds(nextX, nextY, width, height, rotation);
+  bounds = rotatedBounds(nextX, nextY, width, height, rotation, aspect);
   const verticalCandidates = [
     bounds.top >= -EDGE_RELEASE_DISTANCE &&
     bounds.top <= EDGE_SNAP_DISTANCE
@@ -389,16 +478,13 @@ function clipPolygon(
   return result;
 }
 
-function canvasClipPath(el: CanvasElement): CSSProperties["clipPath"] {
+function canvasClipPath(
+  el: CanvasElement,
+  aspect = 1,
+): CSSProperties["clipPath"] {
   const width = Math.max(0.001, el.width);
   const height = Math.max(0.001, el.height ?? 20);
-  const bounds = rotatedBounds(
-    el.x,
-    el.y,
-    width,
-    height,
-    el.rotation,
-  );
+  const bounds = rotatedBounds(el.x, el.y, width, height, el.rotation, aspect);
   if (
     bounds.left >= 0 &&
     bounds.right <= 100 &&
@@ -410,22 +496,13 @@ function canvasClipPath(el: CanvasElement): CSSProperties["clipPath"] {
 
   const centerX = el.x + width / 2;
   const centerY = el.y + height / 2;
-  const radians = (el.rotation * Math.PI) / 180;
-  const cos = Math.cos(radians);
-  const sin = Math.sin(radians);
+  const centre = { x: centerX, y: centerY };
   let polygon: Point[] = [
     { x: el.x, y: el.y },
     { x: el.x + width, y: el.y },
     { x: el.x + width, y: el.y + height },
     { x: el.x, y: el.y + height },
-  ].map((point) => {
-    const dx = point.x - centerX;
-    const dy = point.y - centerY;
-    return {
-      x: centerX + dx * cos - dy * sin,
-      y: centerY + dx * sin + dy * cos,
-    };
-  });
+  ].map((point) => turnPercentPoint(point, centre, el.rotation, aspect));
 
   const verticalIntersection =
     (edgeX: number) => (start: Point, end: Point) => {
@@ -467,13 +544,10 @@ function canvasClipPath(el: CanvasElement): CSSProperties["clipPath"] {
   if (polygon.length < 3) return "inset(100%)";
 
   const localPoints = polygon.map((point) => {
-    const dx = point.x - centerX;
-    const dy = point.y - centerY;
-    const unrotatedX = centerX + dx * cos + dy * sin;
-    const unrotatedY = centerY - dx * sin + dy * cos;
+    const local = unturnPercentPoint(point, centre, el.rotation, aspect);
     return {
-      x: ((unrotatedX - el.x) / width) * 100,
-      y: ((unrotatedY - el.y) / height) * 100,
+      x: ((local.x - el.x) / width) * 100,
+      y: ((local.y - el.y) / height) * 100,
     };
   });
   return `polygon(${localPoints
@@ -498,7 +572,6 @@ export function EditorCanvas({
   backgroundTextureBlend = "soft-light",
   border = null,
   canvasSelected,
-  onToggleGrid,
   onSelect,
   onToggleSelect,
   onSelectMany,
@@ -511,8 +584,6 @@ export function EditorCanvas({
   onDuplicate,
   onDelete,
   onDeleteMany,
-  onToggleLock,
-  onRotate,
   onBeforeChange,
   onInsertDrop,
 }: EditorCanvasProps) {
@@ -537,6 +608,7 @@ export function EditorCanvas({
     startedOutside: boolean;
   } | null>(null);
   const marqueeRef = useRef<typeof marquee>(null);
+  const [rotationReadout, setRotationReadout] = useState<number | null>(null);
   const [alignmentGuides, setAlignmentGuides] = useState({
     vertical: null as number | null,
     horizontal: null as number | null,
@@ -560,6 +632,11 @@ export function EditorCanvas({
     origScale: number;
     origOffsetX: number;
     origOffsetY: number;
+    origRotation: number;
+    /** Pivot and grab angle in client pixels, for rotation. */
+    pivotX: number;
+    pivotY: number;
+    startAngle: number;
     group?: Array<{ id: string; x: number; y: number }>;
     groupBounds?: {
       x: number;
@@ -616,8 +693,9 @@ export function EditorCanvas({
       el.width,
       fallbackHeight,
       el.rotation,
+      aspect,
     );
-  }, []);
+  }, [aspect]);
   const multiSelectionBounds = useMemo(() => {
     if (selectedIds.length < 2) return null;
     const selected = elements.filter((el) => selectedIds.includes(el.id));
@@ -702,6 +780,8 @@ export function EditorCanvas({
               drag.groupBounds.y + nextDy,
               drag.groupBounds.width,
               drag.groupBounds.height,
+              0,
+              aspect,
             ),
             elements
               .filter((item) => !groupIds.has(item.id))
@@ -714,6 +794,8 @@ export function EditorCanvas({
             drag.groupBounds.y + nextDy,
             drag.groupBounds.width,
             drag.groupBounds.height,
+            0,
+            aspect,
           );
           nextDx += resisted.x - (drag.groupBounds.x + nextDx);
           nextDy += resisted.y - (drag.groupBounds.y + nextDy);
@@ -722,13 +804,20 @@ export function EditorCanvas({
             horizontal: alignment.horizontal,
           });
           setEdgeGuides(resisted.edges);
-          const updates = drag.group.map((item) => ({
-            id: item.id,
-            patch: {
-              x: Math.min(95, Math.max(-20, item.x + nextDx)),
-              y: Math.min(95, Math.max(-20, item.y + nextDy)),
-            },
-          }));
+          const updates = drag.group.map((item) => {
+            const element = elements.find((entry) => entry.id === item.id);
+            return {
+              id: item.id,
+              patch: keepOnCard(
+                item.x + nextDx,
+                item.y + nextDy,
+                element?.width ?? 0,
+                element?.height ?? 0,
+                element?.rotation ?? 0,
+                aspect,
+              ),
+            };
+          });
           if (onChangeElements) onChangeElements(updates);
           else {
             for (const update of updates) {
@@ -736,8 +825,16 @@ export function EditorCanvas({
             }
           }
         } else {
-          let nextX = Math.min(95, Math.max(-20, drag.origX + dx));
-          let nextY = Math.min(95, Math.max(-20, drag.origY + dy));
+          const held = keepOnCard(
+            drag.origX + dx,
+            drag.origY + dy,
+            drag.origW,
+            drag.origH,
+            el.rotation,
+            aspect,
+          );
+          let nextX = held.x;
+          let nextY = held.y;
           const alignment = findSmartAlignment(
             rotatedBounds(
               nextX,
@@ -745,6 +842,7 @@ export function EditorCanvas({
               drag.origW,
               drag.origH,
               el.rotation,
+              aspect,
             ),
             elements
               .filter((item) => item.id !== el.id)
@@ -758,6 +856,7 @@ export function EditorCanvas({
             drag.origW,
             drag.origH,
             el.rotation,
+            aspect,
           );
           nextX = resisted.x;
           nextY = resisted.y;
@@ -783,6 +882,22 @@ export function EditorCanvas({
             ...fit,
           },
         });
+      } else if (drag.mode === "rotate") {
+        const angle =
+          (Math.atan2(event.clientY - drag.pivotY, event.clientX - drag.pivotX) *
+            180) /
+          Math.PI;
+        let next = drag.origRotation + (angle - drag.startAngle);
+        next = ((next % 360) + 360) % 360;
+        if (event.shiftKey) {
+          next = Math.round(next / 15) * 15;
+        } else {
+          const nearest = Math.round(next / 45) * 45;
+          if (Math.abs(next - nearest) < 3.5) next = nearest;
+        }
+        const degrees = Math.round(next % 360);
+        setRotationReadout(degrees);
+        onChangeElement(drag.id, { rotation: degrees });
       } else if (drag.mode === "scale-image") {
         // Outward drag on any corner should zoom in.
         const sx = drag.handle.includes("w") ? -1 : 1;
@@ -805,29 +920,50 @@ export function EditorCanvas({
       } else {
         const cornerResize = drag.handle.length === 2;
         const keepRatio =
-          cornerResize && (el.type === "image" || el.type === "shape");
+          (cornerResize && (el.type === "image" || el.type === "shape")) ||
+          (el.type === "image" && isDecorativeGraphicSrc(el.content));
         // Icons and other vector shapes remain crisp at very small sizes.
         // Keep their resize floor low while retaining a selectable wrapper.
         const minWidth = el.type === "shape" ? 2 : 8;
         const minHeight = el.type === "shape" ? 1.5 : 6;
+        const rotation = el.rotation ?? 0;
+        const rect = canvasRef.current?.getBoundingClientRect();
+
+        /**
+         * A handle pulls along the element's own axes, not the card's. Percent
+         * axes are not square, so the delta goes through pixels to be turned.
+         */
+        const turn = (vx: number, vy: number, degrees: number) => {
+          if (!degrees || !rect || !rect.width || !rect.height) {
+            return { x: vx, y: vy };
+          }
+          const px = (vx / 100) * rect.width;
+          const py = (vy / 100) * rect.height;
+          const radians = (degrees * Math.PI) / 180;
+          const cos = Math.cos(radians);
+          const sin = Math.sin(radians);
+          return {
+            x: ((px * cos - py * sin) / rect.width) * 100,
+            y: ((px * sin + py * cos) / rect.height) * 100,
+          };
+        };
+
+        const local = turn(dx, dy, -rotation);
         let nextW = drag.origW;
         let nextH = drag.origH;
-        let nextX = drag.origX;
-        let nextY = drag.origY;
 
+        // No ceiling: art is allowed to grow past the card and bleed off it.
         if (drag.handle.includes("e")) {
-          nextW = Math.min(100, Math.max(minWidth, drag.origW + dx));
+          nextW = Math.max(minWidth, drag.origW + local.x);
         }
         if (drag.handle.includes("w")) {
-          nextW = Math.min(100, Math.max(minWidth, drag.origW - dx));
-          nextX = drag.origX + (drag.origW - nextW);
+          nextW = Math.max(minWidth, drag.origW - local.x);
         }
         if (drag.handle.includes("s")) {
-          nextH = Math.min(100, Math.max(minHeight, drag.origH + dy));
+          nextH = Math.max(minHeight, drag.origH + local.y);
         }
         if (drag.handle.includes("n")) {
-          nextH = Math.min(100, Math.max(minHeight, drag.origH - dy));
-          nextY = drag.origY + (drag.origH - nextH);
+          nextH = Math.max(minHeight, drag.origH - local.y);
         }
 
         if (keepRatio && drag.origW > 0 && drag.origH > 0) {
@@ -838,26 +974,29 @@ export function EditorCanvas({
             drag.handle === "se" ||
             drag.handle === "ne"
           ) {
-            nextH = Math.min(100, Math.max(minHeight, nextW * ratio));
-            if (drag.handle.includes("n")) {
-              nextY = drag.origY + (drag.origH - nextH);
-            }
-            if (drag.handle.includes("w")) {
-              nextX = drag.origX + (drag.origW - nextW);
-            }
+            nextH = Math.max(minHeight, nextW * ratio);
           } else {
-            nextW = Math.min(
-              100,
-              Math.max(minWidth, nextH / Math.max(ratio, 0.001)),
-            );
-            if (drag.handle.includes("w")) {
-              nextX = drag.origX + (drag.origW - nextW);
-            }
-            if (drag.handle.includes("n")) {
-              nextY = drag.origY + (drag.origH - nextH);
-            }
+            nextW = Math.max(minWidth, nextH / Math.max(ratio, 0.001));
           }
         }
+
+        // The grabbed edge stays put: the centre moves by half the growth,
+        // along the element's own axes.
+        const shift = turn(
+          drag.handle.includes("e")
+            ? (nextW - drag.origW) / 2
+            : drag.handle.includes("w")
+              ? -(nextW - drag.origW) / 2
+              : 0,
+          drag.handle.includes("s")
+            ? (nextH - drag.origH) / 2
+            : drag.handle.includes("n")
+              ? -(nextH - drag.origH) / 2
+              : 0,
+          rotation,
+        );
+        const nextX = drag.origX + drag.origW / 2 + shift.x - nextW / 2;
+        const nextY = drag.origY + drag.origH / 2 + shift.y - nextH / 2;
 
         const bounds = rotatedBounds(
           nextX,
@@ -865,6 +1004,7 @@ export function EditorCanvas({
           nextW,
           nextH,
           el.rotation,
+          aspect,
         );
         setEdgeGuides({
           left: bounds.left <= 1.2,
@@ -882,6 +1022,7 @@ export function EditorCanvas({
       }
     },
     [
+      aspect,
       clientToPercent,
       elementBoundsOnCanvas,
       elements,
@@ -921,6 +1062,7 @@ export function EditorCanvas({
       setMarquee(null);
     }
     dragRef.current = null;
+    setRotationReadout(null);
     setAlignmentGuides({ vertical: null, horizontal: null });
     setEdgeGuides({
       left: false,
@@ -1057,6 +1199,17 @@ export function EditorCanvas({
           }
         : undefined;
     const measuredElementBounds = elementBoundsOnCanvas(el);
+    const canvasRect = canvasRef.current?.getBoundingClientRect();
+    const pivot = {
+      x: canvasRect
+        ? canvasRect.left + ((el.x + el.width / 2) / 100) * canvasRect.width
+        : event.clientX,
+      y: canvasRect
+        ? canvasRect.top +
+          ((measuredElementBounds.top + measuredElementBounds.bottom) / 200) *
+            canvasRect.height
+        : event.clientY,
+    };
     dragRef.current = {
       id,
       mode,
@@ -1078,6 +1231,12 @@ export function EditorCanvas({
         el.style.imageOffsetY,
         el.style.imageScale,
       ),
+      origRotation: el.rotation ?? 0,
+      pivotX: pivot.x,
+      pivotY: pivot.y,
+      startAngle:
+        (Math.atan2(event.clientY - pivot.y, event.clientX - pivot.x) * 180) /
+        Math.PI,
       group:
         groupElements.length > 1
           ? groupElements.map((item) => ({
@@ -1393,6 +1552,7 @@ export function EditorCanvas({
                     width: `${el.width}%`,
                     height: el.height ? `${el.height}%` : undefined,
                     transform: `rotate(${el.rotation}deg)`,
+                    opacity: elementOpacity(el),
                   }}
                   onPointerDown={(event) => {
                     if (event.shiftKey && !isEditing) {
@@ -1459,12 +1619,12 @@ export function EditorCanvas({
                       }}
                       onPointerDown={(e) => e.stopPropagation()}
                     >
-                      <span className="whitespace-nowrap px-2 text-[10px] font-semibold text-grey">
+                      <span className="whitespace-nowrap px-2 text-xs font-semibold text-grey">
                         Drag to pan · scroll to zoom
                       </span>
                       <button
                         type="button"
-                        className="rounded-full bg-black px-2.5 py-1 text-[11px] font-semibold text-white"
+                        className="rounded-full bg-black px-2.5 py-1 text-xs font-semibold text-white"
                         onClick={onStopEdit}
                       >
                         Done
@@ -1472,84 +1632,6 @@ export function EditorCanvas({
                     </div>
                   )}
 
-                  {isOnlySelection && !isEditing && (
-                    <div
-                      className="absolute left-1/2 z-40 flex items-center gap-0.5 rounded-full border border-black/5 bg-white px-1.5 py-1 shadow-[0_8px_20px_rgba(0,0,0,0.12)]"
-                      style={{
-                        top: 0,
-                        transform: `translate(-50%, calc(-100% - 8px)) scale(${uiScale})`,
-                        transformOrigin: "bottom center",
-                      }}
-                      onPointerDown={(e) => e.stopPropagation()}
-                    >
-                      <span className="shrink-0 whitespace-nowrap rounded-full bg-signature/10 px-2 py-0.5 text-[10px] font-semibold capitalize text-signature">
-                        {el.type === "widget" && el.widget
-                          ? widgetKindLabel(el.widget.kind)
-                          : isDecorativeGraphicSrc(el.content)
-                            ? "Graphic"
-                            : el.type}
-                      </span>
-                      {(el.type === "text" ||
-                        (el.type === "widget" && !isGuestNameWidget) ||
-                        (el.type === "image" &&
-                          !isDecorativeGraphicSrc(el.content))) &&
-                        !el.locked && (
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-semibold text-grey hover:bg-soft-grey hover:text-black"
-                          aria-label="Edit"
-                          onClick={() => {
-                            onSelect(el.id);
-                            onStartEdit(el.id);
-                          }}
-                        >
-                          <PencilIcon className="h-3.5 w-3.5" />
-                          {el.type === "image" ? "Fit" : "Edit"}
-                        </button>
-                      )}
-                      {el.type === "text" && !el.locked && (
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-semibold text-grey hover:bg-soft-grey hover:text-black"
-                          aria-label="Link"
-                          title="Link ⌘K"
-                          onClick={() => {
-                            setLinkPrompt({
-                              elementId: el.id,
-                              value: el.href || "",
-                            });
-                          }}
-                        >
-                          Link
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="rounded-md p-1.5 text-grey hover:bg-soft-grey hover:text-black"
-                        aria-label="Duplicate"
-                        onClick={() => onDuplicate(el.id)}
-                      >
-                        <DuplicateIcon className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-md p-1.5 text-grey hover:bg-soft-grey hover:text-black"
-                        aria-label="Delete"
-                        onClick={() => onDelete(el.id)}
-                      >
-                        <TrashIcon className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-md p-1.5 text-grey hover:bg-soft-grey hover:text-black"
-                        aria-label="More"
-                        onClick={() => onToggleLock(el.id)}
-                        title={el.locked ? "Unlock" : "Lock"}
-                      >
-                        <MoreIcon className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  )}
 
                   <div
                     className={`relative h-full w-full ${
@@ -1568,7 +1650,7 @@ export function EditorCanvas({
                       className="relative h-full w-full"
                       style={{
                         ...(el.type === "image" ? undefined : effectStyle(el)),
-                        clipPath: canvasClipPath(el),
+                        clipPath: canvasClipPath(el, aspect),
                       }}
                     >
                     {el.type === "text" &&
@@ -1687,6 +1769,7 @@ export function EditorCanvas({
                         src={el.content}
                         color={el.style.color}
                         frame={el.style.frame}
+                        frameColor={el.style.frameColor}
                         effects={el.style.effects}
                         imageScale={el.style.imageScale}
                         imageOffsetX={el.style.imageOffsetX}
@@ -1801,7 +1884,6 @@ export function EditorCanvas({
                                 transform: `translate(-50%, -50%) scale(${uiScale})`,
                               },
                               className: "h-[7px] w-[7px] rounded-full",
-                              cursor: "nwse-resize",
                             },
                             {
                               id: "n" as const,
@@ -1811,7 +1893,6 @@ export function EditorCanvas({
                                 transform: `translate(-50%, -50%) scale(${uiScale})`,
                               },
                               className: "h-[5px] w-[9px] rounded-full",
-                              cursor: "ns-resize",
                             },
                             {
                               id: "ne" as const,
@@ -1821,7 +1902,6 @@ export function EditorCanvas({
                                 transform: `translate(50%, -50%) scale(${uiScale})`,
                               },
                               className: "h-[7px] w-[7px] rounded-full",
-                              cursor: "nesw-resize",
                             },
                             {
                               id: "e" as const,
@@ -1831,7 +1911,6 @@ export function EditorCanvas({
                                 transform: `translate(50%, -50%) scale(${uiScale})`,
                               },
                               className: "h-[9px] w-[5px] rounded-full",
-                              cursor: "ew-resize",
                             },
                             {
                               id: "se" as const,
@@ -1841,7 +1920,6 @@ export function EditorCanvas({
                                 transform: `translate(50%, 50%) scale(${uiScale})`,
                               },
                               className: "h-[7px] w-[7px] rounded-full",
-                              cursor: "nwse-resize",
                             },
                             {
                               id: "s" as const,
@@ -1851,7 +1929,6 @@ export function EditorCanvas({
                                 transform: `translate(-50%, 50%) scale(${uiScale})`,
                               },
                               className: "h-[5px] w-[9px] rounded-full",
-                              cursor: "ns-resize",
                             },
                             {
                               id: "sw" as const,
@@ -1861,7 +1938,6 @@ export function EditorCanvas({
                                 transform: `translate(-50%, 50%) scale(${uiScale})`,
                               },
                               className: "h-[7px] w-[7px] rounded-full",
-                              cursor: "nesw-resize",
                             },
                             {
                               id: "w" as const,
@@ -1871,7 +1947,6 @@ export function EditorCanvas({
                                 transform: `translate(-50%, -50%) scale(${uiScale})`,
                               },
                               className: "h-[9px] w-[5px] rounded-full",
-                              cursor: "ew-resize",
                             },
                           ] as const
                         ).map((handle) => (
@@ -1880,7 +1955,7 @@ export function EditorCanvas({
                             data-resize-handle={handle.id}
                             role="presentation"
                             className={`absolute z-30 border border-signature/55 bg-white ${handle.className}`}
-                            style={{ ...handle.style, cursor: handle.cursor }}
+                            style={{ ...handle.style, cursor: resizeCursor(handle.id, el.rotation) }}
                             onPointerDown={(event) =>
                               startDrag(event, el.id, "resize", handle.id)
                             }
@@ -1893,6 +1968,40 @@ export function EditorCanvas({
                             }
                           />
                         ))}
+
+                        {/* Drag to rotate, the way the resize handles drag to
+                            resize. Shift steps in 15 degrees; a free drag
+                            snaps to the quarter turns. */}
+                        <span
+                          data-rotate-handle
+                          role="presentation"
+                          title="Drag to rotate"
+                          className="absolute left-1/2 z-30 flex items-center justify-center rounded-full border border-signature/55 bg-white text-signature shadow-sm"
+                          style={{
+                            bottom: 0,
+                            height: 16,
+                            width: 16,
+                            transform: `translate(-50%, calc(100% + 14px)) scale(${uiScale})`,
+                            cursor: "grab",
+                          }}
+                          onPointerDown={(event) =>
+                            startDrag(event, el.id, "rotate")
+                          }
+                        >
+                          <RotateIcon className="h-2.5 w-2.5" />
+                        </span>
+
+                        {rotationReadout !== null && (
+                          <span
+                            className="pointer-events-none absolute left-1/2 z-40 rounded-md bg-black px-1.5 py-0.5 text-xs font-semibold text-white"
+                            style={{
+                              bottom: 0,
+                              transform: `translate(-50%, calc(100% + 36px)) rotate(${-el.rotation}deg) scale(${uiScale})`,
+                            }}
+                          >
+                            {rotationReadout}°
+                          </span>
+                        )}
                       </>
                     )}
                   </div>
@@ -1935,7 +2044,7 @@ export function EditorCanvas({
                 aria-hidden="true"
               >
                 <span
-                  className="absolute left-1/2 top-0 -translate-x-1/2 whitespace-nowrap rounded-full bg-signature px-2 py-0.5 text-[10px] font-semibold text-white"
+                  className="absolute left-1/2 top-0 -translate-x-1/2 whitespace-nowrap rounded-full bg-signature px-2 py-0.5 text-xs font-semibold text-white"
                   style={{
                     transform: `translate(-50%, calc(-100% - 6px)) scale(${uiScale})`,
                     transformOrigin: "bottom center",
@@ -1961,58 +2070,6 @@ export function EditorCanvas({
             </div>
           </div>
 
-          <div className="absolute top-1/2 -right-11 z-30 hidden -translate-y-1/2 flex-col gap-0.5 rounded-full border border-black/5 bg-white p-1 shadow-[0_8px_24px_rgba(0,0,0,0.08)] lg:flex">
-            {(
-              [
-                {
-                  label: "Grid",
-                  icon: GridIcon,
-                  active: showGrid,
-                  onClick: onToggleGrid,
-                },
-                {
-                  label: "Lock",
-                  icon: LockIcon,
-                  onClick: () => selectedId && onToggleLock(selectedId),
-                },
-                {
-                  label: "Duplicate",
-                  icon: DuplicateIcon,
-                  onClick: () => selectedId && onDuplicate(selectedId),
-                },
-                {
-                  label: "Rotate",
-                  icon: RotateIcon,
-                  onClick: () => selectedId && onRotate(selectedId),
-                },
-                {
-                  label: "Delete",
-                  icon: TrashIcon,
-                  onClick: () =>
-                    selectedIds.length > 1
-                      ? onDeleteMany(selectedIds)
-                      : selectedId && onDelete(selectedId),
-                },
-              ] as const
-            ).map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={item.onClick}
-                  className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                    "active" in item && item.active
-                      ? "bg-signature/15 text-signature"
-                      : "text-grey hover:bg-soft-grey hover:text-black"
-                  }`}
-                  aria-label={item.label}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                </button>
-              );
-            })}
-          </div>
         </div>
       </div>
 
@@ -2042,7 +2099,7 @@ export function EditorCanvas({
                     }}
                   >
                     <span>Link</span>
-                    <span className="text-[11px] text-grey">⌘K</span>
+                    <span className="text-xs text-grey">⌘K</span>
                   </button>
                 )}
                 <button

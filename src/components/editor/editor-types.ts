@@ -18,7 +18,6 @@ export type EditorToolId =
   | "brand";
 
 export type InvitationShape = InvitationCanvasShape;
-export type PreviewDevice = "desktop" | "mobile" | "fullscreen";
 export type PropertiesTab = "style" | "position";
 
 export type SizeUnit = InvitationSizeUnit;

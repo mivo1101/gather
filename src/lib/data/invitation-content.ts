@@ -73,7 +73,13 @@ export type PaperTexture =
   | "cotton"
   | "linen"
   | "handmade"
-  | "pressed";
+  | "pressed"
+  | "kraft"
+  | "laid"
+  | "canvas"
+  | "watercolour"
+  | "speckle"
+  | "vellum";
 
 export type PaperTextureBlend = "soft-light" | "multiply" | "overlay";
 

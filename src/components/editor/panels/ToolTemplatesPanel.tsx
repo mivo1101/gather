@@ -157,7 +157,7 @@ function TemplateTile({
         <p className="truncate text-xs font-semibold text-black">
           {template.title}
         </p>
-        <p className="truncate text-[10px] text-grey">
+        <p className="truncate text-xs text-grey">
           {template.pages.length} pages
           {shape === "portrait"
             ? ""
