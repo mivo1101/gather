@@ -74,8 +74,7 @@ export function HomeHub({ user, greeting, active, children }: HomeHubProps) {
                 the squeeze so the heading stays on one line. */}
             <div className="min-w-0 xl:shrink-0">
               <h1 className="text-2xl font-bold tracking-tight text-black md:text-3xl xl:whitespace-nowrap">
-                {localGreeting}, {user.firstName}{" "}
-                <span aria-hidden="true">👋</span>
+                {localGreeting}, {user.firstName}
               </h1>
               {subtitle ? (
                 <p className="mt-2 text-base text-grey xl:max-w-md">

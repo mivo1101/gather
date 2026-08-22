@@ -354,7 +354,7 @@ export function RecentInvitations({ invitations }: RecentInvitationsProps) {
           )}
         </div>
       ) : (
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((invitation) => (
             <InvitationCard
               key={invitation.id}
