@@ -45,7 +45,6 @@ export function squareElementSize(
   };
 }
 
-export { cardAspectRatio } from "./canvas-metrics";
 
 /** Size a photo element (%) so the selection box matches image aspect. */
 export function photoElementSize(

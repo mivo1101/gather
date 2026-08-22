@@ -7,7 +7,10 @@
     "build": "next build",
     "build:check": "NEXT_DIST_DIR=.next-build next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "check:boundaries": "node scripts/check-client-boundaries.mjs",
+    "verify": "npm run typecheck && npm run lint && npm run check:boundaries"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",

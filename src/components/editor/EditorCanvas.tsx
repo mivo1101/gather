@@ -28,11 +28,11 @@ import type {
 } from "./editor-types";
 import {
   CanvasImageContent,
-  cardAspectRatio,
   clampImageFit,
   normalizeImageOffset,
   normalizeImageScale,
 } from "./CanvasImageContent";
+import { cardAspectRatio } from "./canvas-metrics";
 import { CanvasWidgetView } from "./CanvasWidgetView";
 import { isDecorativeGraphicSrc } from "@/lib/data/element-library";
 import { ShapeGraphic } from "./ShapeGraphic";

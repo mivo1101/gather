@@ -3,7 +3,8 @@
 import { useEffect, useId } from "react";
 import type { CanvasElement } from "@/lib/data/canvas-elements";
 import type { InvitationPage } from "@/lib/data/invitation-content";
-import { CanvasImageContent, cardAspectRatio } from "./CanvasImageContent";
+import { CanvasImageContent } from "./CanvasImageContent";
+import { cardAspectRatio } from "./canvas-metrics";
 import { CanvasWidgetView } from "./CanvasWidgetView";
 import { CloseIcon, DesktopIcon, MobileIcon } from "./editor-icons";
 import { ShapeGraphic } from "./ShapeGraphic";

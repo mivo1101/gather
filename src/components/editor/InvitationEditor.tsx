@@ -46,11 +46,11 @@ import {
 } from "@/lib/invitation-paths";
 import { shortcutLabel } from "@/lib/shortcut-label";
 import {
-  cardAspectRatio,
   photoElementSize,
   isSquareFrame,
   squareElementSize,
 } from "./CanvasImageContent";
+import { cardAspectRatio } from "./canvas-metrics";
 import { ConfirmDialog } from "./ConfirmDialog";
 import {
   CompletedEventNotice,
